@@ -1,0 +1,63 @@
+# 应用：Server + 前端（管理后台 + 博客前台，同一 Nginx 按域名分流）
+# 用法：./deploy-app.sh
+# 通过 .env 中 DB_* / REDIS_* 连接数据库（本机 Docker 库默认 host.docker.internal）
+
+name: ${COMPOSE_PROJECT_NAME:-designer-admin}-app
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: designer-admin-server:${IMAGE_TAG:-1.0.0}
+    container_name: designer-admin-server
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m -Dfile.encoding=UTF-8}
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-designer_blog}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST:-host.docker.internal}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: ${REDIS_DB:-5}
+    volumes:
+      - server_uploads:/app/uploads
+      - server_logs:/app/logs
+    ports:
+      # 只绑定回环：server 不直接对外，所有流量必须经 nginx。
+      # 否则攻击者可绕过 nginx 直连 8080 并伪造 X-Real-IP / X-Forwarded-For，IP 限流直接失效。
+      - "127.0.0.1:${SERVER_PORT:-8080}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - designer-app-net
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    image: designer-web:${IMAGE_TAG:-1.0.0}
+    container_name: designer-web
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      # 单一入口：同一 Nginx 内按域名分流
+      #   www.rainterm.cn   → 博客前台
+      #   admin.rainterm.cn → 管理后台
+      - "${WEB_PORT:-80}:80"
+    networks:
+      - designer-app-net
+
+volumes:
+  server_uploads:
+  server_logs:
+
+networks:
+  designer-app-net:
+    driver: bridge

@@ -1,0 +1,126 @@
+package com.designer.admin.framework.storage.provider;
+
+import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.storage.FileStorageProvider;
+import com.designer.admin.framework.storage.StorageFieldMeta;
+import com.designer.admin.framework.storage.StorageProperties;
+import com.designer.admin.framework.storage.StorageRuntimeConfig;
+import org.noear.solon.annotation.Component;
+import org.noear.solon.annotation.Inject;
+import org.noear.solon.core.handle.UploadedFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 本地磁盘存储
+ */
+@Component
+public class LocalFileStorageProvider implements FileStorageProvider {
+
+    public static final String TYPE = "local";
+
+    @Inject
+    private StorageProperties storageProperties;
+
+    @Override
+    public String type() {
+        return TYPE;
+    }
+
+    @Override
+    public String label() {
+        return "本地存储";
+    }
+
+    @Override
+    public List<StorageFieldMeta> configFields() {
+        String localDefault = storageProperties.resolvedLocalDefaultPath();
+        return List.of(
+                StorageFieldMeta.builder()
+                        .name("localPath")
+                        .label("本地目录")
+                        .inputType("text")
+                        .required(true)
+                        .defaultValue(localDefault)
+                        .placeholder(localDefault)
+                        .help("相对 jar 启动目录或绝对路径")
+                        .build()
+        );
+    }
+
+    @Override
+    public void validateConfig(Map<String, Object> props) {
+        String path = str(props, "localPath");
+        if (path.isBlank()) {
+            throw new BizException("本地目录不能为空");
+        }
+    }
+
+    @Override
+    public void store(UploadedFile file, String filePath, String contentType, StorageRuntimeConfig config) {
+        Path target = resolve(filePath, config);
+        try {
+            Files.createDirectories(target.getParent());
+            try (InputStream in = file.getContent()) {
+                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            throw new BizException("文件保存失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public void delete(String filePath, StorageRuntimeConfig config) {
+        try {
+            Files.deleteIfExists(resolve(filePath, config));
+        } catch (Exception ignored) {
+            // ignore
+        }
+    }
+
+    @Override
+    public InputStream open(String filePath, StorageRuntimeConfig config) throws Exception {
+        Path target = resolve(filePath, config);
+        if (!Files.isRegularFile(target)) {
+            throw new BizException("文件不存在");
+        }
+        return Files.newInputStream(target);
+    }
+
+    @Override
+    public String buildAccessUrl(String filePath, StorageRuntimeConfig config) {
+        String prefix = config.getUrlPrefix();
+        if (prefix == null || prefix.isBlank()) {
+            prefix = storageProperties.normalizedUrlPrefix();
+        }
+        if (!prefix.endsWith("/")) {
+            prefix = prefix + "/";
+        }
+        return prefix + filePath;
+    }
+
+    private Path resolve(String filePath, StorageRuntimeConfig config) {
+        Path root = Paths.get(config.prop("localPath", storageProperties.resolvedLocalDefaultPath()))
+                .toAbsolutePath()
+                .normalize();
+        Path target = root.resolve(filePath).normalize();
+        if (!target.startsWith(root)) {
+            throw new BizException("非法的文件路径");
+        }
+        return target;
+    }
+
+    private static String str(Map<String, Object> props, String key) {
+        if (props == null || props.get(key) == null) {
+            return "";
+        }
+        return String.valueOf(props.get(key)).trim();
+    }
+}

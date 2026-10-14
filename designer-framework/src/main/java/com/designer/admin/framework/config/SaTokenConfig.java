@@ -1,0 +1,37 @@
+package com.designer.admin.framework.config;
+
+import cn.dev33.satoken.router.SaRouter;
+import cn.dev33.satoken.solon.integration.SaTokenInterceptor;
+import cn.dev33.satoken.stp.StpUtil;
+import com.designer.admin.common.core.R;
+import com.designer.admin.common.core.ResultCode;
+import org.noear.solon.annotation.Bean;
+import org.noear.solon.annotation.Configuration;
+
+/**
+ * Sa-Token 拦截鉴权配置：
+ * <ul>
+ *   <li>{@code /admin-api/**} 默认需后台用户登录</li>
+ *   <li>{@code /app-api/**} 面向前台，默认免登录（由业务控制）</li>
+ *   <li>{@code /open-api/**} 由 {@code OpenApiScopeFilter} 做 OAuth2 登录 + Scope 校验</li>
+ *   <li>{@code /oauth2/**} 令牌端点放行</li>
+ * </ul>
+ */
+@Configuration
+public class SaTokenConfig {
+
+    @Bean(index = -100)
+    public SaTokenInterceptor saTokenInterceptor() {
+        return new SaTokenInterceptor()
+                .addInclude("/admin-api/**")
+                .addInclude("/app-api/**")
+                .addExclude("/oauth2/**")
+                .addExclude("/open-api/**")
+                .setAuth(req -> SaRouter.match("/admin-api/**", r -> StpUtil.checkLogin()))
+                .setError(e -> {
+                    int code = (e instanceof cn.dev33.satoken.exception.NotLoginException)
+                            ? ResultCode.UNAUTHORIZED : ResultCode.FORBIDDEN;
+                    return R.fail(code, code == ResultCode.UNAUTHORIZED ? "登录状态已过期，请重新登录" : "无权限访问");
+                });
+    }
+}

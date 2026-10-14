@@ -1,0 +1,53 @@
+package com.designer.admin.system.model.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.designer.admin.common.core.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.noear.snack4.annotation.ONodeAttr;
+
+/**
+ * 文件存储配置（数据库驱动，可扩展多种存储类型）
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("sys_storage_config")
+public class SysStorageConfig extends BaseEntity {
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    /** 配置名称 */
+    private String configName;
+
+    /** 存储类型：local / s3 / ...（对应 FileStorageProvider#type） */
+    private String storageType;
+
+    /** 是否默认：1是 0否（全局仅一条为默认） */
+    private Integer isDefault;
+
+    /** 状态：1启用 0停用 */
+    private Integer status;
+
+    /** 代理下载 URL 前缀 */
+    private String urlPrefix;
+
+    /** 允许的扩展名，逗号分隔 */
+    private String allowedExtensions;
+
+    /** 单文件大小上限（字节） */
+    private Long maxSize;
+
+    /** 类型专属配置 JSON */
+    private String configJson;
+
+    /** 备注 */
+    private String remark;
+
+    @TableLogic
+    @ONodeAttr(ignore = true)
+    private Integer deleted;
+}

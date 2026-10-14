@@ -1,0 +1,424 @@
+-- =====================================================================
+--  system/schema.sql
+-- =====================================================================
+
+SET NAMES utf8mb4;
+USE `designer_blog`;
+
+-- ---------------------------------------------------------------------
+-- 系统管理
+-- ---------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `sys_user`;
+CREATE TABLE `sys_user` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '用户ID',
+    `username`    VARCHAR(50)  NOT NULL                COMMENT '登录账号',
+    `password`    VARCHAR(100) NOT NULL                COMMENT '密码（BCrypt）',
+    `nickname`    VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '昵称',
+    `avatar`      VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '头像地址',
+    `email`       VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '邮箱',
+    `phone`       VARCHAR(20)  NOT NULL DEFAULT ''     COMMENT '手机号',
+    `dept_id`     BIGINT       DEFAULT NULL            COMMENT '部门ID',
+    `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `remark`      VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sys_user_username` (`username`),
+    KEY `idx_sys_user_dept` (`dept_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统用户';
+
+DROP TABLE IF EXISTS `sys_dept`;
+CREATE TABLE `sys_dept` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '部门ID',
+    `parent_id`   BIGINT       NOT NULL DEFAULT 0      COMMENT '父部门ID，0为顶级',
+    `ancestors`   VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '祖级列表，如 0,100,101',
+    `dept_name`   VARCHAR(50)  NOT NULL                COMMENT '部门名称',
+    `sort`        INT          NOT NULL DEFAULT 0      COMMENT '显示顺序',
+    `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `create_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_dept_parent` (`parent_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '部门';
+
+DROP TABLE IF EXISTS `sys_user_post`;
+DROP TABLE IF EXISTS `sys_post`;
+CREATE TABLE `sys_post` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '岗位ID',
+    `post_name`   VARCHAR(50)  NOT NULL                COMMENT '岗位名称，如系长/科长/部长',
+    `post_code`   VARCHAR(50)  NOT NULL                COMMENT '岗位编码，全局唯一，如 KE_ZHANG',
+    `post_level`  INT          NOT NULL DEFAULT 0      COMMENT '职级，数值越大越高',
+    `sort`        INT          NOT NULL DEFAULT 0      COMMENT '显示顺序',
+    `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `remark`      VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sys_post_code` (`post_code`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '岗位（全局字典，部门通过用户关联）';
+
+CREATE TABLE `sys_user_post` (
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `post_id` BIGINT NOT NULL COMMENT '岗位ID',
+    PRIMARY KEY (`user_id`, `post_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '用户岗位关联';
+
+DROP TABLE IF EXISTS `sys_config`;
+CREATE TABLE `sys_config` (
+    `id`           BIGINT        NOT NULL AUTO_INCREMENT COMMENT '参数ID',
+    `config_name`  VARCHAR(100)  NOT NULL DEFAULT ''     COMMENT '参数名称',
+    `config_key`   VARCHAR(100)  NOT NULL                COMMENT '参数键名',
+    `config_value` VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '参数键值',
+    `config_type`  CHAR(1)       NOT NULL DEFAULT 'N'    COMMENT '系统内置：Y是 N否',
+    `remark`       VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`    VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time`  DATETIME      DEFAULT NULL            COMMENT '创建时间',
+    `update_by`    VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time`  DATETIME      DEFAULT NULL            COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sys_config_key` (`config_key`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '参数配置';
+
+DROP TABLE IF EXISTS `sys_role`;
+CREATE TABLE `sys_role` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '角色ID',
+    `role_name`   VARCHAR(50)  NOT NULL                COMMENT '角色名称',
+    `role_key`    VARCHAR(50)  NOT NULL                COMMENT '角色标识',
+    `sort`        INT          NOT NULL DEFAULT 0      COMMENT '显示顺序',
+    `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `is_super`    TINYINT(1)   NOT NULL DEFAULT 0      COMMENT '是否超级管理员：1是 0否（取代 role_key=admin 字符串判断）',
+    `role_type`   TINYINT      NOT NULL DEFAULT 2      COMMENT '角色类型：1=系统内置（不可修改/删除） 2=自定义',
+    `remark`      VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sys_role_key` (`role_key`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统角色';
+
+DROP TABLE IF EXISTS `sys_menu`;
+CREATE TABLE `sys_menu` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '菜单ID',
+    `parent_id`   BIGINT       NOT NULL DEFAULT 0      COMMENT '父菜单ID，0为顶级',
+    `menu_name`   VARCHAR(50)  NOT NULL                COMMENT '菜单名称',
+    `menu_type`   CHAR(1)      NOT NULL                COMMENT '类型：M目录 C菜单 F按钮',
+    `path`        VARCHAR(200) NOT NULL DEFAULT ''     COMMENT '路由地址',
+    `component`   VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '组件路径',
+    `perms`       VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '权限标识',
+    `icon`        VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '菜单图标',
+    `sort`        INT          NOT NULL DEFAULT 0      COMMENT '显示顺序',
+    `visible`     TINYINT      NOT NULL DEFAULT 1      COMMENT '是否显示：1显示 0隐藏',
+    `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `create_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_menu_parent` (`parent_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统菜单';
+
+DROP TABLE IF EXISTS `sys_user_role`;
+CREATE TABLE `sys_user_role` (
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `role_id` BIGINT NOT NULL COMMENT '角色ID',
+    PRIMARY KEY (`user_id`, `role_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '用户角色关联';
+
+DROP TABLE IF EXISTS `sys_role_menu`;
+CREATE TABLE `sys_role_menu` (
+    `role_id` BIGINT NOT NULL COMMENT '角色ID',
+    `menu_id` BIGINT NOT NULL COMMENT '菜单ID',
+    PRIMARY KEY (`role_id`, `menu_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '角色菜单关联';
+
+DROP TABLE IF EXISTS `sys_dict_type`;
+CREATE TABLE `sys_dict_type` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '字典类型ID',
+    `dict_name`   VARCHAR(50)  NOT NULL                COMMENT '字典名称',
+    `dict_type`   VARCHAR(50)  NOT NULL                COMMENT '字典类型标识',
+    `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `remark`      VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sys_dict_type` (`dict_type`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '字典类型';
+
+DROP TABLE IF EXISTS `sys_dict_data`;
+CREATE TABLE `sys_dict_data` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '字典数据ID',
+    `dict_type`   VARCHAR(50)  NOT NULL                COMMENT '字典类型标识',
+    `dict_label`  VARCHAR(50)  NOT NULL                COMMENT '字典标签',
+    `dict_value`  VARCHAR(50)  NOT NULL                COMMENT '字典键值',
+    `sort`        INT          NOT NULL DEFAULT 0      COMMENT '显示顺序',
+    `is_default`  TINYINT      NOT NULL DEFAULT 0      COMMENT '是否默认：1是 0否',
+    `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `remark`      VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_dict_data_type` (`dict_type`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '字典数据';
+
+DROP TABLE IF EXISTS `sys_oper_log`;
+CREATE TABLE `sys_oper_log` (
+    `id`             BIGINT        NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+    `title`          VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '操作模块',
+    `business_type`  VARCHAR(20)   NOT NULL DEFAULT ''     COMMENT '业务类型',
+    `method`         VARCHAR(255)  NOT NULL DEFAULT ''     COMMENT '方法名称',
+    `request_method` VARCHAR(10)   NOT NULL DEFAULT ''     COMMENT '请求方式',
+    `oper_name`      VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '操作人',
+    `oper_url`       VARCHAR(255)  NOT NULL DEFAULT ''     COMMENT '请求URL',
+    `oper_ip`        VARCHAR(64)   NOT NULL DEFAULT ''     COMMENT '操作IP',
+    `oper_param`     TEXT          DEFAULT NULL            COMMENT '请求参数',
+    `json_result`    TEXT          DEFAULT NULL            COMMENT '返回结果',
+    `status`         TINYINT       NOT NULL DEFAULT 1      COMMENT '状态：1成功 0失败',
+    `error_msg`      TEXT          DEFAULT NULL            COMMENT '错误信息',
+    `cost_time`      BIGINT        NOT NULL DEFAULT 0      COMMENT '耗时（毫秒）',
+    `oper_time`      DATETIME      DEFAULT NULL            COMMENT '操作时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_oper_log_time` (`oper_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '操作日志';
+
+DROP TABLE IF EXISTS `sys_login_log`;
+CREATE TABLE `sys_login_log` (
+    `id`         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+    `username`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '登录账号',
+    `ip`         VARCHAR(64)  NOT NULL DEFAULT ''     COMMENT '登录IP',
+    `browser`    VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '浏览器',
+    `os`         VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '操作系统',
+    `status`     TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1成功 0失败',
+    `msg`        VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '提示信息',
+    `login_time` DATETIME     DEFAULT NULL            COMMENT '登录时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_login_log_time` (`login_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '登录日志';
+
+DROP TABLE IF EXISTS `sys_file`;
+CREATE TABLE `sys_file` (
+    `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '文件ID',
+    `original_name` VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '原始文件名',
+    `file_name`     VARCHAR(128) NOT NULL DEFAULT ''     COMMENT '存储文件名',
+    `file_path`     VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '存储相对路径/对象Key',
+    `url`           VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '访问URL',
+    `file_size`     BIGINT       NOT NULL DEFAULT 0      COMMENT '文件大小（字节）',
+    `content_type`  VARCHAR(128) NOT NULL DEFAULT ''     COMMENT 'Content-Type',
+    `extension`     VARCHAR(32)  NOT NULL DEFAULT ''     COMMENT '扩展名',
+    `biz_dir`       VARCHAR(64)  NOT NULL DEFAULT ''     COMMENT '业务子目录',
+    `storage_type`  VARCHAR(16)  NOT NULL DEFAULT 'local' COMMENT '存储类型：local/s3/...',
+    `config_id`     BIGINT       DEFAULT NULL            COMMENT '存储配置ID',
+    `create_by`     VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time`   DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`     VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time`   DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`       TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_file_biz` (`biz_dir`),
+    KEY `idx_sys_file_path` (`file_path`),
+    KEY `idx_sys_file_name` (`original_name`),
+    KEY `idx_sys_file_time` (`create_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统文件';
+
+DROP TABLE IF EXISTS `sys_storage_config`;
+CREATE TABLE `sys_storage_config` (
+    `id`                 BIGINT        NOT NULL AUTO_INCREMENT COMMENT '配置ID',
+    `config_name`        VARCHAR(50)   NOT NULL                COMMENT '配置名称',
+    `storage_type`       VARCHAR(32)   NOT NULL                COMMENT '存储类型：local/s3/...',
+    `is_default`         TINYINT       NOT NULL DEFAULT 0      COMMENT '是否默认：1是 0否',
+    `status`             TINYINT       NOT NULL DEFAULT 1      COMMENT '状态：1启用 0停用',
+    `url_prefix`         VARCHAR(255)  NOT NULL DEFAULT '/admin-api/system/file/download/' COMMENT '代理下载前缀',
+    `allowed_extensions` VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '允许扩展名，逗号分隔',
+    `max_size`           BIGINT        NOT NULL DEFAULT 5242880 COMMENT '单文件大小上限（字节）',
+    `config_json`        TEXT          DEFAULT NULL            COMMENT '类型专属配置JSON',
+    `remark`             VARCHAR(255)  NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`          VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time`        DATETIME      DEFAULT NULL            COMMENT '创建时间',
+    `update_by`          VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time`        DATETIME      DEFAULT NULL            COMMENT '更新时间',
+    `deleted`            TINYINT       NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_storage_type` (`storage_type`),
+    KEY `idx_sys_storage_default` (`is_default`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '文件存储配置';
+
+DROP TABLE IF EXISTS `sys_message_config`;
+CREATE TABLE `sys_message_config` (
+    `id`           BIGINT        NOT NULL AUTO_INCREMENT COMMENT '配置ID',
+    `config_name`  VARCHAR(50)   NOT NULL                COMMENT '配置名称',
+    `channel_type` VARCHAR(32)   NOT NULL                COMMENT '通道类型：email/sms/dingtalk/wechat/feishu',
+    `is_default`   TINYINT       NOT NULL DEFAULT 0      COMMENT '同通道类型下是否默认：1是 0否',
+    `status`       TINYINT       NOT NULL DEFAULT 1      COMMENT '状态：1启用 0停用',
+    `config_json`  TEXT          DEFAULT NULL            COMMENT '通道专属配置JSON',
+    `remark`       VARCHAR(255)  NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`    VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time`  DATETIME      DEFAULT NULL            COMMENT '创建时间',
+    `update_by`    VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time`  DATETIME      DEFAULT NULL            COMMENT '更新时间',
+    `deleted`      TINYINT       NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_message_type` (`channel_type`),
+    KEY `idx_sys_message_default` (`channel_type`, `is_default`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '消息通道配置';
+
+DROP TABLE IF EXISTS `sys_message_record`;
+CREATE TABLE `sys_message_record` (
+    `id`           BIGINT        NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+    `config_id`    BIGINT        DEFAULT NULL            COMMENT '通道配置ID',
+    `config_name`  VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '配置名称快照',
+    `channel_type` VARCHAR(32)   NOT NULL DEFAULT ''     COMMENT '通道类型',
+    `receivers`    VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '收件人',
+    `title`        VARCHAR(200)  NOT NULL DEFAULT ''     COMMENT '标题',
+    `content`      VARCHAR(2000) NOT NULL DEFAULT ''     COMMENT '内容摘要',
+    `html`         TINYINT       NOT NULL DEFAULT 0      COMMENT '是否HTML：1是 0否',
+    `status`       TINYINT       NOT NULL DEFAULT 1      COMMENT '状态：1成功 0失败',
+    `error_msg`    VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '错误信息',
+    `cost_time`    BIGINT        NOT NULL DEFAULT 0      COMMENT '耗时（毫秒）',
+    `send_by`      VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '发送人',
+    `send_time`    DATETIME      DEFAULT NULL            COMMENT '发送时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_message_record_type` (`channel_type`),
+    KEY `idx_sys_message_record_time` (`send_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '消息发送记录';
+
+DROP TABLE IF EXISTS `sys_notice_read`;
+DROP TABLE IF EXISTS `sys_notice`;
+CREATE TABLE `sys_notice` (
+    `id`           BIGINT        NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+    `title`        VARCHAR(100)  NOT NULL                COMMENT '标题',
+    `content`      TEXT          DEFAULT NULL            COMMENT '内容',
+    `status`       TINYINT       NOT NULL DEFAULT 1      COMMENT '状态：1正常 0关闭',
+    `receivers`    VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '接收人账号，空=全体；多个逗号分隔',
+    `remark`       VARCHAR(255)  NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`    VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time`  DATETIME      DEFAULT NULL            COMMENT '创建时间',
+    `update_by`    VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time`  DATETIME      DEFAULT NULL            COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_notice_status` (`status`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '站内消息（inbox 通道）';
+
+CREATE TABLE `sys_notice_read` (
+    `id`           BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `notice_id`    BIGINT        NOT NULL                COMMENT '消息ID',
+    `user_id`      BIGINT        NOT NULL                COMMENT '用户ID',
+    `read_time`    DATETIME      DEFAULT NULL            COMMENT '阅读时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sys_notice_read` (`notice_id`, `user_id`),
+    KEY `idx_sys_notice_read_user` (`user_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '站内消息已读记录';
+
+DROP TABLE IF EXISTS `sys_job`;
+CREATE TABLE `sys_job` (
+    `id`              BIGINT        NOT NULL AUTO_INCREMENT COMMENT '任务ID',
+    `job_name`        VARCHAR(64)   NOT NULL DEFAULT ''     COMMENT '任务名称',
+    `job_group`       VARCHAR(64)   NOT NULL DEFAULT 'DEFAULT' COMMENT '任务组名',
+    `invoke_target`   VARCHAR(500)  NOT NULL                COMMENT '调用目标：bean.method / bean.method(args)',
+    `cron_expression` VARCHAR(255)  NOT NULL DEFAULT ''     COMMENT 'cron 表达式',
+    `misfire_policy`  TINYINT       NOT NULL DEFAULT 1      COMMENT 'misfire：1默认 2立即执行 3放弃',
+    `concurrent`      TINYINT       NOT NULL DEFAULT 1      COMMENT '是否允许并发：1允许 0禁止',
+    `status`          TINYINT       NOT NULL DEFAULT 1      COMMENT '状态：1正常 0暂停',
+    `remark`          VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`       VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time`     DATETIME      DEFAULT NULL            COMMENT '创建时间',
+    `update_by`       VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time`     DATETIME      DEFAULT NULL            COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_job_status` (`status`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '定时任务';
+
+DROP TABLE IF EXISTS `sys_job_log`;
+CREATE TABLE `sys_job_log` (
+    `id`              BIGINT        NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+    `job_id`          BIGINT        DEFAULT NULL            COMMENT '任务ID',
+    `job_name`        VARCHAR(64)   NOT NULL DEFAULT ''     COMMENT '任务名称',
+    `job_group`       VARCHAR(64)   NOT NULL DEFAULT ''     COMMENT '任务组名',
+    `invoke_target`   VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '调用目标',
+    `job_message`     VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '日志信息',
+    `status`          TINYINT       NOT NULL DEFAULT 1      COMMENT '状态：1成功 0失败',
+    `exception_info`  VARCHAR(2000) NOT NULL DEFAULT ''     COMMENT '异常信息',
+    `cost_time`       BIGINT        NOT NULL DEFAULT 0      COMMENT '耗时（毫秒）',
+    `create_time`     DATETIME      DEFAULT NULL            COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_sys_job_log_job` (`job_id`),
+    KEY `idx_sys_job_log_time` (`create_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '定时任务调度日志';
+
+DROP TABLE IF EXISTS `sys_sso_client`;
+CREATE TABLE `sys_sso_client` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '客户端ID',
+    `client_name` VARCHAR(100) NOT NULL                COMMENT '客户端名称',
+    `client_key`  VARCHAR(64)  NOT NULL                COMMENT '客户端标识，如 app1',
+    `origin`      VARCHAR(255) NOT NULL                COMMENT '允许回跳的 Origin，如 http://localhost:5176',
+    `open_url`    VARCHAR(500) NOT NULL                COMMENT '打开地址（一般与 Origin 同主机）',
+    `entry_path`  VARCHAR(100) NOT NULL DEFAULT '/sso' COMMENT 'SSO 接入路径',
+    `sort`        INT          NOT NULL DEFAULT 0      COMMENT '显示顺序',
+    `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `remark`      VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sys_sso_client_key` (`client_key`),
+    UNIQUE KEY `uk_sys_sso_client_origin` (`origin`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'SSO 客户端（跨应用单点登录白名单）';
+
+DROP TABLE IF EXISTS `sys_oauth_client_scope`;
+DROP TABLE IF EXISTS `sys_oauth_client`;
+DROP TABLE IF EXISTS `sys_oauth_scope`;
+CREATE TABLE `sys_oauth_scope` (
+    `id`           BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'Scope ID',
+    `scope_code`   VARCHAR(100) NOT NULL                COMMENT 'Scope 标识，如 open.ping',
+    `scope_name`   VARCHAR(100) NOT NULL                COMMENT '显示名称',
+    `path_pattern` VARCHAR(255) NOT NULL                COMMENT 'Ant 路径，如 /open-api/system/ping',
+    `sort`         INT          NOT NULL DEFAULT 0      COMMENT '显示顺序',
+    `status`       TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `remark`       VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`    VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time`  DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`    VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time`  DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`      TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sys_oauth_scope_code` (`scope_code`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'OAuth2 开放接口 Scope 目录';
+
+CREATE TABLE `sys_oauth_client` (
+    `id`                BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `client_id`         VARCHAR(64)  NOT NULL                COMMENT 'OAuth client_id',
+    `client_secret`     VARCHAR(100) NOT NULL                COMMENT '客户端密钥（BCrypt）',
+    `client_name`       VARCHAR(100) NOT NULL                COMMENT '客户端名称',
+    `access_token_ttl`  INT          NOT NULL DEFAULT 7200   COMMENT 'access_token 有效期（秒）',
+    `status`            TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
+    `remark`            VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '备注',
+    `create_by`         VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time`       DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`         VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time`       DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`           TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sys_oauth_client_id` (`client_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'OAuth2 客户端（Client Credentials）';
+
+CREATE TABLE `sys_oauth_client_scope` (
+    `client_id` BIGINT NOT NULL COMMENT 'sys_oauth_client.id',
+    `scope_id`  BIGINT NOT NULL COMMENT 'sys_oauth_scope.id',
+    PRIMARY KEY (`client_id`, `scope_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'OAuth2 客户端授权 Scope';
