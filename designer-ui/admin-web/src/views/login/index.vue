@@ -2,10 +2,10 @@
   <div class="login-page">
     <div class="login-card">
       <div class="login-brand">
-        <BrandLogo class="brand-logo" />
+        <BrandLogo class="brand-logo" :src="settingStore.logoUrl" :radius="settingStore.logoRadius" />
         <div>
-          <h1>{{ appTitle }}</h1>
-          <p>统一管理后台，让协作更高效</p>
+          <h1>{{ settingStore.systemName }}</h1>
+          <p v-if="settingStore.loginSubtitle">{{ settingStore.loginSubtitle }}</p>
         </div>
       </div>
 
@@ -53,7 +53,7 @@ import { getCaptcha } from '@/api/auth'
 import { captchaApi } from '@/api/captcha'
 import { buildPasswordRules } from '@/constants/password'
 import { useUserStore } from '@/store/user'
-import { appTitle } from '@/settings'
+import { useSettingStore } from '@/store/setting'
 import BrandLogo from '@/components/BrandLogo.vue'
 import { continueSsoReturn, safeInternalRedirect } from '@/utils/sso'
 
@@ -61,6 +61,7 @@ const router = useRouter()
 const route = useRoute()
 const message = useMessage()
 const userStore = useUserStore()
+const settingStore = useSettingStore()
 
 const formRef = ref(null)
 const loading = ref(false)
@@ -203,7 +204,11 @@ watch(
   }
 )
 
-onMounted(loadCaptcha)
+onMounted(() => {
+  // 系统名称 / Logo 由公开接口下发，登录前即可展示（已加载则直接返回）
+  settingStore.loadPublic()
+  loadCaptcha()
+})
 </script>
 
 <style scoped>

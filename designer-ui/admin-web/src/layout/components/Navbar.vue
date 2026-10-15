@@ -2,8 +2,12 @@
   <div class="navbar" :class="{ 'navbar--with-logo': showLogo }">
     <div class="navbar-left">
       <div v-if="showLogo" class="navbar-brand">
-        <BrandLogo class="navbar-brand__logo" />
-        <span class="navbar-brand__text">{{ appTitle }}</span>
+        <BrandLogo
+          class="navbar-brand__logo"
+          :src="settingStore.logoUrl"
+          :radius="settingStore.logoRadius"
+        />
+        <span class="navbar-brand__text">{{ settingStore.systemName }}</span>
       </div>
 
       <n-button v-if="showCollapse" quaternary circle @click="appStore.toggleCollapsed()">
@@ -72,7 +76,7 @@ import ProfileDialog from './ProfileDialog.vue'
 import Sidebar from './Sidebar.vue'
 import { useAppStore } from '@/store/app'
 import { useUserStore } from '@/store/user'
-import { appTitle } from '@/settings'
+import { useSettingStore } from '@/store/setting'
 
 defineProps({
   showLogo: { type: Boolean, default: false },
@@ -87,6 +91,7 @@ const router = useRouter()
 const dialog = useDialog()
 const appStore = useAppStore()
 const userStore = useUserStore()
+const settingStore = useSettingStore()
 
 const profileVisible = ref(false)
 const passwordVisible = ref(false)

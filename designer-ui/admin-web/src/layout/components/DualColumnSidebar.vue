@@ -2,7 +2,11 @@
   <div class="dual-sidebar" :class="{ 'is-solo': !showSubs }">
     <div class="dual-sidebar__icons">
       <div v-if="showLogo" class="dual-sidebar__logo">
-        <BrandLogo class="dual-sidebar__logo-img" />
+        <BrandLogo
+          class="dual-sidebar__logo-img"
+          :src="settingStore.logoUrl"
+          :radius="settingStore.logoRadius"
+        />
       </div>
       <button
         v-for="item in topOptions"
@@ -38,6 +42,9 @@
 import { computed, defineComponent, ref, watch } from 'vue'
 import BrandLogo from '@/components/BrandLogo.vue'
 import { useSidebarMenu } from '@/composables/useSidebarMenu'
+import { useSettingStore } from '@/store/setting'
+
+const settingStore = useSettingStore()
 
 defineProps({
   showLogo: { type: Boolean, default: false },

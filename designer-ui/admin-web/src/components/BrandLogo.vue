@@ -1,5 +1,13 @@
 <template>
+  <img
+    v-if="src"
+    class="brand-logo brand-logo--img"
+    :src="src"
+    :alt="alt"
+    :style="imgStyle"
+  />
   <svg
+    v-else
     class="brand-logo"
     viewBox="0 0 64 64"
     fill="none"
@@ -16,9 +24,17 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
+  /** 自定义 Logo 图片地址；为空则渲染内置 SVG */
+  src: { type: String, default: '' },
+  /** Logo 圆角（px） */
+  radius: { type: Number, default: 6 },
   alt: { type: String, default: 'logo' }
 })
+
+const imgStyle = computed(() => ({ borderRadius: `${props.radius}px` }))
 </script>
 
 <style scoped>

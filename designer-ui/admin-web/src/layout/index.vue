@@ -18,8 +18,12 @@
     >
       <div class="sider-inner">
         <div v-if="!isDual" class="logo">
-          <BrandLogo class="logo-img" />
-          <span v-show="!siderCollapsed" class="logo-text">{{ appTitle }}</span>
+          <BrandLogo
+            class="logo-img"
+            :src="settingStore.logoUrl"
+            :radius="settingStore.logoRadius"
+          />
+          <span v-show="!siderCollapsed" class="logo-text">{{ settingStore.systemName }}</span>
         </div>
         <div class="sidebar-menu" :class="{ 'sidebar-menu--dual': isDual || iconOnly }">
           <DualColumnSidebar v-if="isDual" show-logo />
@@ -129,7 +133,7 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useAppStore } from '@/store/app'
-import { appTitle } from '@/settings'
+import { useSettingStore } from '@/store/setting'
 import {
   hasSider,
   isDualColumn,
@@ -146,6 +150,7 @@ import TagsView from './components/TagsView.vue'
 import PreferenceSettings from './components/PreferenceSettings.vue'
 
 const appStore = useAppStore()
+const settingStore = useSettingStore()
 const { currentTop } = useSidebarMenu()
 
 const layoutMode = computed(() => appStore.layoutMode)

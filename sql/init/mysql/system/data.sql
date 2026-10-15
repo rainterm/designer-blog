@@ -31,10 +31,14 @@ INSERT INTO `sys_config` (`id`, `config_name`, `config_key`, `config_value`, `co
 (2, '账号登录失败锁定', 'sys.account.lockEnabled', 'true', 'Y', '是否开启登录失败锁定', 'system', NOW(), 'system', NOW()),
 (3, '登录失败最大次数', 'sys.account.lockMaxRetry', '5', 'Y', '连续失败达到次数后锁定', 'system', NOW(), 'system', NOW()),
 (4, '登录锁定时长(分钟)', 'sys.account.lockMinutes', '10', 'Y', '锁定时长，单位分钟', 'system', NOW(), 'system', NOW()),
-(5, '系统名称', 'sys.index.title', 'Designer Admin', 'Y', '登录页与侧边栏显示名称', 'system', NOW(), 'system', NOW()),
 (6, 'Token绝对有效期(秒)', 'sys.account.tokenTimeout', '86400', 'Y', 'Token 最长存活时间，到期必须重新登录；默认 86400=1天，最小 60', 'system', NOW(), 'system', NOW()),
 (7, 'Token活跃续期(秒)', 'sys.account.tokenActiveTimeout', '1800', 'Y', '有请求则自动续期；连续闲置超过该秒数踢出；默认 1800=30分钟，-1 关闭', 'system', NOW(), 'system', NOW()),
 (8, '验证码失败阈值', 'sys.account.captchaFailThreshold', '3', 'Y', '同一账号连续登录失败达到该次数后才要求滑块验证，默认 3', 'system', NOW(), 'system', NOW());
+
+-- ------------------------- 系统设置（单行）-------------------------
+-- 系统名称 / 登录页副标题 / Logo / 默认偏好设置；由「系统管理 → 系统设置」菜单维护
+INSERT INTO `sys_setting` (`id`, `system_name`, `login_subtitle`, `logo_url`, `logo_radius`, `default_layout_mode`, `default_primary_color`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+(1, 'Designer Admin', '统一管理后台，让协作更高效', '', 6, 'mixed-vertical', '#16A34A', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 菜单（目录 / 菜单）-------------------------
 -- 按大模块划分：系统模块（内含二级目录）/ 博客模块(8000) / 示例模块(9000)
@@ -57,6 +61,7 @@ INSERT INTO `sys_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `path`, `co
 (23, 1, '参数设置', 'C', '/system/config',    'system/config/index',  'system:config:list',   'options',     7, 1, 1, 'system', NOW(), 'system', NOW()),
 (26, 1, 'SSO客户端', 'C', '/system/ssoclient', 'system/ssoclient/index','system:ssoclient:list','link',       8, 1, 1, 'system', NOW(), 'system', NOW()),
 (28, 1, 'OAuth客户端', 'C', '/system/oauthclient', 'system/oauthclient/index','system:oauthclient:list','key', 9, 1, 1, 'system', NOW(), 'system', NOW()),
+(27, 1, '系统设置', 'C', '/system/setting', 'system/setting/index', 'system:setting:query', 'color', 10, 1, 1, 'system', NOW(), 'system', NOW()),
 -- 系统监控
 (24, 2, '在线用户', 'C', '/system/online',    'system/online/index',  'system:online:list',   'pulse',       1, 1, 1, 'system', NOW(), 'system', NOW()),
 (14, 2, '操作日志', 'C', '/system/operlog',   'system/operlog/index', 'system:operlog:list',  'history',     2, 1, 1, 'system', NOW(), 'system', NOW()),
@@ -136,7 +141,9 @@ INSERT INTO `sys_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `path`, `co
 (281, 28, 'OAuth新增', 'F', '', '', 'system:oauthclient:add',    '',2, 1, 1, 'system', NOW(), 'system', NOW()),
 (282, 28, 'OAuth修改', 'F', '', '', 'system:oauthclient:edit',   '',3, 1, 1, 'system', NOW(), 'system', NOW()),
 (283, 28, 'OAuth删除', 'F', '', '', 'system:oauthclient:remove', '',4, 1, 1, 'system', NOW(), 'system', NOW()),
-(284, 28, '重置密钥', 'F', '', '', 'system:oauthclient:resetSecret', '',5, 1, 1, 'system', NOW(), 'system', NOW());
+(284, 28, '重置密钥', 'F', '', '', 'system:oauthclient:resetSecret', '',5, 1, 1, 'system', NOW(), 'system', NOW()),
+(290, 27, '设置查询', 'F', '', '', 'system:setting:query', '',1, 1, 1, 'system', NOW(), 'system', NOW()),
+(291, 27, '设置修改', 'F', '', '', 'system:setting:edit', '',2, 1, 1, 'system', NOW(), 'system', NOW());
 
 -- ------------------------- OAuth2 开放 Scope（示例）-------------------------
 INSERT INTO `sys_oauth_scope` (`id`, `scope_code`, `scope_name`, `path_pattern`, `sort`, `status`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
@@ -166,6 +173,7 @@ INSERT INTO `sys_role_menu` (`role_id`, `menu_id`) VALUES
 (2, 12), (2, 120),
 (2, 13), (2, 130),
 (2, 23), (2, 230),
+(2, 27), (2, 290),
 (2, 2),
 (2, 24), (2, 240),
 (2, 14), (2, 15),

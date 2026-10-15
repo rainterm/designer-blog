@@ -89,6 +89,22 @@ CREATE TABLE `sys_config` (
     UNIQUE KEY `uk_sys_config_key` (`config_key`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '参数配置';
 
+DROP TABLE IF EXISTS `sys_setting`;
+CREATE TABLE `sys_setting` (
+    `id`                    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键（单行固定 id=1）',
+    `system_name`           VARCHAR(50)  NOT NULL DEFAULT 'Designer Admin' COMMENT '系统名称（登录页/侧边栏/顶栏/浏览器标题）',
+    `login_subtitle`        VARCHAR(100) NOT NULL DEFAULT '统一管理后台，让协作更高效' COMMENT '登录页副标题，留空不显示',
+    `logo_url`              VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '系统 Logo 地址，留空用内置 Logo',
+    `logo_radius`           INT          NOT NULL DEFAULT 6      COMMENT 'Logo 圆角（px，0 为直角）',
+    `default_layout_mode`   VARCHAR(32)  NOT NULL DEFAULT 'mixed-vertical' COMMENT '默认布局模式',
+    `default_primary_color` VARCHAR(16)  NOT NULL DEFAULT '#16A34A' COMMENT '默认主题色（十六进制）',
+    `create_by`             VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
+    `create_time`           DATETIME     DEFAULT NULL            COMMENT '创建时间',
+    `update_by`             VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
+    `update_time`           DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统设置（单行：系统名称/副标题/Logo/默认偏好）';
+
 DROP TABLE IF EXISTS `sys_role`;
 CREATE TABLE `sys_role` (
     `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '角色ID',

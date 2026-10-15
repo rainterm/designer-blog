@@ -174,6 +174,12 @@ export const deleteConfigs = (ids) =>
   request.delete('/admin-api/system/config/remove', { params: { ids: ids.join(',') } })
 export const refreshConfigCache = () => request.delete('/admin-api/system/config/refresh')
 
+// ---------------------- 系统设置（系统名称 / Logo / 默认偏好）----------------------
+export const getSystemSetting = () => request.get('/admin-api/system/setting')
+export const updateSystemSetting = (data) => request.put('/admin-api/system/setting', data)
+/** 公开系统设置（免登录）：登录页展示系统名称与 Logo */
+export const getPublicSystemSetting = () => request.get('/admin-api/system/setting/public')
+
 // ---------------------- 部门 ----------------------
 export const getDeptTree = (params) => request.get('/admin-api/system/dept/tree', { params })
 export const getDeptOptions = () => request.get('/admin-api/system/dept/options')

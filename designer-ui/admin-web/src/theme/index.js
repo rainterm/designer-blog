@@ -10,7 +10,7 @@ import { lightTheme } from 'naive-ui'
 
 export const DEFAULT_PRIMARY = '#16A34A'
 
-/** 预设主题色（偏好设置外观面板） */
+/** 预设主题色（ThemeColorPicker 共享组件：偏好设置外观面板 + 系统设置默认主题色） */
 export const PRIMARY_PRESETS = [
   { label: '翠绿', value: '#16A34A' },
   { label: '天蓝', value: '#2563EB' },
