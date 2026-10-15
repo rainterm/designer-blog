@@ -29,10 +29,6 @@
         </nav>
 
         <form v-if="showSearch" class="search" @submit.prevent="emitSearch">
-          <svg class="search__icon" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" />
-            <path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
           <input
             v-model="keyword"
             class="search__input"
@@ -50,6 +46,13 @@
             @click="clearSearch"
           >
             ×
+          </button>
+          <!-- 提交按钮：移动端没有键盘「搜索」键的直观提示，点这里即可触发 -->
+          <button type="submit" class="search__submit" aria-label="搜索" title="搜索">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" />
+              <path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
           </button>
         </form>
       </div>
@@ -181,10 +184,10 @@ function clearSearch() {
 .search {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: min(260px, 48vw);
   height: 36px;
-  padding: 0 12px 0 14px;
+  padding: 0 5px 0 14px;
   border-radius: var(--radius);
   background: var(--color-body);
   border: 1px solid transparent;
@@ -197,15 +200,34 @@ function clearSearch() {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
-.search__icon {
-  width: 16px;
-  height: 16px;
+.search__submit {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
 }
 
-.search:focus-within .search__icon {
+.search__submit svg {
+  width: 16px;
+  height: 16px;
+}
+
+.search__submit:hover,
+.search:focus-within .search__submit {
   color: var(--color-primary);
+}
+
+.search__submit:hover {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .search__input {
@@ -272,6 +294,13 @@ function clearSearch() {
 
   .search {
     width: min(150px, 38vw);
+    padding-left: 12px;
+  }
+
+  /* 触屏上把点击区域放大到 ~30px，避免图标太小点不中 */
+  .search__submit {
+    width: 30px;
+    height: 30px;
   }
 }
 </style>
