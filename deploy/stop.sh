@@ -42,7 +42,7 @@ case "${TARGET}" in
     ;;
   app)
     compose_app "${DOWN_ARGS[@]}"
-    echo "[INFO] 已停止应用（Server / 前端 Nginx）"
+    echo "[INFO] 已停止应用（Server / 博客前台 Node / 前端 Nginx）"
     ;;
   minio)
     compose_minio "${DOWN_ARGS[@]}"

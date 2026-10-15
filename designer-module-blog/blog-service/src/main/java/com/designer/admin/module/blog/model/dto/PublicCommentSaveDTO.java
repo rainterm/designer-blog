@@ -15,11 +15,14 @@ public class PublicCommentSaveDTO {
 
     private String content;
 
-    /** 验证码标识（由 /comment/captcha 下发，一次性使用） */
-    private String captchaUuid;
-
-    /** 验证码答案 */
-    private String captchaCode;
+    /**
+     * 滑块验证码的二次校验凭据。
+     *
+     * <p>前端拖拽通过后调用 {@code POST /captcha/check} 得到，服务端再拿去复核一次
+     * （见 {@code com.designer.admin.framework.captcha.CaptchaVerifier}）。**一次性**：校验通过后服务端就把它作废，
+     * 所以同一个值不能重复提交。</p>
+     */
+    private String captchaVerification;
 
     /**
      * 评论人匿名标识（前端 localStorage 里的随机密钥）。

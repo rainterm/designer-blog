@@ -2,6 +2,7 @@ package com.designer.admin.module.blog.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.designer.admin.framework.client.IpRegionResolver;
+import com.designer.admin.framework.redis.RedisCounter;
 import com.designer.admin.module.blog.mapper.BlogPostMapper;
 import com.designer.admin.module.blog.mapper.BlogVisitMapper;
 import com.designer.admin.module.blog.model.dto.VisitReportDTO;
@@ -11,13 +12,12 @@ import com.designer.admin.module.blog.model.vo.VisitNameValueVO;
 import com.designer.admin.module.blog.model.vo.VisitOverviewVO;
 import com.designer.admin.module.blog.model.vo.VisitSummaryVO;
 import com.designer.admin.module.blog.model.vo.VisitTrendVO;
-import com.designer.admin.module.blog.util.ClientIpUtil;
+import com.designer.admin.framework.client.ClientIpUtil;
 import com.designer.admin.module.blog.util.HashUtil;
 import com.designer.admin.module.blog.util.RefererUtil;
 import com.designer.admin.module.blog.util.UserAgentUtil;
 import com.designer.admin.module.blog.util.VisitPathUtil;
 import org.apache.ibatis.solon.annotation.Db;
-import org.noear.redisx.RedisClient;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.core.handle.Context;
@@ -71,7 +71,9 @@ public class BlogVisitService {
     @Inject
     private IpRegionResolver ipRegionResolver;
     @Inject
-    private RedisClient redisClient;
+    private RedisCounter redisCounter;
+    @Inject
+    private BlogViewCounter viewCounter;
 
     /**
      * 记录一次访问。
@@ -122,13 +124,16 @@ public class BlogVisitService {
         String visitorKey = HashUtil.sha256Hex(ip + "|" + ua);
 
         // 去重先于配额：刷新 / 重复上报在这一步就被挡掉，不消耗配额
-        if (incrWithTtl(DEDUP_KEY + visitorKey + ":" + parsed.path(), DEDUP_TTL) > 1) {
+        if (redisCounter.incrWithTtl(DEDUP_KEY + visitorKey + ":" + parsed.path(), DEDUP_TTL) > 1) {
             return;
         }
-        if (incrWithTtl(QUOTA_KEY + ip, DAY_SECONDS) > DAILY_QUOTA) {
+        if (redisCounter.incrWithTtl(QUOTA_KEY + ip, DAY_SECONDS) > DAILY_QUOTA) {
             // 超配额静默丢弃：对访客毫无感知，也不会污染统计
             return;
         }
+
+        String device = UserAgentUtil.device(ua);
+        recordRead(postId, device);
 
         String refererHost = RefererUtil.host(ctx.header("Referer"), selfHost(ctx));
 
@@ -142,7 +147,7 @@ public class BlogVisitService {
         // 归属地在写入时解析并固化，与评论保持一致：日后换数据文件不影响历史
         entity.setIpLocation(ipRegionResolver.lookup(ip));
         entity.setVisitorKey(visitorKey);
-        entity.setDevice(UserAgentUtil.device(ua));
+        entity.setDevice(device);
         entity.setRefererHost(refererHost);
         entity.setRefererType(RefererUtil.type(refererHost));
         entity.setUa(ua);
@@ -249,14 +254,25 @@ public class BlogVisitService {
         return Math.min(days, MAX_DAYS);
     }
 
-    /** 计数 +1，首次写入时设置 TTL（滚动窗口），语义同评论防刷 */
-    private long incrWithTtl(String key, int ttlSeconds) {
-        return redisClient.open1(s -> {
-            long count = s.key(key).incr();
-            if (count == 1) {
-                s.key(key).expire(ttlSeconds);
-            }
-            return count;
-        });
+    /**
+     * 累加一篇文章的阅读数。
+     *
+     * <p>刻意挂在**浏览器侧**的埋点链路上，而不是文章详情接口：SSR 取数走内网，
+     * 后端看到的 IP 是 blog 容器、UA 是 Node 的 fetch —— 既无法按访客去重，
+     * 也认不出爬虫，爬虫抓一次阅读数就涨一次。放在这里，前面的 60 秒去重
+     * 与配额检查都是白拿的，且爬虫（不执行 JS）根本不会走到这一步。</p>
+     *
+     * <p>调用点在去重与配额**之后**，所以刷新页面不会重复计数。</p>
+     */
+    private void recordRead(Long postId, String device) {
+        if (postId == null || UserAgentUtil.BOT.equals(device)) {
+            return;
+        }
+        try {
+            viewCounter.record(postId);
+        } catch (Exception e) {
+            // 与埋点同策略：计数属于附加能力，失败不能影响访客请求
+            log.warn("[blog-visit] 阅读数累加失败 postId={}：{}", postId, e.getMessage());
+        }
     }
 }

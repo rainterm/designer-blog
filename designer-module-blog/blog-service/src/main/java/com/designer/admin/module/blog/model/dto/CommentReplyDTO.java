@@ -13,7 +13,4 @@ public class CommentReplyDTO {
 
     /** 回复内容 */
     private String content;
-
-    /** 回复人昵称；为空时使用默认的「博主」 */
-    private String nickname;
 }

@@ -113,6 +113,31 @@
             </div>
           </n-form-item>
 
+          <n-form-item label="站长署名">
+            <div class="owner-nickname-field">
+              <n-input v-model:value="form.ownerNickname" maxlength="50" placeholder="博主" />
+              <span class="switch-field__hint">
+                后台回复评论时的默认署名，并会<strong>自动</strong>加入下面的保留昵称，无需重复填写。
+                署名只影响文字展示，前台是否显示「博主」标识由服务端身份字段决定。
+              </span>
+            </div>
+          </n-form-item>
+
+          <n-form-item label="保留昵称">
+            <div class="owner-nickname-field">
+              <n-input
+                v-model:value="form.reservedNicknames"
+                maxlength="500"
+                placeholder="博主,站长,管理员,admin"
+              />
+              <span class="switch-field__hint">
+                逗号分隔（全角逗号、分号、换行也可以）。访客昵称只要<strong>包含</strong>其中任一词就会被拒绝，
+                能挡住「博主小号」「admin01」这类夹带式冒充；比较时忽略大小写与空格，全角/半角视为相同。
+                所以请填完整、有辨识度的词：填「站」会连「车站」都拦掉。留空表示不拦截任何词。
+              </span>
+            </div>
+          </n-form-item>
+
           <n-divider style="margin: 4px 0 20px">
             <span class="setting-divider-text">SEO 默认值（文章未单独设置时生效）</span>
           </n-divider>
@@ -176,7 +201,9 @@ const form = reactive({
   icpUrl: '',
   seoKeywords: '',
   seoDescription: '',
-  commentEnabled: 1
+  commentEnabled: 1,
+  ownerNickname: '博主',
+  reservedNicknames: '博主,站长,管理员,admin'
 })
 
 const formRules = {
@@ -199,6 +226,11 @@ async function loadSetting() {
     form.seoDescription = data.seoDescription || ''
     // 0 是合法值（关闭），故用 null 判断而非真值
     form.commentEnabled = data.commentEnabled != null ? data.commentEnabled : 1
+    form.ownerNickname = data.ownerNickname || '博主'
+    // 空串是合法值（表示不拦截任何词），所以只在字段缺失（null/undefined）时回默认
+    form.reservedNicknames = data.reservedNicknames != null
+      ? data.reservedNicknames
+      : '博主,站长,管理员,admin'
   } catch {
     // 拦截器已提示
   } finally {
@@ -349,5 +381,14 @@ onMounted(loadSetting)
   line-height: 1.6;
   color: var(--color-text-muted);
   padding-top: 3px;
+}
+
+/* 站长署名：输入框 + 说明纵向排列 */
+.owner-nickname-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 </style>

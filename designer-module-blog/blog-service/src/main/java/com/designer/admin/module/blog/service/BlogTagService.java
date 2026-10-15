@@ -3,6 +3,7 @@ package com.designer.admin.module.blog.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.module.blog.constant.BlogCacheTags;
 import com.designer.admin.module.blog.mapper.BlogPostTagMapper;
 import com.designer.admin.module.blog.mapper.BlogTagMapper;
 import com.designer.admin.module.blog.model.dto.TagQueryDTO;
@@ -11,6 +12,7 @@ import com.designer.admin.module.blog.model.entity.BlogTag;
 import com.designer.admin.module.blog.util.SlugUtil;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.data.annotation.CacheRemove;
 
 import java.util.List;
 
@@ -30,6 +32,7 @@ public class BlogTagService {
                 .orderByDesc(BlogTag::getId));
     }
 
+    /** 前台列表：仅启用（读缓存在 {@code BlogPublicController#tags}） */
     public List<BlogTag> listEnabled() {
         return tagMapper.selectList(new LambdaQueryWrapper<BlogTag>()
                 .eq(BlogTag::getStatus, 1)
@@ -50,6 +53,8 @@ public class BlogTagService {
                 .last("limit 1"));
     }
 
+    /** 新增：失效前台标签列表缓存 */
+    @CacheRemove(tags = BlogCacheTags.TAG)
     public void save(TagSaveDTO dto) {
         if (!notBlank(dto.getName())) {
             throw new BizException("标签名称不能为空");
@@ -64,6 +69,7 @@ public class BlogTagService {
         tagMapper.insert(entity);
     }
 
+    @CacheRemove(tags = BlogCacheTags.TAG)
     public void update(TagSaveDTO dto) {
         if (dto.getId() == null) {
             throw new BizException("标签ID不能为空");
@@ -79,6 +85,7 @@ public class BlogTagService {
         tagMapper.updateById(entity);
     }
 
+    @CacheRemove(tags = BlogCacheTags.TAG)
     public void remove(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;

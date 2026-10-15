@@ -12,6 +12,7 @@
   "dependencies": {
     "@vicons/ionicons5": "^0.13.0",
     "axios": "^1.20.0",
+    "crypto-js": "^4.2.0",
     "echarts": "^5.6.0",
     "md-editor-v3": "^7.0.0",
     "naive-ui": "^2.45.3",

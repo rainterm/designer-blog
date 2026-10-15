@@ -4,8 +4,9 @@
 [![JDK](https://img.shields.io/badge/JDK-25-orange.svg)](https://adoptium.net/temurin/releases/)
 [![Solon](https://img.shields.io/badge/Solon-4.1.0-16A34A.svg)](https://solon.noear.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-42b883.svg)](https://vuejs.org/)
+[![Nuxt](https://img.shields.io/badge/Nuxt-4-00DC82.svg)](https://nuxt.com/)
 
-一套**前后台分离**的个人博客系统：博客前台（Vue 3 + Vite）面向读者，管理后台复用
+一套**前后台分离**的个人博客系统：博客前台（Nuxt 4 SSR）面向读者与搜索引擎，管理后台复用
 **[Designer Admin](https://gitee.com/rainterm/designer-admin)** 脚手架（Solon + MyBatis-Plus + Vue 3 + Naive UI），
 博客业务以独立模块 `designer-module-blog` 接入，**不改动**脚手架既有能力（改动清单见[相对上游的改动](#相对上游的改动)）。
 
@@ -68,7 +69,7 @@
 ### 评论
 
 - **匿名评论**：读者无需注册；提交默认**待审**，后台审核通过才公开
-- **防刷**：图形验证码（一次性消费）+ 分 IP 频率限制（两次最小间隔 30 秒、24 小时最多 20 条、验证码每分钟最多拉取 20 次）
+- **防刷**：滑块验证码（AJ-Captcha，一次性凭据）+ 分 IP 频率限制（两次最小间隔 30 秒、24 小时最多 20 条），阈值用 `@RateLimit` 注解声明在方法上；验证码的拉取频控由 AJ-Captcha 自带限流 + nginx 承担（注解标不到第三方 controller 上）
 - **两级开关**：站点总开关（后台「站点设置」）与单篇开关（文章「允许评论」）为**与**关系，都开启才可评论；关闭后**已发布评论仍可读**
 - **回复层级压平为 2 层**：存储上 `parent_id` 记录真实回复对象（链可任意深），展示层统一上溯到顶级评论，最多两层，第二层标出「某某 回复 某某」
 - **我的评论**：读者凭浏览器本地密钥（请求头 `X-Commenter-Key`，服务端只存 SHA-256）查看自己的待审评论、并删除自己的评论
@@ -106,9 +107,9 @@
 | IP 归属地 | ip2region（离线 xdb） | 随包 |
 | 数据库 | MySQL | 8 |
 | 缓存/会话 | Redis | 7 |
-| 前台 / 后台框架 | Vue 3 | 3.5 |
+| 前台 / 后台框架 | Vue 3（前台 Nuxt 4 SSR） | 3.5 |
 | UI 组件库 | Naive UI | 2.45 |
-| 构建 | Vite | 8 |
+| 构建 | Vite（前台 Nitro） | 8 |
 | 状态管理 | Pinia | 4 |
 | Markdown 编辑器 | md-editor-v3 | 7 |
 | 图表 | ECharts（管理后台） | 5.6 |
@@ -135,7 +136,7 @@ designer-blog/
 │       └── ip2region.xdb           #   IP 归属地离线数据（约 11MB，随包）
 ├── designer-ui/                    # 前端工程
 │   ├── admin-web/                  # 管理后台（Vue3 + Naive UI + ECharts）
-│   ├── blog-web/                   # 博客前台（Vue3 + Vite）
+│   ├── blog-web/                   # 博客前台（Nuxt 4 SSR + Naive UI）
 │   └── sso-demo/                   # SSO 接入示例（Vue3 + Vite）
 ├── sql/
 │   └── init/mysql/                 # 按模块文件夹分类的初始化 SQL
@@ -200,13 +201,17 @@ cd designer-ui/admin-web
 pnpm install
 pnpm run dev
 
-# 博客前台 → http://localhost:5174
+# 博客前台（Nuxt SSR） → http://localhost:3000
 cd designer-ui/blog-web
 pnpm install
 pnpm run dev
 ```
 
-两个前端都把 `/admin-api`、`/app-api` 代理到 `http://localhost:8080`，无需额外配置跨域。
+管理后台把 `/admin-api`、`/app-api` 代理到 `http://localhost:8080`，无需额外配置跨域。
+
+博客前台不用代理：浏览器侧与后台一样走同源相对路径 `/app-api`（生产由 nginx 反代），
+而 **SSR 期间由 Node 直连后端**，地址读 `.env` 的 `NUXT_API_INTERNAL_BASE`（默认 `http://localhost:8080`）。
+这也是它必须用 `$fetch` 而不能用 axios 的原因 —— 服务端没有「页面来源」，相对路径无从解析。
 
 ### 默认账号
 
@@ -231,7 +236,7 @@ pnpm run dev
 
 博客功能建立在这些基础能力之上，全部来自 Designer Admin：
 
-- **认证与权限**：Sa-Token 登录鉴权（会话存 Redis，可集群共享）、验证码与登录失败锁定；用户 - 角色 - 菜单三级 RBAC，按钮即权限标识（如 `blog:comment:audit`）；动态路由按权限注册
+- **认证与权限**：Sa-Token 登录鉴权（会话存 Redis，可集群共享）、滑块验证码（失败达阈值才出现，与博客前台评论共用同一套实现）与登录失败锁定，`@RateLimit` 再按 IP 给登录接口兜一层频控（挡换用户名扫的撞库/爆破）；用户 - 角色 - 菜单三级 RBAC，按钮即权限标识（如 `blog:comment:audit`）；动态路由按权限注册
 - **组织与基础数据**：用户、部门树、岗位、角色授权、数据字典、系统参数
 - **文件与消息**：可插拔文件存储（本地 / S3 兼容，上传元数据落库）、站内信 SSE 通知
 - **日志与监控**：操作日志（`@OperLog` 异步落库）、登录日志、服务监控（CPU / 内存 / JVM / 磁盘）、首页仪表盘
@@ -242,7 +247,8 @@ pnpm run dev
 ## 生产环境部署（Docker）
 
 数据库与应用**分开**部署：本机用 JDK / Maven / Node 打包后，再打成运行镜像。
-前端由**同一个 Nginx 容器**按域名分流托管博客前台与管理后台。
+应用共三个容器（后端 Server、博客前台 Nuxt SSR 的 Node 服务、入口 Nginx），
+入口 Nginx 按域名分流：博客域名反代到 Node，后台域名发静态文件。
 
 ```bash
 cd deploy
@@ -250,15 +256,16 @@ cd deploy
 cp .env.example .env && vim .env
 ./deploy-db.sh            # 仅启动 MySQL + Redis（不自动建表）
 cd .. && bash sql/init/mysql/00-run-init.sh && cd deploy   # 手动初始化数据库表（首次/重置）
-./deploy-app.sh           # 父工程 Maven 打包 + 构建镜像 + 启动 Server / 前端 Nginx
+./deploy-app.sh           # 父工程 Maven 打包 + 构建镜像 + 启动 Server / 博客前台 / 入口 Nginx
 ```
 
 可选：`./deploy-minio.sh` 一键起本地 MinIO（S3 兼容存储，`9000` / `9001`）。
 
 浏览器访问（均走 80，需先把域名解析到服务器）：
 
-- 博客前台 `http://www.rainterm.cn`
+- 博客前台 `http://www.rainterm.cn`（Nuxt SSR，正文随首屏 HTML 返回）
 - 管理后台 `http://admin.rainterm.cn`
+- 收录入口 `http://www.rainterm.cn/sitemap.xml`
 
 域名与端口在 `deploy/nginx/default.conf`（`server_name`）与 `.env`（`WEB_PORT`）中配置，
 完整说明见 [deploy/README.md](deploy/README.md)。
@@ -268,8 +275,8 @@ cd .. && bash sql/init/mysql/00-run-init.sh && cd deploy   # 手动初始化数�
 | 文档 | 说明 |
 |---|---|
 | [designer-module-blog/README.md](designer-module-blog/README.md) | 博客后端：评论防刷与两级开关、回复压平、访问统计口径、IP 防伪造、已有库升级 SQL |
-| [designer-ui/blog-web/README.md](designer-ui/blog-web/README.md) | 博客前台：路由、评论交互、埋点、正文渲染与大纲 |
-| [deploy/README.md](deploy/README.md) | 生产环境 Docker 部署（域名分流、DNS、升级与 HTTPS 说明） |
+| [designer-ui/blog-web/README.md](designer-ui/blog-web/README.md) | 博客前台：SSR 取数约定、SEO/robots/sitemap、评论交互、埋点、正文渲染与大纲 |
+| [deploy/README.md](deploy/README.md) | 生产环境 Docker 部署（三容器架构、域名分流、DNS、升级与 HTTPS 说明） |
 | [docs/开发规范.md](docs/开发规范.md) | 前后端编码约定、模块依赖方向，以及**新增业务模块**的步骤 |
 | [docs/SSO.md](docs/SSO.md) | 单点登录接入流程与三步接入指引 |
 | [designer-module-system/README.md](designer-module-system/README.md) | 系统模块结构说明 |
@@ -294,9 +301,25 @@ cd .. && bash sql/init/mysql/00-run-init.sh && cd deploy   # 手动初始化数�
 统计接口只返回聚合结果，不对外输出原始 `ip` / `ua`；归属地离线解析、不请求第三方接口。
 建议按需调小保留期，或只保留 `ip_location` 而把 `ip` / `ua` 置空，见「隐私」一节。
 
+**Q：有人用脚本频繁刷页面怎么办？**
+匿名**写**接口（评论、访问埋点）在应用层用 Redis 计数限流；
+**读**路径（SSR 页面、公开接口、sitemap）在 **nginx 层**按 IP 限流并回 429，
+拦掉的请求不消耗 Node 与数据库连接——见 [deploy/README.md](deploy/README.md) 的「注意事项」第 11 条。
+之所以还要放在 nginx：SSR 每渲染一页仍要查文章、评论、分类、标签、站点设置，
+一次廉价 GET 依然比静态文件贵得多。限流之外还有缓存：SSR 页面在 nginx 层缓存 60 秒，
+**命中时完全不走 Node**（见 [deploy/README.md](deploy/README.md) 的「注意事项」第 9 条）。
+服务端侧另有几处削减：
+站点设置 / 分类 / 标签 / 外链这四个公开读接口有 1 小时缓存（Solon 声明式 `@Cache`）——
+这几张表几乎不变，而改动由 `@CacheRemove` 在后台写入时按 tag 失效、**立刻生效**，
+所以 TTL 只是兜底；
+列表页的标签查询与篇数无关，固定 2 条；阅读数走 Redis 累加 + 30 秒合并回写，
+读路径不产生任何数据库写 —— 细节见 [designer-module-blog/README.md](designer-module-blog/README.md) 的「阅读数」一节。
+⚠ 前面再加 CDN 时需用 `real_ip` 还原真实 IP，否则限流会按 CDN 节点统计并误伤全站。
+
 **Q：部署后限流好像误伤了所有用户？**
 多半是反向代理不在可信网段内。`designer.client-ip.trusted-proxies` 需覆盖你的代理地址，
 否则真实客户端 IP 会退化成代理地址——见「客户端 IP 防伪造」一节的部署注意事项。
+若加了 CDN，还要在 nginx 里配 `real_ip` / `set_real_ip_from`，两处指向同一个真实来源。
 
 ## Roadmap
 
@@ -325,7 +348,7 @@ cd .. && bash sql/init/mysql/00-run-init.sh && cd deploy   # 手动初始化数�
 | `designer-server/` | 依赖 `blog-service`；`app.yml` 补博客与日志配置；随包 `ip2region.xdb` |
 | `designer-ui/admin-web/` | 新增 `modules/blog` 页面，路由与依赖（ECharts、md-editor-v3）相应补充 |
 | `deploy/` | 前端改为单容器按域名分流，同容器托管两个站点 |
-| `designer-framework/` | 通用加固：`client/`（`TrustedProxyHostUtil` / `IpRange` / `IpRegionResolver`）+ `ClientIpConfig` 防 IP 伪造；`GlobalExceptionFilter` 不再把异常详情回传调用方 |
+| `designer-framework/` | 通用加固：`client/`（`TrustedProxyHostUtil` / `IpRange` / `IpRegionResolver` / `ClientIpUtil`）防 IP 伪造；`ratelimit/` 注解式限流组件 `@RateLimit`；`redis/RedisCounter` 原子固定窗口计数；`GlobalExceptionFilter` 不再把异常详情回传调用方 |
 | `designer-common/`、`designer-module-system/`、`designer-module-demo/` | **未改动** |
 
 ## 贡献与反馈

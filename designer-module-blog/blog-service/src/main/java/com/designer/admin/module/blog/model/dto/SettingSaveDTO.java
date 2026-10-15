@@ -14,4 +14,10 @@ public class SettingSaveDTO {
     private String seoKeywords;
     private String seoDescription;
     private Integer commentEnabled;
+
+    /** 站长评论署名（默认「博主」）：后台回复的默认署名，并自动加入保留昵称 */
+    private String ownerNickname;
+
+    /** 保留昵称名单（逗号分隔）：访客昵称包含其中任一词即拒绝 */
+    private String reservedNicknames;
 }

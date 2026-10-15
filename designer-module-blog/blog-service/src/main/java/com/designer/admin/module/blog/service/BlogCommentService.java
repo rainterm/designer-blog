@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.common.core.PageQuery;
 import com.designer.admin.common.core.PageResult;
+import com.designer.admin.framework.captcha.CaptchaVerifier;
+import com.designer.admin.framework.client.ClientIpUtil;
 import com.designer.admin.framework.client.IpRegionResolver;
 import com.designer.admin.module.blog.mapper.BlogCommentMapper;
 import com.designer.admin.module.blog.mapper.BlogPostMapper;
@@ -14,10 +16,10 @@ import com.designer.admin.module.blog.model.dto.CommentReplyDTO;
 import com.designer.admin.module.blog.model.dto.PublicCommentSaveDTO;
 import com.designer.admin.module.blog.model.entity.BlogComment;
 import com.designer.admin.module.blog.model.entity.BlogPost;
-import com.designer.admin.module.blog.model.vo.CommentCaptchaVO;
 import com.designer.admin.module.blog.model.vo.MyCommentVO;
 import com.designer.admin.module.blog.model.vo.PublicCommentVO;
 import com.designer.admin.module.blog.util.CommenterKeyUtil;
+import com.designer.admin.module.blog.util.NicknameUtil;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
@@ -43,15 +45,17 @@ public class BlogCommentService {
     private static final int MAX_CONTENT_LENGTH = 2000;
     /** 昵称长度上限，与 blog_comment.nickname 列宽一致（VARCHAR(50)） */
     private static final int MAX_NICKNAME_LENGTH = 50;
-    /** 管理员回复未指定昵称时的默认署名 */
-    private static final String OWNER_NICKNAME = "博主";
+    /** 作者类型：访客 */
+    private static final int AUTHOR_TYPE_VISITOR = 0;
+    /** 作者类型：博主 */
+    private static final int AUTHOR_TYPE_OWNER = 1;
 
     @Db
     private BlogCommentMapper commentMapper;
     @Db
     private BlogPostMapper postMapper;
     @Inject
-    private BlogCommentGuard commentGuard;
+    private CaptchaVerifier captchaVerifier;
     @Inject
     private BlogSettingService settingService;
     @Inject
@@ -135,7 +139,14 @@ public class BlogCommentService {
         BlogComment reply = new BlogComment();
         reply.setPostId(parent.getPostId());
         reply.setParentId(parent.getId());
-        reply.setNickname(notBlank(dto.getNickname()) ? dto.getNickname().trim() : OWNER_NICKNAME);
+        /*
+         * 署名固定取站点配置的站长署名，不接受调用方自定义：
+         * 回复入口再给一个昵称输入框，就会出现「后台回复」署名各自不同的情况，
+         * 与 author_type=1 这个统一身份标记相矛盾，也容易和访客昵称混淆。
+         * 要改署名请去「站点设置 → 站长署名」，所有回复一起生效。
+         */
+        reply.setNickname(settingService.getOwnerNickname());
+        reply.setAuthorType(AUTHOR_TYPE_OWNER);
         reply.setEmail("");
         reply.setContent(content);
         reply.setIp("");
@@ -144,11 +155,6 @@ public class BlogCommentService {
         reply.setCommenterKey("");
         reply.setStatus(1);
         commentMapper.insert(reply);
-    }
-
-    /** 生成评论验证码（防刷前置，见 {@link BlogCommentGuard}） */
-    public CommentCaptchaVO createCaptcha() {
-        return commentGuard.createCaptcha();
     }
 
     /**
@@ -174,6 +180,7 @@ public class BlogCommentService {
             vo.setId(c.getId());
             vo.setParentId(c.getParentId());
             vo.setNickname(c.getNickname());
+            vo.setAuthorType(c.getAuthorType() == null ? AUTHOR_TYPE_VISITOR : c.getAuthorType());
             vo.setContent(c.getContent());
             vo.setIpLocation(c.getIpLocation());
             vo.setCreateTime(c.getCreateTime());
@@ -267,23 +274,37 @@ public class BlogCommentService {
         if (dto.getPostId() == null) {
             throw new BizException("文章ID不能为空");
         }
-        if (!notBlank(dto.getNickname())) {
+        // 先清洗再校验：全角空格 / 零宽字符 / 首尾空白都不该让「博主」蒙混过关
+        String nickname = NicknameUtil.sanitize(dto.getNickname());
+        if (nickname.isEmpty()) {
             throw new BizException("昵称不能为空");
         }
         if (!notBlank(dto.getContent())) {
             throw new BizException("评论内容不能为空");
         }
-        if (dto.getNickname().trim().length() > MAX_NICKNAME_LENGTH) {
+        if (nickname.length() > MAX_NICKNAME_LENGTH) {
             throw new BizException("昵称过长");
         }
         if (dto.getContent().trim().length() > MAX_CONTENT_LENGTH) {
             throw new BizException("评论内容过长");
         }
+        // 保留昵称拦截：**包含**即拒绝（后台可配 + 站长署名自动加入）。
+        // 用包含而非相等，是为了挡住「博主小号」「我是站长」「admin01」这类夹带式冒充；
+        // 真正的身份鉴别靠 author_type，这里只减少视觉混淆。
+        String reservedHit = NicknameUtil.firstMatch(nickname, settingService.getReservedNicknames());
+        if (reservedHit != null) {
+            throw new BizException("昵称不能包含保留词「" + reservedHit + "」");
+        }
         String email = normalizeEmail(dto.getEmail());
         // 全局总开关优先于验证码：站点关闭时立刻拒绝，避免白白消费掉一张验证码
         assertCommentEnabled();
-        // 防刷准入：验证码 + 频率限制（通过后返回归一化 IP，供落库）
-        String ip = commentGuard.assertCanSubmit(dto.getCaptchaUuid(), dto.getCaptchaCode());
+        // 防刷准入：滑块验证码的二次校验，凭据一次性消费（见 CaptchaVerifier）。
+        // 频率限制不在这里 —— 它在控制层的 @RateLimit 上，先于本方法执行
+        // （见 BlogPublicController#submitComment）。
+        captchaVerifier.assertVerified(dto.getCaptchaVerification());
+        // 落库用的归一化 IP：与限流键同源（都用 ClientIpUtil），
+        // 避免同一次请求在评论表和限流桶里被算成两个不同的 IP
+        String ip = ClientIpUtil.current();
         BlogPost post = postMapper.selectById(dto.getPostId());
         if (post == null || !Objects.equals(post.getStatus(), 1)) {
             throw new BizException("文章不存在或未发布");
@@ -302,7 +323,9 @@ public class BlogCommentService {
         BlogComment comment = new BlogComment();
         comment.setPostId(dto.getPostId());
         comment.setParentId(parentId);
-        comment.setNickname(dto.getNickname().trim());
+        comment.setNickname(nickname);
+        // 访客身份一律强制为 0：不取前端传值，author_type 只由服务端决定
+        comment.setAuthorType(AUTHOR_TYPE_VISITOR);
         comment.setEmail(email);
         comment.setContent(dto.getContent().trim());
         comment.setIp(ip);
@@ -362,7 +385,7 @@ public class BlogCommentService {
      * 分页版评论树：以**顶级评论**为单位分页，每条顶级评论带上它已通过的全部回复。
      *
      * <p>树形结构没法直接交给 SQL 分页，所以先在内存里按顶级整理，再切页。
-     * 这样返回体大小随页大小收敛（原先一次性返回全部评论，单篇被刷爆后响应体会非常大），
+     * 这样返回体大小随页大小收敛（一次性返回全部评论时，单篇被刷爆后响应体会非常大），
      * 同时保留原有语义：父评论未通过时子评论提升为顶级，避免漏展示。</p>
      */
     public PageResult<PublicCommentVO> listApprovedPage(Long postId, PageQuery query) {

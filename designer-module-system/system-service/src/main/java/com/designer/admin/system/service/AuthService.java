@@ -6,6 +6,7 @@ import cn.dev33.satoken.stp.parameter.SaLoginParameter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.designer.admin.common.constant.SystemConstants;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.captcha.CaptchaVerifier;
 import com.designer.admin.framework.satoken.LoginHelper;
 import com.designer.admin.framework.satoken.LoginUser;
 import com.designer.admin.system.model.dto.LoginDTO;
@@ -43,20 +44,26 @@ public class AuthService {
     @Inject
     private SysLoginLogService loginLogService;
     @Inject
-    private CaptchaService captchaService;
+    private CaptchaVerifier captchaVerifier;
+    @Inject
+    private LoginAttemptService loginAttemptService;
     @Inject
     private SysConfigService configService;
 
     /**
-     * 账号密码登录：验证码校验、失败锁定、BCrypt 校验、记录登录日志、写入 Sa-Token session。
+     * 账号密码登录：人机验证、失败锁定、BCrypt 校验、记录登录日志、写入 Sa-Token session。
      */
     public LoginVO login(LoginDTO dto, Context ctx) {
         String ip = ctx == null ? "" : ctx.realIp();
         String userAgent = ctx == null ? null : ctx.userAgent();
         String username = dto.getUsername();
 
-        captchaService.validateCaptcha(username, dto.getUuid(), dto.getCaptcha());
-        captchaService.assertNotLocked(username);
+        // 先问「要不要验」，再决定是否消费凭据：凭据一次性，
+        // 对不需要验证的账号调校验会把它白白用掉（见 LoginAttemptService 的类注释）
+        if (loginAttemptService.needCaptcha(username)) {
+            captchaVerifier.assertVerified(dto.getCaptchaVerification());
+        }
+        loginAttemptService.assertNotLocked(username);
 
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username));
@@ -64,7 +71,7 @@ public class AuthService {
         if (user == null || !BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
             recordLoginLog(username, ip, userAgent, 0, "账号或密码错误");
             try {
-                captchaService.recordLoginFail(username);
+                loginAttemptService.recordLoginFail(username);
             } catch (BizException lockEx) {
                 recordLoginLog(username, ip, userAgent, 0, lockEx.getMessage());
                 throw lockEx;
@@ -76,7 +83,7 @@ public class AuthService {
             throw new BizException("账号已停用，请联系管理员");
         }
 
-        captchaService.clearLoginFail(username);
+        loginAttemptService.clearLoginFail(username);
         long tokenTimeout = configService.getTokenTimeoutSeconds();
         long activeTimeout = configService.getTokenActiveTimeoutSeconds();
         SaLoginParameter loginParam = new SaLoginParameter().setTimeout(tokenTimeout);
@@ -134,8 +141,16 @@ public class AuthService {
         return vo;
     }
 
+    /**
+     * 登录前询问该账号是否需要人机验证。
+     *
+     * <p>验证码本身由 AJ-Captcha 的 {@code /captcha/get} 下发（与博客前台评论共用同一套端点），
+     * 这里只回答「要不要」，前端据此决定是否展示滑块。</p>
+     */
     public CaptchaVO captcha(String username) {
-        return captchaService.createCaptcha(username);
+        CaptchaVO vo = new CaptchaVO();
+        vo.setEnabled(loginAttemptService.needCaptcha(username));
+        return vo;
     }
 
     public void logout() {

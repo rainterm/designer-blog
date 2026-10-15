@@ -47,8 +47,9 @@
         label-placement="left"
         label-width="80"
       >
-        <n-form-item label="署名" path="nickname">
-          <n-input v-model:value="replyForm.nickname" placeholder="留空则署名「博主」" maxlength="50" />
+        <!-- 署名不在这里填：统一用「站点设置 → 站长署名」，避免同一个人出现多个署名 -->
+        <n-form-item label="署名">
+          <span class="reply-owner">{{ ownerNickname }}</span>
         </n-form-item>
         <n-form-item label="回复内容" path="content">
           <n-input
@@ -104,6 +105,9 @@ const commentEnabled = ref(1)
 const replyDisabled = computed(() => commentEnabled.value !== 1)
 const replyTip = computed(() => (replyDisabled.value ? '站点已关闭评论功能' : '回复'))
 
+/** 站长署名（站点设置）：回复固定用它，弹窗里只做展示，不给编辑入口 */
+const ownerNickname = ref('博主')
+
 const {
   visible: replyVisible,
   submitting: replySubmitting,
@@ -112,13 +116,10 @@ const {
   openCreate: openReplyDialog,
   submit: submitReply
 } = useFormDialog({
-  defaults: { id: null, nickname: '', content: '' },
+  defaults: { id: null, content: '' },
   async onSubmit(payload) {
-    await replyComment({
-      id: payload.id,
-      content: payload.content,
-      nickname: payload.nickname
-    })
+    // 不带署名：服务端统一取「站点设置 → 站长署名」
+    await replyComment({ id: payload.id, content: payload.content })
     message.success('回复成功')
     loadData()
   }
@@ -236,11 +237,12 @@ async function handleDelete(row) {
   loadData()
 }
 
-/** 拉取站点评论总开关；失败时按「开启」处理，不阻塞列表（后端仍会兜底校验） */
+/** 拉取站点评论总开关与站长署名；失败时按默认处理，不阻塞列表（后端仍会兜底校验） */
 async function loadCommentSwitch() {
   try {
     const res = await getSetting()
     commentEnabled.value = res.data?.commentEnabled != null ? res.data.commentEnabled : 1
+    ownerNickname.value = res.data?.ownerNickname || '博主'
   } catch {
     commentEnabled.value = 1
   }
@@ -277,5 +279,10 @@ onMounted(loadCommentSwitch)
   word-break: break-word;
   max-height: 120px;
   overflow: auto;
+}
+
+/* 署名只读展示：不可编辑，视觉上区别于输入框 */
+.reply-owner {
+  color: var(--color-text-2, #666);
 }
 </style>

@@ -9,6 +9,8 @@ export const CODE = {
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
+  // 429：被限流（应用层 @RateLimit 或 nginx limit_req，两层语义一致）
+  TOO_MANY_REQUESTS: 429,
   ERROR: 500
 }
 

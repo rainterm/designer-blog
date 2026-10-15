@@ -4,19 +4,23 @@ import cn.dev33.satoken.annotation.SaIgnore;
 import com.designer.admin.common.core.PageQuery;
 import com.designer.admin.common.core.PageResult;
 import com.designer.admin.common.core.R;
+import com.designer.admin.common.core.ResultCode;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.ratelimit.RateLimit;
+import com.designer.admin.framework.ratelimit.RateLimitDimension;
+import com.designer.admin.module.blog.constant.BlogCacheTags;
 import com.designer.admin.module.blog.model.dto.PostQueryDTO;
 import com.designer.admin.module.blog.model.dto.PublicCommentSaveDTO;
 import com.designer.admin.module.blog.model.dto.VisitReportDTO;
 import com.designer.admin.module.blog.model.entity.BlogCategory;
 import com.designer.admin.module.blog.model.entity.BlogLink;
 import com.designer.admin.module.blog.model.entity.BlogTag;
-import com.designer.admin.module.blog.model.vo.CommentCaptchaVO;
 import com.designer.admin.module.blog.model.vo.MyCommentVO;
 import com.designer.admin.module.blog.model.vo.PublicCommentVO;
 import com.designer.admin.module.blog.model.vo.PublicPostVO;
 import com.designer.admin.module.blog.model.vo.PublicSiteVO;
-import com.designer.admin.module.blog.service.BlogCategoryService;import com.designer.admin.module.blog.service.BlogCommentService;
+import com.designer.admin.module.blog.service.BlogCategoryService;
+import com.designer.admin.module.blog.service.BlogCommentService;
 import com.designer.admin.module.blog.service.BlogLinkService;
 import com.designer.admin.module.blog.service.BlogPostService;
 import com.designer.admin.module.blog.service.BlogSettingService;
@@ -30,6 +34,7 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.core.handle.Context;
+import org.noear.solon.data.annotation.Cache;
 import org.noear.solon.validation.annotation.Valid;
 
 import java.util.List;
@@ -46,6 +51,11 @@ public class BlogPublicController {
     /** 评论人匿名标识的请求头名（与前端 blog-web 保持一致） */
     private static final String COMMENTER_KEY_HEADER = "X-Commenter-Key";
 
+    /**
+     * 公开读缓存的兜底存活时间（秒）：1 小时。
+     */
+    private static final int CACHE_SECONDS = 3600;
+
     @Inject
     private BlogPostService postService;
     @Inject
@@ -61,9 +71,9 @@ public class BlogPublicController {
     @Inject
     private BlogVisitService visitService;
 
-    /** 站点设置（站点名 / Logo / 版权 / 备案号） */
     @Get
     @Mapping("/site")
+    @Cache(tags = BlogCacheTags.SITE, seconds = CACHE_SECONDS)
     public R<PublicSiteVO> site() {
         return R.ok(settingService.getPublic());
     }
@@ -74,14 +84,14 @@ public class BlogPublicController {
         if (categorySlug != null && !categorySlug.isBlank()) {
             BlogCategory cat = categoryService.getBySlug(categorySlug);
             if (cat == null || cat.getStatus() == null || cat.getStatus() != 1) {
-                throw new BizException("分类不存在");
+                throw new BizException(ResultCode.NOT_FOUND, "分类不存在");
             }
             query.setCategoryId(cat.getId());
         }
         if (tagSlug != null && !tagSlug.isBlank()) {
             BlogTag tag = tagService.getBySlug(tagSlug);
             if (tag == null || tag.getStatus() == null || tag.getStatus() != 1) {
-                throw new BizException("标签不存在");
+                throw new BizException(ResultCode.NOT_FOUND, "标签不存在");
             }
             query.setTagId(tag.getId());
         }
@@ -96,18 +106,21 @@ public class BlogPublicController {
 
     @Get
     @Mapping("/categories")
+    @Cache(tags = BlogCacheTags.CATEGORY, seconds = CACHE_SECONDS)
     public R<List<BlogCategory>> categories() {
         return R.ok(categoryService.listEnabled());
     }
 
     @Get
     @Mapping("/tags")
+    @Cache(tags = BlogCacheTags.TAG, seconds = CACHE_SECONDS)
     public R<List<BlogTag>> tags() {
         return R.ok(tagService.listEnabled());
     }
 
     @Get
     @Mapping("/links")
+    @Cache(tags = BlogCacheTags.LINK, seconds = CACHE_SECONDS)
     public R<List<BlogLink>> links() {
         return R.ok(linkService.listEnabled());
     }
@@ -117,13 +130,6 @@ public class BlogPublicController {
     @Mapping("/posts/{id}/comments")
     public R<PageResult<PublicCommentVO>> comments(Long id, PageQuery query) {
         return R.ok(commentService.listApprovedPage(id, query));
-    }
-
-    /** 评论验证码（匿名接口的防刷前置） */
-    @Get
-    @Mapping("/comment/captcha")
-    public R<CommentCaptchaVO> commentCaptcha() {
-        return R.ok(commentService.createCaptcha());
     }
 
     /**
@@ -146,8 +152,24 @@ public class BlogPublicController {
         return R.ok();
     }
 
+    /**
+     * 提交评论（匿名）。
+     *
+     * <p>两条规则共用一个 {@code name}、按声明顺序校验：间隔在前，
+     * 被间隔挡下的突发请求就不会白吃掉日配额。</p>
+     *
+     * <p>限流先于方法体执行，所以它挡在验证码校验之前：连验证码都没填的垃圾请求
+     * 同样会被限速。代价是**填错验证码也占一次额度**（本接口的 DTO 没写校验约束，
+     * 因此不会先被参数校验拦下）。这是「把限流放在 API 边界」的必然结果，
+     * 也正是它比放在 service 里更严的地方。</p>
+     */
     @Post
     @Mapping("/comments")
+    @RateLimit(name = "blog:comment-submit", dimension = RateLimitDimension.IP, rules = {
+            @RateLimit.Rule(count = 1, window = 30, message = "评论太频繁了，请 {} 秒后再试"),
+            @RateLimit.Rule(count = 20, window = 24 * 60 * 60,
+                    message = "24 小时内评论条数已达上限，请稍后再试")
+    })
     public R<Void> submitComment(@Body PublicCommentSaveDTO dto) {
         commentService.submitPublic(dto);
         return R.ok();

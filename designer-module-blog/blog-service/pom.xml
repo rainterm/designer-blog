@@ -23,6 +23,9 @@
             <groupId>com.designer</groupId>
             <artifactId>designer-framework</artifactId>
         </dependency>
+        <!-- 图形验证码不在这里声明：captcha-solon-plugin 及配套的
+             RedisCaptchaCacheService / CaptchaVerifier 都随 designer-framework 引入，
+             后台登录与前台评论共用同一份实现（见 framework 的 captcha 包）。 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

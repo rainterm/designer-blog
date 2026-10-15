@@ -3,6 +3,7 @@ package com.designer.admin.module.blog.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.module.blog.constant.BlogCacheTags;
 import com.designer.admin.module.blog.mapper.BlogCategoryMapper;
 import com.designer.admin.module.blog.mapper.BlogPostMapper;
 import com.designer.admin.module.blog.model.dto.CategoryQueryDTO;
@@ -12,6 +13,7 @@ import com.designer.admin.module.blog.model.entity.BlogPost;
 import com.designer.admin.module.blog.util.SlugUtil;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.data.annotation.CacheRemove;
 
 import java.util.List;
 
@@ -32,6 +34,7 @@ public class BlogCategoryService {
                 .orderByAsc(BlogCategory::getId));
     }
 
+    /** 前台列表：仅启用，按排序升序（读缓存在 {@code BlogPublicController#categories}） */
     public List<BlogCategory> listEnabled() {
         return categoryMapper.selectList(new LambdaQueryWrapper<BlogCategory>()
                 .eq(BlogCategory::getStatus, 1)
@@ -53,6 +56,8 @@ public class BlogCategoryService {
                 .last("limit 1"));
     }
 
+    /** 新增：失效前台分类列表缓存 */
+    @CacheRemove(tags = BlogCacheTags.CATEGORY)
     public void save(CategorySaveDTO dto) {
         if (!notBlank(dto.getName())) {
             throw new BizException("分类名称不能为空");
@@ -72,6 +77,7 @@ public class BlogCategoryService {
         categoryMapper.insert(entity);
     }
 
+    @CacheRemove(tags = BlogCacheTags.CATEGORY)
     public void update(CategorySaveDTO dto) {
         if (dto.getId() == null) {
             throw new BizException("分类ID不能为空");
@@ -86,6 +92,7 @@ public class BlogCategoryService {
         categoryMapper.updateById(entity);
     }
 
+    @CacheRemove(tags = BlogCacheTags.CATEGORY)
     public void remove(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;

@@ -1,0 +1,38 @@
+/*
+ * 由 scripts/syncThemeTokens.js 依据 app/config/theme.js 生成，请勿手改。
+ * 改配色请改 theme.js，然后重新执行 dev / build（dev 下保存即自动重建）。
+ */
+:root {
+  --color-primary: #16A34A;
+  --color-primary-hover: #22C55E;
+  --color-primary-pressed: #15803D;
+  --color-primary-suppl: #22C55E;
+  --color-primary-light: #86EFAC;
+  --color-primary-soft: rgba(22, 163, 74, 0.12);
+  --color-accent: #22C55E;
+  --color-body: #F2F5F3;
+  --color-surface: #FFFFFF;
+  --color-border: #E2E8E4;
+  --color-border-strong: #D1D9D4;
+  --color-text: #161A17;
+  --color-text-secondary: #55605A;
+  --color-text-muted: #87918B;
+  --color-success: #16A34A;
+  --color-code-bg: #1A2421;
+  --color-quote-bg: rgba(22, 163, 74, 0.08);
+  --color-quote-text: #15803D;
+  --gradient-brand: linear-gradient(135deg, #16A34A, #86EFAC);
+  --radius: 6px;
+  --radius-sm: 6px;
+  --radius-md: 6px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-full: 999px;
+  --layout-max-width: 920px;
+  --layout-article-max-width: 920px;
+  --layout-nav-height: 64px;
+  --layout-page-padding: 24px;
+  --font-sans: 'Manrope', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Manrope', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+}

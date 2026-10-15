@@ -93,36 +93,37 @@ INSERT INTO `blog_post_tag` (`post_id`, `tag_id`) VALUES
 -- 时间用 DATE_SUB(NOW(), ...) 相对生成，所以无论何时初始化，看起来都是「最近几天」的评论。
 -- ID 从 101 起是为了与真实评论区分开：不需要时一条语句即可清空。
 --   DELETE FROM `blog_comment` WHERE `id` BETWEEN 101 AND 110;
+-- author_type：0 访客，1 博主。管理员回复（空 ip）标 1，署名统一取「站点设置 → 站长署名」。
 INSERT INTO `blog_comment`
-(`id`, `post_id`, `parent_id`, `nickname`, `email`, `content`, `ip`, `ip_location`, `commenter_key`, `status`, `create_by`, `create_time`, `update_by`, `update_time`)
+(`id`, `post_id`, `parent_id`, `nickname`, `author_type`, `email`, `content`, `ip`, `ip_location`, `commenter_key`, `status`, `create_by`, `create_time`, `update_by`, `update_time`)
 VALUES
 -- ---------- 文章 2《Markdown 写作指南》：一条「回复的回复」深链（显示时压平为 2 层） ----------
-(101, 2, 0,   '张三', 'zhangsan@example.com', '代码块的写法很清晰，收藏了。',                   '114.114.114.114', '江苏', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 3 DAY), 'system', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(102, 2, 101, '李四', '',                     '同感，另外想问下支持表格吗？',                   '202.96.128.86',   '广东', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 2 DAY), 'system', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(101, 2, 0,   '张三', 0, 'zhangsan@example.com', '代码块的写法很清晰，收藏了。',                   '114.114.114.114', '江苏', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 3 DAY), 'system', DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(102, 2, 101, '李四', 0, '',                     '同感，另外想问下支持表格吗？',                   '202.96.128.86',   '广东', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 2 DAY), 'system', DATE_SUB(NOW(), INTERVAL 2 DAY)),
 -- 管理员回复（回复 #102 这条第 2 层回复，显示时仍在第 2 层）
-(103, 2, 102, '博主', '',                     '支持的，标准 Markdown 表格语法即可，后面我会补一篇详细说明。', '', '', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 2 DAY), 'system', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(103, 2, 102, '博主', 1, '',                     '支持的，标准 Markdown 表格语法即可，后面我会补一篇详细说明。', '', '', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 2 DAY), 'system', DATE_SUB(NOW(), INTERVAL 2 DAY)),
 -- 同一顶级下的另一条管理员回复（第 2 层）
-(107, 2, 101, '博主', '',                     '谢谢！后面还会写一篇代码块高亮的配置说明。',       '', '', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 1 DAY), 'system', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(107, 2, 101, '博主', 1, '',                     '谢谢！后面还会写一篇代码块高亮的配置说明。',       '', '', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 1 DAY), 'system', DATE_SUB(NOW(), INTERVAL 1 DAY)),
 -- 在第 2 层继续回复（parentId 指向 103 这条回复）：显示时仍压平在第 2 层，标题为「王五 回复 博主」
-(110, 2, 103, '王五', '',                     '等这篇！高亮主题能自定义吗？',                   '223.5.5.5',       '浙江', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 6 HOUR), 'system', DATE_SUB(NOW(), INTERVAL 6 HOUR)),
+(110, 2, 103, '王五', 0, '',                     '等这篇！高亮主题能自定义吗？',                   '223.5.5.5',       '浙江', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 6 HOUR), 'system', DATE_SUB(NOW(), INTERVAL 6 HOUR)),
 
 -- ---------- 文章 2：一条待审评论（用于测试审核通过 / 拒绝） ----------
-(104, 2, 0,   '王五', '',                     '标题层级那部分能再展开讲讲吗？',                 '223.5.5.5',       '浙江', '', 0, 'system', DATE_SUB(NOW(), INTERVAL 5 HOUR), 'system', DATE_SUB(NOW(), INTERVAL 5 HOUR)),
+(104, 2, 0,   '王五', 0, '',                     '标题层级那部分能再展开讲讲吗？',                 '223.5.5.5',       '浙江', '', 0, 'system', DATE_SUB(NOW(), INTERVAL 5 HOUR), 'system', DATE_SUB(NOW(), INTERVAL 5 HOUR)),
 
 -- ---------- 文章 1《欢迎使用博客系统》 ----------
-(105, 1, 0,   '小明', 'xiaoming@example.com', '博客做得不错，界面很干净！',                     '1.2.4.8',         '北京', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 1 DAY), 'system', DATE_SUB(NOW(), INTERVAL 1 DAY)),
--- 管理员回复，自定义署名
-(108, 1, 105, '站长', '',                     '谢谢支持！有问题随时留言。',                     '', '', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 20 HOUR), 'system', DATE_SUB(NOW(), INTERVAL 20 HOUR)),
-(109, 1, 108, '博主', '',                     'RSS 订阅在规划中了，预计下周上线。',              '', '', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 19 HOUR), 'system', DATE_SUB(NOW(), INTERVAL 19 HOUR)),
+(105, 1, 0,   '小明', 0, 'xiaoming@example.com', '博客做得不错，界面很干净！',                     '1.2.4.8',         '北京', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 1 DAY), 'system', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+-- 管理员回复（署名统一取站点设置，这里与默认的「博主」一致）
+(108, 1, 105, '博主', 1, '',                     '谢谢支持！有问题随时留言。',                     '', '', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 20 HOUR), 'system', DATE_SUB(NOW(), INTERVAL 20 HOUR)),
+(109, 1, 108, '博主', 1, '',                     'RSS 订阅在规划中了，预计下周上线。',              '', '', '', 1, 'system', DATE_SUB(NOW(), INTERVAL 19 HOUR), 'system', DATE_SUB(NOW(), INTERVAL 19 HOUR)),
 
 -- ---------- 文章 1：一条待审评论 ----------
-(106, 1, 0,   '路人甲', '',                   '第一次来，请问有没有 RSS 订阅？',                '101.226.4.6',     '上海', '', 0, 'system', DATE_SUB(NOW(), INTERVAL 20 MINUTE), 'system', DATE_SUB(NOW(), INTERVAL 20 MINUTE));
+(106, 1, 0,   '路人甲', 0, '',                   '第一次来，请问有没有 RSS 订阅？',                '101.226.4.6',     '上海', '', 0, 'system', DATE_SUB(NOW(), INTERVAL 20 MINUTE), 'system', DATE_SUB(NOW(), INTERVAL 20 MINUTE));
 
 INSERT INTO `blog_link` (`id`, `name`, `url`, `icon`, `sort`, `status`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
 (1, 'GitHub', 'https://github.com/rainterm', 'github', 1, 1, '代码托管', 'system', NOW(), 'system', NOW()),
 (2, 'Gitee',  'https://gitee.com/rainterm',  'gitee',  2, 1, '代码托管', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 站点设置（单行，id=1）-------------------------
-INSERT INTO `blog_setting` (`id`, `site_name`, `site_subtitle`, `logo_url`, `logo_radius`, `copyright`, `icp`, `icp_url`, `seo_keywords`, `seo_description`, `comment_enabled`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
-(1, 'Designer Blog', '记录技术与生活', '', 6, '© 2026 Designer. All rights reserved.', '粤ICP备XXXXXX号', 'https://beian.miit.gov.cn/', 'Designer,个人博客,技术与生活', 'Designer 的个人博客，分享技术与生活。', 1, 'system', NOW(), 'system', NOW());
+INSERT INTO `blog_setting` (`id`, `site_name`, `site_subtitle`, `logo_url`, `logo_radius`, `copyright`, `icp`, `icp_url`, `seo_keywords`, `seo_description`, `comment_enabled`, `owner_nickname`, `reserved_nicknames`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+(1, 'Designer Blog', '记录技术与生活', '', 6, '© 2026 Designer. All rights reserved.', '粤ICP备XXXXXX号', 'https://beian.miit.gov.cn/', 'Designer,个人博客,技术与生活', 'Designer 的个人博客，分享技术与生活。', 1, '博主', '博主,站长,管理员,admin', 'system', NOW(), 'system', NOW());
 

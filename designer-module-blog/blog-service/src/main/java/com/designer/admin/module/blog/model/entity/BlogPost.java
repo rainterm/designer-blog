@@ -68,6 +68,16 @@ public class BlogPost extends BaseEntity {
     @TableField(exist = false)
     private String categoryName;
 
+    /**
+     * 分类 slug（非库字段）。
+     *
+     * <p>和 {@link #categoryName} 一起在 {@code fillExtras} 里批量填好。
+     * 有了它，{@code toPublicVO} 就不必为了拿 slug 再单独查一次分类 ——
+     * 那次查询在列表页是「每篇一条」，纯属重复。</p>
+     */
+    @TableField(exist = false)
+    private String categorySlug;
+
     /** 标签 ID 列表（非库字段） */
     @TableField(exist = false)
     private List<Long> tagIds;
@@ -75,4 +85,8 @@ public class BlogPost extends BaseEntity {
     /** 标签名称列表（非库字段） */
     @TableField(exist = false)
     private List<String> tagNames;
+
+    /** 标签 slug 列表（非库字段），同样由 fillExtras 批量填好 */
+    @TableField(exist = false)
+    private List<String> tagSlugs;
 }

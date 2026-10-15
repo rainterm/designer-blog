@@ -3,6 +3,8 @@ package com.designer.admin.system.controller.admin;
 import cn.dev33.satoken.annotation.SaIgnore;
 import cn.dev33.satoken.stp.StpUtil;
 import com.designer.admin.common.core.R;
+import com.designer.admin.framework.ratelimit.RateLimit;
+import com.designer.admin.framework.ratelimit.RateLimitDimension;
 import com.designer.admin.system.model.dto.LoginDTO;
 import com.designer.admin.system.model.dto.SsoExchangeDTO;
 import com.designer.admin.system.model.dto.SsoTicketDTO;
@@ -38,7 +40,10 @@ public class AuthController {
     private SsoService ssoService;
 
     /**
-     * 获取登录验证码。未开启或该账号失败未达阈值时 enabled=false。
+     * 获取登录验证码提示。未开启或该账号失败未达阈值时 enabled=false。
+     *
+     * <p>只返回「要不要验」，不返回图片：滑块由 AJ-Captcha 的 {@code /captcha/get}
+     * 下发（与博客前台评论共用同一套端点）。</p>
      *
      * @param username 登录账号（用于判断是否已达失败阈值）
      */
@@ -50,11 +55,30 @@ public class AuthController {
     }
 
     /**
-     * 账号密码登录，返回 token 与基础用户信息
+     * 账号密码登录，返回 token 与基础用户信息。
+     *
+     * <p><b>限流按 IP</b>：账号维度的防线在 {@code LoginAttemptService}（连续失败触发验证码、
+     * 达上限锁定），但它挡不住「换着用户名扫」——每个用户名只错一两次，
+     * 既够不到验证码阈值也触发不了锁定。撞库/爆破正是这种形态，
+     * 只有按来源 IP 计一份总额度才能挡住。</p>
+     *
+     * <p>两条规则按声明顺序校验，前一条挡住就不消耗后一条的额度：
+     * 分钟级限突发，日级限慢速爆破（例如每 5 分钟试一次，单靠分钟规则永远拦不住）。</p>
+     *
+     * <p>阈值刻意偏宽松：同一出口 IP（公司 NAT）后可能坐着多个管理员，
+     * 卡太紧会把他们一起误伤。真正的强约束仍交给账号锁定 —— 那里按账号、按失败次数精确计算。</p>
+     *
+     * <p>⚠ {@code @Valid} 参数校验是 Filter、先于本拦截器执行，
+     * 所以「账号/密码为空」的请求会先被校验拦下、不消耗额度；能消耗额度的都是形态完整的登录尝试。</p>
      */
     @SaIgnore
     @Post
     @Mapping("/login")
+    @RateLimit(name = "system:login", dimension = RateLimitDimension.IP, rules = {
+            @RateLimit.Rule(count = 10, window = 60, message = "登录尝试过于频繁，请 {} 秒后再试"),
+            @RateLimit.Rule(count = 100, window = 24 * 60 * 60,
+                    message = "24 小时内登录尝试次数过多，请稍后再试")
+    })
     public R<LoginVO> login(@Body LoginDTO dto, Context ctx) {
         return R.ok(authService.login(dto, ctx));
     }

@@ -27,20 +27,12 @@
           </n-input>
         </n-form-item>
 
-        <n-form-item v-if="captchaEnabled" path="captcha" label="验证码">
-          <div class="captcha-row">
-            <n-input v-model:value="form.captcha" size="large" placeholder="计算结果" clearable>
-              <template #prefix><n-icon :component="ShieldCheckmarkOutline" /></template>
-            </n-input>
-            <img
-              v-if="captchaImg"
-              class="captcha-img"
-              :src="captchaImg"
-              alt="验证码"
-              title="点击刷新"
-              @click="loadCaptcha"
-            />
-          </div>
+        <!--
+          人机验证面板按需展示（后端：全局开启且该账号失败 ≥ 阈值）。
+          与博客评论表单同一套取舍：默认不出现，也就不请求、不占版面。
+        -->
+        <n-form-item v-if="captchaVisible" label="安全验证">
+          <SliderCaptcha ref="captchaRef" :api="captchaApi" @verified="onVerified" />
         </n-form-item>
 
         <n-button type="primary" size="large" block :loading="loading" @click="handleLogin">
@@ -55,8 +47,10 @@
 import { onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
-import { PersonOutline, LockClosedOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
+import { PersonOutline, LockClosedOutline } from '@vicons/ionicons5'
+import { SliderCaptcha } from '@captcha'
 import { getCaptcha } from '@/api/auth'
+import { captchaApi } from '@/api/captcha'
 import { useUserStore } from '@/store/user'
 import { appTitle } from '@/settings'
 import BrandLogo from '@/components/BrandLogo.vue'
@@ -69,46 +63,46 @@ const userStore = useUserStore()
 
 const formRef = ref(null)
 const loading = ref(false)
-/** 是否展示验证码（后端：全局开启且该账号失败 ≥ 阈值） */
+/** 该账号本次登录是否需要人机验证（后端按失败次数判定） */
 const captchaEnabled = ref(false)
-const captchaImg = ref('')
+/**
+ * 滑块面板是否已展开。与 {@link captchaEnabled} 分开：需要验证 ≠ 已经把面板摆出来，
+ * 首次点「登录」时才展开，免得一进页面就在密码框下面杵一张图。
+ */
+const captchaVisible = ref(false)
+const captchaRef = ref(null)
+
 const form = reactive({
   username: '',
-  password: '',
-  captcha: '',
-  uuid: ''
+  password: ''
 })
+
+/**
+ * /captcha/check 下发的二次校验凭据。**一次性**：服务端在登录流程里消费掉它
+ * （无论登录成败），所以每次提交失败后都必须清掉并重新拖滑块。
+ */
+const captchaVerification = ref('')
 
 const rules = {
   username: [{ required: true, message: '请输入登录账号', trigger: ['input', 'blur'] }],
-  password: [{ required: true, message: '请输入登录密码', trigger: ['input', 'blur'] }],
-  captcha: [
-    {
-      required: true,
-      validator: (_r, v) => {
-        if (!captchaEnabled.value) return true
-        if (!v) return new Error('请输入验证码')
-        return true
-      },
-      trigger: ['input', 'blur']
-    }
-  ]
+  password: [{ required: true, message: '请输入登录密码', trigger: ['input', 'blur'] }]
 }
 
 async function loadCaptcha() {
   try {
     const res = await getCaptcha(form.username)
-    const data = res.data || {}
-    captchaEnabled.value = !!data.enabled
-    form.uuid = data.uuid || ''
-    captchaImg.value = data.img || ''
-    form.captcha = ''
-  } catch (e) {
+    captchaEnabled.value = !!(res.data || {}).enabled
+  } catch {
+    // 拿不到「要不要验」时按「不需要」处理：真正需要时服务端仍会拒绝，
+    // 用户重新提交一次就会再拉一次状态，不会把自己卡在登录页上
     captchaEnabled.value = false
-    captchaImg.value = ''
-    form.uuid = ''
-    form.captcha = ''
   }
+}
+
+function resetCaptcha() {
+  captchaVerification.value = ''
+  captchaVisible.value = false
+  captchaRef.value?.reset()
 }
 
 async function handleLogin() {
@@ -117,15 +111,36 @@ async function handleLogin() {
   } catch (e) {
     return
   }
+
+  // 需要验证但还没拖：展开面板，等 SliderCaptcha 通过后自动提交（见 onVerified）
+  if (captchaEnabled.value && !captchaVerification.value) {
+    if (!captchaVisible.value) {
+      captchaVisible.value = true
+      message.info('请拖动滑块完成验证')
+    }
+    return
+  }
+
+  await doLogin()
+}
+
+/** 滑块对齐成功，拿到凭据后直接提交，省掉一次多余的点击 */
+async function onVerified(credential) {
+  captchaVerification.value = credential
+  await doLogin()
+}
+
+async function doLogin() {
+  if (loading.value) return
   loading.value = true
   try {
     const payload = {
       username: form.username,
       password: form.password
     }
-    if (captchaEnabled.value) {
-      payload.captcha = form.captcha
-      payload.uuid = form.uuid
+    // 不需要验证时不必带：服务端只在启用了验证码的账号上消费这个字段
+    if (captchaVerification.value) {
+      payload.captchaVerification = captchaVerification.value
     }
     await userStore.login(payload)
     message.success('登录成功')
@@ -144,8 +159,15 @@ async function handleLogin() {
     }
     router.replace(safeInternalRedirect(redirect))
   } catch (e) {
-    // 失败后按账号重新拉取，达到阈值才展示验证码
+    // 失败原因由请求层统一提示。凭据已被服务端消费掉（无论登录成败），
+    // 这里必须清掉并重新拉状态 —— 失败一次就可能刚好越过阈值，面板要立刻出现
+    captchaVerification.value = ''
     await loadCaptcha()
+    if (captchaVisible.value) {
+      // 面板已展开就原地换一张（SliderCaptcha 会顺带清掉「验证通过」状态），
+      // 用户直接重拖即可，不必再点一次登录
+      captchaRef.value?.refresh()
+    }
   } finally {
     loading.value = false
   }
@@ -154,6 +176,9 @@ async function handleLogin() {
 watch(
   () => form.username,
   () => {
+    // 阈值是按账号算的，换账号必须把上一轮的状态整个丢掉，
+    // 否则会把 A 账号的「需要验证」和已拖出来的凭据带到 B 账号上
+    resetCaptcha()
     loadCaptcha()
   }
 )
@@ -201,6 +226,9 @@ onMounted(loadCaptcha)
   border: 1px solid color-mix(in srgb, var(--color-primary) 8%, var(--color-border));
   border-radius: var(--radius);
   box-shadow: 0 16px 40px color-mix(in srgb, var(--color-primary) 10%, transparent);
+  /* 验证码面板展开后卡片会变高，窗口矮时要能滚动而不是把「登录」按钮顶出视口 */
+  max-height: 100vh;
+  overflow-y: auto;
 }
 
 .login-brand {
@@ -228,26 +256,5 @@ onMounted(loadCaptcha)
   font-size: 12px;
   line-height: 1.4;
   color: var(--color-text-muted);
-}
-
-.captcha-row {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  align-items: center;
-}
-
-.captcha-row :deep(.n-input) {
-  flex: 1;
-}
-
-.captcha-img {
-  height: 40px;
-  width: 120px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  border: 1px solid var(--color-border);
-  object-fit: cover;
-  flex-shrink: 0;
 }
 </style>

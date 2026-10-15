@@ -3,7 +3,12 @@ import request from './request'
 /** 登录 */
 export const login = (data) => request.post('/admin-api/system/auth/login', data)
 
-/** 获取验证码（按账号失败次数决定是否返回图片） */
+/**
+ * 询问该账号本次登录是否需要人机验证。
+ *
+ * <p>只返回 `{ enabled }` —— 滑块本身由 AJ-Captcha 的 `/captcha/get` 下发
+ * （与博客前台评论共用同一套端点，见 `@/api/captcha`）。</p>
+ */
 export const getCaptcha = (username) =>
   request.get('/admin-api/system/auth/captcha', { params: { username: username || '' } })
 

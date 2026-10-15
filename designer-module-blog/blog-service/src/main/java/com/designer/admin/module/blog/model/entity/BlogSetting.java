@@ -52,4 +52,20 @@ public class BlogSetting extends BaseEntity {
      * 只有两者都开启时，该文章才允许提交评论。</p>
      */
     private Integer commentEnabled;
+
+    /**
+     * 站长评论署名（默认「博主」）。
+     *
+     * <p>用途：一是后台回复未指定昵称时的署名；二是**自动**加入保留昵称名单
+     * （见 {@link #reservedNicknames}），所以署名改了不必再去名单里手动同步。</p>
+     */
+    private String ownerNickname;
+
+    /**
+     * 保留昵称名单（逗号分隔），后台可配。
+     *
+     * <p>访客昵称**包含**其中任一词即被拒绝。默认值给的是 {@code 博主,站长,管理员,admin}
+     * （见 {@code NicknameUtil.DEFAULT_RESERVED_TEXT}），可随意增删改；清空即表示不拦截这些词。</p>
+     */
+    private String reservedNicknames;
 }

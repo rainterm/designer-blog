@@ -1,22 +1,25 @@
 {
   "name": "blog-web",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview --port 4174"
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "axios": "^1.20.0",
+    "@css-render/vue3-ssr": "^0.15.14",
+    "crypto-js": "^4.2.0",
     "md-editor-v3": "^7.0.0",
     "naive-ui": "^2.45.3",
-    "vue": "^3.5.43",
-    "vue-router": "^5.3.1"
+    "nuxt": "^4.6.1"
   },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.9",
-    "vite": "^8.3.0"
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

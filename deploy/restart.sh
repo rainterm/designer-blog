@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 重启服务（不重新构建）。用法：./restart.sh [db|app|all]  默认 app（server + 前端 Nginx）
+# 重启服务（不重新构建）。用法：./restart.sh [db|app|all]  默认 app（server + 博客前台 + 前端 Nginx）
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"

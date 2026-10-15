@@ -3,12 +3,14 @@ package com.designer.admin.module.blog.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.module.blog.constant.BlogCacheTags;
 import com.designer.admin.module.blog.mapper.BlogLinkMapper;
 import com.designer.admin.module.blog.model.dto.LinkQueryDTO;
 import com.designer.admin.module.blog.model.dto.LinkSaveDTO;
 import com.designer.admin.module.blog.model.entity.BlogLink;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.data.annotation.CacheRemove;
 
 import java.util.List;
 
@@ -29,7 +31,7 @@ public class BlogLinkService {
                 .orderByAsc(BlogLink::getId));
     }
 
-    /** 前台展示用：仅启用，按排序升序 */
+    /** 前台展示用：仅启用，按排序升序（读缓存在 {@code BlogPublicController#links}） */
     public List<BlogLink> listEnabled() {
         return linkMapper.selectList(new LambdaQueryWrapper<BlogLink>()
                 .eq(BlogLink::getStatus, 1)
@@ -45,6 +47,8 @@ public class BlogLinkService {
         return link;
     }
 
+    /** 新增：失效前台外链缓存 */
+    @CacheRemove(tags = BlogCacheTags.LINK)
     public void save(LinkSaveDTO dto) {
         validate(dto);
         BlogLink entity = toEntity(dto);
@@ -57,6 +61,7 @@ public class BlogLinkService {
         linkMapper.insert(entity);
     }
 
+    @CacheRemove(tags = BlogCacheTags.LINK)
     public void update(LinkSaveDTO dto) {
         if (dto.getId() == null) {
             throw new BizException("链接ID不能为空");
@@ -66,6 +71,7 @@ public class BlogLinkService {
         linkMapper.updateById(toEntity(dto));
     }
 
+    @CacheRemove(tags = BlogCacheTags.LINK)
     public void remove(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;

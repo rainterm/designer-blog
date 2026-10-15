@@ -2,9 +2,9 @@ package com.designer.admin.module.blog.service;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.designer.admin.common.core.ResultCode;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.satoken.LoginHelper;
 import com.designer.admin.framework.satoken.LoginUser;
@@ -24,6 +24,7 @@ import com.designer.admin.module.blog.model.vo.PublicPostVO;
 import com.designer.admin.module.blog.util.SlugUtil;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.annotation.Inject;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -46,6 +47,8 @@ public class BlogPostService {
     private BlogCategoryMapper categoryMapper;
     @Db
     private BlogCommentMapper commentMapper;
+    @Inject
+    private BlogViewCounter viewCounter;
 
     public IPage<BlogPost> page(PostQueryDTO query) {
         List<Long> postIdsByTag = null;
@@ -163,6 +166,7 @@ public class BlogPostService {
                 .orderByDesc(BlogPost::getPublishedAt)
                 .orderByDesc(BlogPost::getId));
         fillExtras(page.getRecords());
+        applyPendingViews(page.getRecords());
         Page<PublicPostVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         voPage.setRecords(page.getRecords().stream().map(p -> toPublicVO(p, false)).collect(Collectors.toList()));
         return voPage;
@@ -174,14 +178,39 @@ public class BlogPostService {
                 .eq(BlogPost::getStatus, 1)
                 .last("limit 1"));
         if (post == null) {
-            throw new BizException("文章不存在或未发布");
+            throw new BizException(ResultCode.NOT_FOUND, "文章不存在或未发布");
         }
-        postMapper.update(null, new LambdaUpdateWrapper<BlogPost>()
-                .eq(BlogPost::getId, post.getId())
-                .setSql("view_count = view_count + 1"));
-        post.setViewCount(post.getViewCount() == null ? 1 : post.getViewCount() + 1);
         fillExtras(List.of(post));
+        applyPendingViews(List.of(post));
         return toPublicVO(post, true);
+    }
+
+    /**
+     * 把 Redis 里尚未回写的阅读增量加到展示值上。
+     *
+     * <p>阅读数的真实值 = 「库里已落地的 + 还没回写的」。缺了后半截，刚发布的文章
+     * 会明显偏少（一条都还没回写过），也会出现「刷新一下数字跳一截」的观感。
+     * 列表与详情都走这里，保证两处显示一致。</p>
+     *
+     * <p>整批只发一次 {@code HMGET}；Redis 不可用时内部已降级为 0，不会影响出页。</p>
+     */
+    private void applyPendingViews(List<BlogPost> posts) {
+        if (posts == null || posts.isEmpty()) {
+            return;
+        }
+        Map<Long, Long> pending = viewCounter.pendingBatch(
+                posts.stream().map(BlogPost::getId).collect(Collectors.toList()));
+        if (pending.isEmpty()) {
+            return;
+        }
+        for (BlogPost post : posts) {
+            Long delta = pending.get(post.getId());
+            if (delta == null) {
+                continue;
+            }
+            int stored = post.getViewCount() == null ? 0 : post.getViewCount();
+            post.setViewCount((int) (stored + delta));
+        }
     }
 
     private void validateSave(PostSaveDTO dto) {
@@ -271,21 +300,43 @@ public class BlogPostService {
                 categoryMap.put(c.getId(), c);
             }
         }
+        // 标签必须批量查：逐篇查的话一页 5 篇就是 10 条 SQL
+        //（每篇一次 selectTagIdsByPostId + 一次 selectByIds），会吃掉列表页的绝大部分查询。
+        // 批量后无论多少篇都只有 2 条（关联表 1 条 + 标签表 1 条）。
+        List<Long> postIds = posts.stream()
+                .map(BlogPost::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, List<Long>> tagIdsByPost = postTagMapper.selectTagIdsByPostIds(postIds);
+        List<Long> allTagIds = tagIdsByPost.values().stream()
+                .flatMap(List::stream)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, BlogTag> tagMap = new HashMap<>();
+        if (!allTagIds.isEmpty()) {
+            for (BlogTag t : tagMapper.selectByIds(allTagIds)) {
+                tagMap.put(t.getId(), t);
+            }
+        }
         for (BlogPost post : posts) {
             if (post.getCategoryId() != null) {
                 BlogCategory c = categoryMap.get(post.getCategoryId());
                 if (c != null) {
+                    // slug 一并填上，避免 toPublicVO 为了拿它再查一次分类
                     post.setCategoryName(c.getName());
+                    post.setCategorySlug(c.getSlug());
                 }
             }
-            List<Long> tagIds = postTagMapper.selectTagIdsByPostId(post.getId());
-            post.setTagIds(tagIds == null ? Collections.emptyList() : tagIds);
-            if (tagIds != null && !tagIds.isEmpty()) {
-                List<BlogTag> tags = tagMapper.selectByIds(tagIds);
-                post.setTagNames(tags.stream().map(BlogTag::getName).collect(Collectors.toList()));
-            } else {
-                post.setTagNames(Collections.emptyList());
-            }
+            List<Long> tagIds = tagIdsByPost.getOrDefault(post.getId(), Collections.emptyList());
+            post.setTagIds(tagIds);
+            // 名称与 slug 都在这里定下来，toPublicVO 只做字段搬运
+            List<BlogTag> tags = tagIds.stream()
+                    .map(tagMap::get)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            post.setTagNames(tags.stream().map(BlogTag::getName).collect(Collectors.toList()));
+            post.setTagSlugs(tags.stream().map(BlogTag::getSlug).collect(Collectors.toList()));
         }
     }
 
@@ -299,13 +350,10 @@ public class BlogPostService {
         vo.setCoverUrl(post.getCoverUrl());
         vo.setCategoryId(post.getCategoryId());
         vo.setCategoryName(post.getCategoryName());
-        if (post.getCategoryId() != null) {
-            BlogCategory c = categoryMapper.selectById(post.getCategoryId());
-            if (c != null) {
-                vo.setCategorySlug(c.getSlug());
-                vo.setCategoryName(c.getName());
-            }
-        }
+        // 分类名与 slug 由 fillExtras 批量填好，这里只做搬运。
+        // ⚠ 不要在这里再 selectById 查分类：fillExtras 刚查过同一批，
+        // 列表页上会变成「每篇多一条」的重复查询
+        vo.setCategorySlug(post.getCategorySlug());
         vo.setAuthorName(post.getAuthorName());
         vo.setIsTop(post.getIsTop());
         vo.setAllowComment(post.getAllowComment());
@@ -314,18 +362,10 @@ public class BlogPostService {
         vo.setSeoKeywords(post.getSeoKeywords());
         vo.setSeoDescription(post.getSeoDescription());
         vo.setPublishedAt(post.getPublishedAt());
-        List<Long> tagIds = post.getTagIds();
-        if (tagIds == null) {
-            tagIds = postTagMapper.selectTagIdsByPostId(post.getId());
-        }
-        if (tagIds != null && !tagIds.isEmpty()) {
-            List<BlogTag> tags = tagMapper.selectByIds(tagIds);
-            vo.setTagNames(tags.stream().map(BlogTag::getName).collect(Collectors.toList()));
-            vo.setTagSlugs(tags.stream().map(BlogTag::getSlug).collect(Collectors.toList()));
-        } else {
-            vo.setTagNames(Collections.emptyList());
-            vo.setTagSlugs(Collections.emptyList());
-        }
+        // 标签同理：名称与 slug 都在 fillExtras 里一次性填好，这里只做搬运。
+        // ⚠ 不要在这里再查 tagMapper.selectByIds，与 fillExtras 完全重复
+        vo.setTagNames(post.getTagNames() == null ? Collections.emptyList() : post.getTagNames());
+        vo.setTagSlugs(post.getTagSlugs() == null ? Collections.emptyList() : post.getTagSlugs());
         return vo;
     }
 

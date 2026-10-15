@@ -26,6 +26,16 @@ public class BlogComment extends BaseEntity {
 
     private String nickname;
 
+    /**
+     * 作者类型：0 访客，1 博主。
+     *
+     * <p>这是**身份的唯一权威来源**：展示层的「博主」标识只看这个字段，
+     * 绝不根据昵称文本判断，否则访客把昵称写成「博主」即可冒充。
+     * 只有后台回复（{@code BlogCommentService#reply}）会写入 1，
+     * 访客提交一律强制为 0（不取前端传值）。</p>
+     */
+    private Integer authorType;
+
     private String email;
 
     private String content;

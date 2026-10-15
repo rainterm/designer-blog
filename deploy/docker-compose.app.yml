@@ -1,4 +1,4 @@
-# 应用：Server + 前端（管理后台 + 博客前台，同一 Nginx 按域名分流）
+# 应用：Server + 前端（博客前台 Nuxt SSR + 管理后台静态资源 / 同一 Nginx 按域名分流）
 # 用法：./deploy-app.sh
 # 通过 .env 中 DB_* / REDIS_* 连接数据库（本机 Docker 库默认 host.docker.internal）
 
@@ -36,6 +36,27 @@ services:
     networks:
       - designer-app-net
 
+  blog:
+    build:
+      context: .
+      dockerfile: blog/Dockerfile
+    image: designer-blog-web:${IMAGE_TAG:-1.0.0}
+    container_name: designer-blog-web
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      # SSR 期间直连后端：走容器内网，不经 nginx，也因此拿不到客户端真实 IP。
+      # 所以所有依赖真实 IP 的接口（访问统计、评论提交/限流）都必须留在浏览器侧发起，
+      # 不能挪到服务端渲染期间调用 —— 否则它们看到的是本容器 IP。
+      NUXT_API_INTERNAL_BASE: http://server:8080
+    depends_on:
+      server:
+        condition: service_healthy
+    # 刻意不发布端口：博客前台只经 nginx 对外。
+    # 若映射到宿主，则可绕过 nginx 直连并伪造 X-Real-IP / X-Forwarded-For。
+    networks:
+      - designer-app-net
+
   web:
     build:
       context: .
@@ -46,10 +67,14 @@ services:
     depends_on:
       server:
         condition: service_healthy
+      # 必须等 blog 真正就绪：nginx 在启动时就要解析 `blog` 这个 upstream 名字，
+      # 容器不存在或还没监听会让 nginx 直接启动失败（host not found in upstream）。
+      blog:
+        condition: service_healthy
     ports:
       # 单一入口：同一 Nginx 内按域名分流
-      #   www.rainterm.cn   → 博客前台
-      #   admin.rainterm.cn → 管理后台
+      #   www.rainterm.cn   → 反代到 blog（Nuxt SSR）
+      #   admin.rainterm.cn → 本容器静态资源
       - "${WEB_PORT:-80}:80"
     networks:
       - designer-app-net

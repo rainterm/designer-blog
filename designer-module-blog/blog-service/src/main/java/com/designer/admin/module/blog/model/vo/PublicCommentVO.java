@@ -15,6 +15,12 @@ public class PublicCommentVO {
     private Long id;
     private Long parentId;
     private String nickname;
+
+    /**
+     * 作者类型：0 访客，1 博主。前端据此渲染「博主」标识，而不是看昵称文本。
+     */
+    private Integer authorType;
+
     private String content;
 
     /** IP 归属地（省级，如「广东」） */

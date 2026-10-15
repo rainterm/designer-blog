@@ -43,8 +43,8 @@ for arg in "$@"; do
 
 流程：
   1. 仓库根目录 mvn -pl designer-server -am package 打后端胖包
-  2. 本地 pnpm run build 打 admin-web / blog-web 静态资源
-  3. Docker 仅打包运行镜像并启动（Server / 前端 Nginx）
+  2. 本地 pnpm run build 打 admin-web（静态）与 blog-web（Nuxt SSR）
+  3. Docker 仅打包运行镜像并启动（Server / 博客前台 Node / 前端 Nginx）
 EOF
       exit 0
       ;;
@@ -106,13 +106,12 @@ need_local_toolchain() {
   log "  Node $(node -v) / pnpm $(pnpm -v)"
 }
 
-# 构建单个前端工程；$1=源码目录 $2=说明名
-build_frontend() {
-  local src_dir="$1"
-  local name="$2"
+# 构建管理后台（Vite 静态资源，产物 dist/）
+build_admin_web() {
+  local src_dir="${ROOT_DIR}/designer-ui/admin-web"
   local dist="${src_dir}/dist"
 
-  log ">>> 本地打包前端 ${name}（Node / pnpm / Vite）"
+  log ">>> 本地打包前端 admin-web（Node / pnpm / Vite）"
   (
     cd "${src_dir}"
     if [[ -f pnpm-lock.yaml ]]; then
@@ -129,10 +128,36 @@ build_frontend() {
   fi
 }
 
+# 构建博客前台（Nuxt SSR，产物 .output/，由 Node 直接运行）
+#
+# 注意这里产出的**不是静态站点**：.output/server 是一个 Node 服务，
+# HTML 在每次请求时生成。爬虫拿到的正文就来自这里。
+# SSR 期间访问后端的地址不在这里注入 —— 它是容器环境变量
+# NUXT_API_INTERNAL_BASE（见 docker-compose.app.yml），因为同一份产物
+# 在不同环境（本地联调 / 容器内网）指向的后端地址不同。
+build_blog_web() {
+  local src_dir="${ROOT_DIR}/designer-ui/blog-web"
+  local out_dir="${src_dir}/.output"
+
+  log ">>> 本地打包前端 blog-web（Node / pnpm / Nuxt SSR）"
+  (
+    cd "${src_dir}"
+    if [[ -f pnpm-lock.yaml ]]; then
+      pnpm install --frozen-lockfile
+    else
+      pnpm install
+    fi
+    pnpm run build
+  )
+  if [[ ! -f "${out_dir}/server/index.mjs" ]]; then
+    err "未找到 Nuxt 产物：${out_dir}/server/index.mjs"
+    exit 1
+  fi
+}
+
 package_locally() {
   local root_dir="${ROOT_DIR}"
   local server_dir="${ROOT_DIR}/designer-server"
-  local admin_dir="${ROOT_DIR}/designer-ui/admin-web"
   local blog_dir="${ROOT_DIR}/designer-ui/blog-web"
   local jar="${server_dir}/target/designer-server.jar"
 
@@ -148,15 +173,15 @@ package_locally() {
     exit 1
   fi
 
-  build_frontend "${admin_dir}" "admin-web"
-  build_frontend "${blog_dir}" "blog-web"
+  build_admin_web
+  build_blog_web
 
   log ">>> 同步产物到 deploy/build/"
   rm -rf "${SCRIPT_DIR}/build/server" "${SCRIPT_DIR}/build/web" "${SCRIPT_DIR}/build/blog-web"
   mkdir -p "${SCRIPT_DIR}/build/server" "${SCRIPT_DIR}/build/web" "${SCRIPT_DIR}/build/blog-web"
   cp "${jar}" "${SCRIPT_DIR}/build/server/designer-server.jar"
-  cp -R "${admin_dir}/dist" "${SCRIPT_DIR}/build/web/dist"
-  cp -R "${blog_dir}/dist" "${SCRIPT_DIR}/build/blog-web/dist"
+  cp -R "${ROOT_DIR}/designer-ui/admin-web/dist" "${SCRIPT_DIR}/build/web/dist"
+  cp -R "${blog_dir}/.output" "${SCRIPT_DIR}/build/blog-web/.output"
   log "本地打包完成"
 }
 
@@ -186,8 +211,8 @@ if [[ "${SKIP_BUILD}" -eq 1 ]]; then
   warn "已跳过本地打包，使用 deploy/build/ 现有产物"
   if [[ ! -f "${SCRIPT_DIR}/build/server/designer-server.jar" ]] \
     || [[ ! -d "${SCRIPT_DIR}/build/web/dist" ]] \
-    || [[ ! -d "${SCRIPT_DIR}/build/blog-web/dist" ]]; then
-    err "缺少 deploy/build 产物（需 server + web + blog-web），请去掉 --skip-build 重新打包"
+    || [[ ! -f "${SCRIPT_DIR}/build/blog-web/.output/server/index.mjs" ]]; then
+    err "缺少 deploy/build 产物（需 server + web + blog-web/.output），请去掉 --skip-build 重新打包"
     exit 1
   fi
 else
@@ -195,7 +220,7 @@ else
   package_locally
 fi
 
-log "构建并启动应用容器（Server / 前端 Nginx）..."
+log "构建并启动应用容器（Server / 博客前台 Node / 前端 Nginx）..."
 log "  数据库 : ${DB_HOST}:${DB_PORT_VAL}"
 log "  Redis  : ${REDIS_HOST_VAL}:${REDIS_PORT_VAL}"
 
@@ -216,22 +241,28 @@ compose_app "${UP_ARGS[@]}"
 log "等待应用就绪..."
 ATTEMPTS=60
 for ((i = 1; i <= ATTEMPTS; i++)); do
-  frontend_ready=0
+  nginx_ready=0
+  blog_ready=0
   backend_ready=0
-  # 前端 /health：不带 Host 会落到 default_server（博客站点），只验证 Nginx 自身
+  # 入口 nginx：/nginx-health 只验证 nginx 自身
+  if curl -fsS "http://127.0.0.1:${WEB_PORT}/nginx-health" >/dev/null 2>&1; then
+    nginx_ready=1
+  fi
+  # 博客前台：/health 经 nginx 反代到 Nuxt，因此代表「nginx + SSR 服务」都通
   if curl -fsS "http://127.0.0.1:${WEB_PORT}/health" >/dev/null 2>&1; then
-    frontend_ready=1
+    blog_ready=1
   fi
   # 后端健康检查：server 只绑回环，直接打宿主映射端口
   if curl -fsS "http://127.0.0.1:${SERVER_PORT}/admin-api/system/health" >/dev/null 2>&1; then
     backend_ready=1
   fi
 
-  if [[ "${frontend_ready}" -eq 1 && "${backend_ready}" -eq 1 ]]; then
+  if [[ "${nginx_ready}" -eq 1 && "${blog_ready}" -eq 1 && "${backend_ready}" -eq 1 ]]; then
     break
   fi
   if [[ "${i}" -eq "${ATTEMPTS}" ]]; then
-    [[ "${frontend_ready}" -eq 1 ]] || warn "前端 Nginx 未就绪，请执行：./logs.sh web"
+    [[ "${nginx_ready}" -eq 1 ]] || warn "入口 Nginx 未就绪，请执行：./logs.sh web"
+    [[ "${blog_ready}" -eq 1 ]] || warn "博客前台（Nuxt SSR）未就绪，请执行：./logs.sh blog"
     [[ "${backend_ready}" -eq 1 ]] || warn "后端未就绪，请执行：./logs.sh server"
   else
     sleep 3
@@ -242,8 +273,9 @@ echo
 compose_app ps
 echo
 log "应用部署完成"
-log "  博客前台 : http://www.rainterm.cn"
+log "  博客前台 : http://www.rainterm.cn     （Nuxt SSR，正文随首屏 HTML 一起返回）"
 log "  管理后台 : http://admin.rainterm.cn   默认账号 admin / admin123"
+log "  收录入口 : http://www.rainterm.cn/sitemap.xml"
 log "  后端直连 : http://<服务器IP>:${SERVER_PORT}"
-log "  查看日志 : ./logs.sh web | ./logs.sh server"
+log "  查看日志 : ./logs.sh web | ./logs.sh blog | ./logs.sh server"
 log "  修改域名 : 改 deploy/nginx/default.conf 的 server_name 后 ./deploy-app.sh --skip-build --rebuild"

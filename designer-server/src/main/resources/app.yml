@@ -109,6 +109,44 @@ sa-token:
   is-read-param: true
   is-log: false
 
+# ============================ 图形验证码（AJ-Captcha）============================
+# 前台评论与后台登录**共用**这一套端点与存储（实现见
+# designer-framework 的 com.designer.admin.framework.captcha 包）。
+# 类型只有 blockPuzzle（滑块拼图）与 clickWord（文字点选）两种，没有字符型。
+#
+# 端点由插件自带的 CaptchaController 注册，路径**写死**为 /captcha/get、/captcha/check，
+# 不在 /admin-api、/app-api 前缀之下，因此：
+#   · 天然免登录 —— Sa-Token 只拦 /admin-api/** 与 /app-api/**，匿名访客可直达（正是我们需要的）；
+#   · 也**不受**业务 controller 上 @RateLimit 的覆盖 —— 注解加不到第三方 controller 上，
+#     所以频控改由下面的 req-* 内置限流承担（它基于同一套 cache-type 计数，多实例下同样生效）；
+#   · 两个站点的 nginx server 块都必须各自反代一次 /captcha/**（见 deploy/nginx/default.conf）。
+#
+# 「要不要验」属于业务策略，不在这一层：前台看站点评论总开关，
+# 后台看该账号连续失败是否达阈值（见 system 模块的 LoginAttemptService）。
+aj:
+  captcha:
+    type: blockPuzzle
+    # 必须与 RedisCaptchaCacheService#type() 的返回值一致，否则查不到该实现
+    cache-type: redis
+    # 画在底图上的水印
+    water-mark: "Designer Blog"
+    # 拼图块与缺口的容差（像素）：越小越难，也越容易误伤手抖的真实用户
+    slip-offset: 5
+    # true → pointJson / captchaVerification 走 AES-128-ECB 加密。
+    # 关掉会让 x 偏移变成明文，验证码退化成「约 60 次请求即可暴力试出」的摆设，故保持开启。
+    aes-status: true
+    interference-options: 1
+    # 内置频控（库默认关闭）。计数维度是请求里的 clientUid，取不到才退化成 IP+UA。
+    # 取值按前台评论的量级定（原先 @RateLimit 是 20 次/分钟，这里适度放宽）——
+    # 匿名访客大量来自运营商 NAT，同一出口 IP 后面可能是很多真人，按 IP 卡太紧会误伤。
+    # 后台登录共用这套阈值：它流量更低，且 nginx 侧另有更紧的 admin_captcha 桶兜底。
+    req-frequency-limit-enable: true
+    req-get-minute-limit: 30
+    req-get-lock-limit: 10
+    req-get-lock-seconds: 30
+    req-check-minute-limit: 60
+    req-verify-minute-limit: 60
+
 # ============================ 文件存储默认项 ============================
 designer:
   storage:
