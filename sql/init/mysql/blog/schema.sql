@@ -99,6 +99,7 @@ CREATE TABLE `blog_setting` (
     `site_subtitle`   VARCHAR(200) NOT NULL DEFAULT ''     COMMENT '站点副标题（顶栏展示 / SEO 描述兜底）',
     `logo_url`        VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '站点 Logo 地址，留空用内置 Logo',
     `logo_radius`     INT          NOT NULL DEFAULT 6      COMMENT 'Logo 圆角（px，0 为直角）',
+    `theme_color`     VARCHAR(16)  NOT NULL DEFAULT '#16A34A' COMMENT '站点主题色（十六进制），前台据此覆盖品牌配色',
     `copyright`       VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '页脚版权',
     `icp`             VARCHAR(100) NOT NULL DEFAULT ''     COMMENT 'ICP 备案号',
     `icp_url`         VARCHAR(500) NOT NULL DEFAULT ''     COMMENT 'ICP 备案号链接，如 https://beian.miit.gov.cn/',

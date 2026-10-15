@@ -23,6 +23,14 @@ public class PublicSiteVO implements Serializable {
     /** Logo 圆角（px） */
     private Integer logoRadius;
 
+    /**
+     * 站点主题色（十六进制，如 #16A34A）。
+     *
+     * <p>前台据此在 SSR 阶段覆盖品牌配色的 CSS 变量。始终下发一个合法值
+     * （非法 / 留空回落内置默认），前端无须再处理兜底。</p>
+     */
+    private String themeColor;
+
     /** 页脚版权 */
     private String copyright;
 

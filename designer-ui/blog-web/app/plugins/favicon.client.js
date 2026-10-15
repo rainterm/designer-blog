@@ -1,5 +1,6 @@
 import { useSiteSetting } from '@/composables/useSiteSetting'
 import { brandMarkSvg } from '@/config/brandMark'
+import { normalizePrimaryColor } from '@/config/theme'
 
 /**
  * 浏览器标签图标跟随站点 Logo（应用圆角）；未配置时用构建期生成的内置图标。
@@ -57,9 +58,9 @@ function toCanvasRadius(radius) {
   return Math.max(0, Math.min(scaled, FAVICON_SIZE / 2))
 }
 
-/** 内置 Logo 的 favicon：按圆角设置生成 SVG data URL（必须转义 # 等字符） */
-function builtinFaviconDataUrl(radius) {
-  return `data:image/svg+xml,${encodeURIComponent(brandMarkSvg({ rx: toCanvasRadius(radius) }))}`
+/** 内置 Logo 的 favicon：按圆角 / 主题色生成 SVG data URL（必须转义 # 等字符） */
+function builtinFaviconDataUrl(radius, fill) {
+  return `data:image/svg+xml,${encodeURIComponent(brandMarkSvg({ rx: toCanvasRadius(radius), fill }))}`
 }
 
 /** 把图片按圆角裁剪并等比缩放，绘制为 favicon 的 data URL */
@@ -88,13 +89,13 @@ async function buildRoundedFavicon(src, radius) {
   return canvas.toDataURL('image/png')
 }
 
-function applyFavicon(logoUrl, logoRadius) {
+function applyFavicon(logoUrl, logoRadius, themeColor) {
   const link = ensureIconLink()
 
-  // 未配置 Logo：用内置图形，并按圆角设置重绘（标签图标不受 CSS 影响）
+  // 未配置 Logo：用内置图形，并按圆角 / 主题色重绘（标签图标不受 CSS 影响）
   if (!logoUrl) {
     token++
-    link.href = builtinFaviconDataUrl(logoRadius)
+    link.href = builtinFaviconDataUrl(logoRadius, themeColor)
     return
   }
 
@@ -119,8 +120,9 @@ function applyFavicon(logoUrl, logoRadius) {
 export default defineNuxtPlugin(() => {
   const site = useSiteSetting()
   watch(
-    () => [site.value.logoUrl, site.value.logoRadius],
-    ([logoUrl, logoRadius]) => applyFavicon(logoUrl, logoRadius),
+    () => [site.value.logoUrl, site.value.logoRadius, site.value.themeColor],
+    ([logoUrl, logoRadius, themeColor]) =>
+      applyFavicon(logoUrl, logoRadius, normalizePrimaryColor(themeColor)),
     { immediate: true }
   )
 })

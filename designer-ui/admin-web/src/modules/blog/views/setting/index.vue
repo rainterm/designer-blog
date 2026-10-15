@@ -81,6 +81,10 @@
             </div>
           </n-form-item>
 
+          <n-form-item label="站点主题色">
+            <ThemeColorPicker v-model="form.themeColor" />
+          </n-form-item>
+
           <n-form-item label="页脚版权" path="copyright">
             <n-input
               v-model:value="form.copyright"
@@ -159,7 +163,8 @@
           </n-form-item>
 
           <p class="setting-tip">
-            保存后博客前台立即生效（主题、文章等其它配置不在本页）。
+            保存后博客前台立即生效（文章等其它配置不在本页）。站点主题色会覆盖前台的品牌配色，
+            影响链接、按钮、标签等所有以主题色渲染的元素。
           </p>
 
           <div class="setting-submit">
@@ -181,8 +186,10 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useMessage } from 'naive-ui'
+import ThemeColorPicker from '@/components/ThemeColorPicker.vue'
 import { getSetting, updateSetting } from '@/modules/blog/api'
 import { uploadFile } from '@/modules/system/api/file'
+import { DEFAULT_PRIMARY } from '@/theme'
 
 const message = useMessage()
 const formRef = ref(null)
@@ -196,6 +203,7 @@ const form = reactive({
   siteSubtitle: '',
   logoUrl: '',
   logoRadius: 6,
+  themeColor: DEFAULT_PRIMARY,
   copyright: '',
   icp: '',
   icpUrl: '',
@@ -219,6 +227,7 @@ async function loadSetting() {
     form.siteSubtitle = data.siteSubtitle || ''
     form.logoUrl = data.logoUrl || ''
     form.logoRadius = data.logoRadius != null ? data.logoRadius : 6
+    form.themeColor = data.themeColor || DEFAULT_PRIMARY
     form.copyright = data.copyright || ''
     form.icp = data.icp || ''
     form.icpUrl = data.icpUrl || ''

@@ -30,6 +30,9 @@ public class BlogSetting extends BaseEntity {
     /** Logo 圆角（px，0 为直角） */
     private Integer logoRadius;
 
+    /** 站点主题色（十六进制，如 #16A34A），前台据此覆盖品牌配色 */
+    private String themeColor;
+
     /** 页脚版权 */
     private String copyright;
 

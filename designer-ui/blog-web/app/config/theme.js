@@ -143,6 +143,128 @@ export const themeOverrides = {
   }
 }
 
+/**
+ * 配色派生。
+ *
+ * <p>上面的 `colors` / `tokens.css` 是**构建期**产物、只含默认色；而站点主题色由后台
+ * 「博客 → 站点设置」下发、运行时可改。所以这里按与 admin-web `buildColors` 一致的
+ * 算法从主色派生整套品牌色，供运行时覆盖使用。</p>
+ */
+
+/** 主色归一化：3 位补全、非法回默认，始终返回大写 #RRGGBB */
+export function normalizePrimaryColor(input) {
+  if (!input || typeof input !== 'string') return colors.primary
+  let hex = input.trim()
+  if (!hex.startsWith('#')) hex = `#${hex}`
+  if (/^#[0-9a-fA-F]{3}$/.test(hex)) {
+    hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+  }
+  return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex.toUpperCase() : colors.primary
+}
+
+function hexToRgb(hex) {
+  const n = parseInt(normalizePrimaryColor(hex).slice(1), 16)
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }
+}
+
+function rgbToHex({ r, g, b }) {
+  const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)))
+  return `#${[clamp(r), clamp(g), clamp(b)]
+    .map((v) => v.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase()}`
+}
+
+/** 把颜色按比例混入目标色 */
+function mixHex(hex, targetHex, amount) {
+  const a = hexToRgb(hex)
+  const b = hexToRgb(targetHex)
+  const t = Math.max(0, Math.min(1, amount))
+  return rgbToHex({
+    r: a.r + (b.r - a.r) * t,
+    g: a.g + (b.g - a.g) * t,
+    b: a.b + (b.b - a.b) * t
+  })
+}
+
+/** 主色 + 透明度 → rgba(...) */
+export function withAlpha(hex, alpha) {
+  const { r, g, b } = hexToRgb(hex)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+/**
+ * 由主色派生整套品牌色。
+ *
+ * <p>与主色无关的 body / surface / text 等沿用内置色板；派生比例与 admin-web
+ * 保持一致，两个前端的主题色观感才统一。</p>
+ */
+export function buildColors(primary = colors.primary) {
+  const p = normalizePrimaryColor(primary)
+  return {
+    ...colors,
+    primary: p,
+    primaryHover: mixHex(p, '#FFFFFF', 0.18),
+    primaryPressed: mixHex(p, '#000000', 0.14),
+    primarySuppl: mixHex(p, '#FFFFFF', 0.22),
+    primaryLight: mixHex(p, '#FFFFFF', 0.55),
+    primarySoft: withAlpha(p, 0.12),
+    accent: mixHex(p, '#FFFFFF', 0.18),
+    success: p,
+    quoteBg: withAlpha(p, 0.08),
+    quoteText: mixHex(p, '#000000', 0.14)
+  }
+}
+
+/**
+ * 主题色对应的 CSS 变量（仅颜色）。
+ *
+ * <p>刻意不含 `--layout-page-padding` 之类的 token：它们由 tokens.css 的响应式
+ * @media 维护，若被内联样式覆盖，移动端断点就失效了。</p>
+ */
+export function themeColorVars(primary) {
+  const c = buildColors(primary)
+  return {
+    '--color-primary': c.primary,
+    '--color-primary-hover': c.primaryHover,
+    '--color-primary-pressed': c.primaryPressed,
+    '--color-primary-suppl': c.primarySuppl,
+    '--color-primary-light': c.primaryLight,
+    '--color-primary-soft': c.primarySoft,
+    '--color-accent': c.accent,
+    '--color-success': c.success,
+    '--color-quote-bg': c.quoteBg,
+    '--color-quote-text': c.quoteText,
+    '--gradient-brand': `linear-gradient(135deg, ${c.primary}, ${c.primaryLight})`
+  }
+}
+
+/** 由主色构建 Naive UI 主题覆盖（结构与圆角沿用内置，色值按主色派生） */
+export function buildThemeOverrides(primary) {
+  const c = buildColors(primary)
+  return {
+    ...themeOverrides,
+    common: {
+      ...themeOverrides.common,
+      primaryColor: c.primary,
+      primaryColorHover: c.primaryHover,
+      primaryColorPressed: c.primaryPressed,
+      primaryColorSuppl: c.primarySuppl,
+      textColorBase: c.text,
+      textColor2: c.textSecondary,
+      textColor3: c.textMuted,
+      bodyColor: c.body,
+      cardColor: c.surface,
+      borderColor: c.border,
+      dividerColor: c.border
+    },
+    Empty: {
+      iconColor: withAlpha(c.primary, 0.35),
+      textColor: c.textMuted
+    }
+  }
+}
+
 export default {
   colors,
   radius,
@@ -150,5 +272,9 @@ export default {
   fonts,
   themeVars,
   themeCssText,
-  themeOverrides
+  themeOverrides,
+  normalizePrimaryColor,
+  buildColors,
+  themeColorVars,
+  buildThemeOverrides
 }

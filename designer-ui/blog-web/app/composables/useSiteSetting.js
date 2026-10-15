@@ -1,8 +1,9 @@
 import { fetchSiteSetting } from '@/api/blog'
 import { brand } from '@/config/site'
+import { colors } from '@/config/theme'
 
 /**
- * 站点设置（后台可配）：站点名称 / 副标题 / Logo / 页脚版权 / 备案号 / SEO 默认值 / 评论总开关。
+ * 站点设置（后台可配）：站点名称 / 副标题 / Logo / 主题色 / 页脚版权 / 备案号 / SEO 默认值 / 评论总开关。
  *
  * <p>这里从「模块级 reactive 单例」换成了 `useState`，原因全是 SSR 带来的：</p>
  *
@@ -23,6 +24,8 @@ export function siteDefaults() {
     siteSubtitle: '',
     logoUrl: '',
     logoRadius: 6,
+    /** 站点主题色（后台可配），默认与内置色板一致 → 不触发覆盖 */
+    themeColor: colors.primary,
     copyright: brand.copyright,
     icp: '',
     icpUrl: '',
@@ -64,7 +67,7 @@ export function siteSeoDescription(siteValue) {
  */
 export function mergeSiteSetting(target, data) {
   if (!target || !data) return target
-  const textKeys = ['siteName', 'siteSubtitle', 'logoUrl', 'copyright', 'icp', 'icpUrl', 'seoKeywords', 'seoDescription', 'ownerNickname']
+  const textKeys = ['siteName', 'siteSubtitle', 'logoUrl', 'themeColor', 'copyright', 'icp', 'icpUrl', 'seoKeywords', 'seoDescription', 'ownerNickname']
   textKeys.forEach((key) => {
     if (data[key]) target[key] = data[key]
   })

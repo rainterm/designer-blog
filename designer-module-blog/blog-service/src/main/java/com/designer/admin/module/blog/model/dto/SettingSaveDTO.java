@@ -8,6 +8,10 @@ public class SettingSaveDTO {
     private String siteSubtitle;
     private String logoUrl;
     private Integer logoRadius;
+
+    /** 站点主题色（#RRGGBB），留空 / 非法回落默认 */
+    private String themeColor;
+
     private String copyright;
     private String icp;
     private String icpUrl;

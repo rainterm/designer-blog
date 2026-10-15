@@ -12,9 +12,10 @@ import org.noear.solon.annotation.Component;
 import org.noear.solon.data.annotation.CacheRemove;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
- * 博客站点设置（单行）：站点名称 / Logo / 页脚版权 / 备案号
+ * 博客站点设置（单行）：站点名称 / Logo / 主题色 / 页脚版权 / 备案号
  */
 @Component
 public class BlogSettingService {
@@ -27,6 +28,12 @@ public class BlogSettingService {
 
     /** Logo 圆角上限（px），避免异常值破坏布局 */
     private static final int MAX_LOGO_RADIUS = 100;
+
+    /** 主题色默认值（与前台 app/config/theme.js 的 colors.primary 保持一致） */
+    private static final String DEFAULT_THEME_COLOR = "#16A34A";
+
+    /** 主题色：仅接受 #RRGGBB */
+    private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
 
     /** 评论总开关默认值：缺省 / 入库前默认开启 */
     private static final int COMMENT_ENABLED = 1;
@@ -68,6 +75,7 @@ public class BlogSettingService {
         vo.setSiteSubtitle(s.getSiteSubtitle());
         vo.setLogoUrl(s.getLogoUrl());
         vo.setLogoRadius(normalizeRadius(s.getLogoRadius()));
+        vo.setThemeColor(normalizeColor(s.getThemeColor()));
         vo.setCopyright(s.getCopyright());
         vo.setIcp(s.getIcp());
         vo.setIcpUrl(normalizeLink(s.getIcpUrl()));
@@ -122,6 +130,7 @@ public class BlogSettingService {
         entity.setSiteSubtitle(trim(dto.getSiteSubtitle()));
         entity.setLogoUrl(trim(dto.getLogoUrl()));
         entity.setLogoRadius(normalizeRadius(dto.getLogoRadius()));
+        entity.setThemeColor(normalizeColor(dto.getThemeColor()));
         entity.setCopyright(trim(dto.getCopyright()));
         entity.setIcp(trim(dto.getIcp()));
         entity.setIcpUrl(normalizeLink(dto.getIcpUrl()));
@@ -146,6 +155,7 @@ public class BlogSettingService {
         s.setSiteSubtitle("");
         s.setLogoUrl("");
         s.setLogoRadius(DEFAULT_LOGO_RADIUS);
+        s.setThemeColor(DEFAULT_THEME_COLOR);
         s.setCopyright("");
         s.setIcp("");
         s.setIcpUrl("");
@@ -182,6 +192,12 @@ public class BlogSettingService {
     /** 开关归一化：只认 0 为关闭，其余（含 null）按开启处理 */
     private int normalizeEnabled(Integer enabled) {
         return (enabled != null && enabled == 0) ? 0 : COMMENT_ENABLED;
+    }
+
+    /** 主题色：仅接受 #RRGGBB，非法 / 留空回默认 */
+    private String normalizeColor(String color) {
+        String value = trim(color);
+        return HEX_COLOR.matcher(value).matches() ? value.toUpperCase() : DEFAULT_THEME_COLOR;
     }
 
     /**

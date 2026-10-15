@@ -225,7 +225,7 @@ function changePage(page) {
 
 .cat-nav__item:hover {
   color: var(--color-text);
-  background: rgba(22, 163, 74, 0.08);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .cat-nav__item.active {

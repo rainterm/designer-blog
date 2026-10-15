@@ -228,7 +228,22 @@ reportVisit('/post/markdown-guide')   // app/utils/visitTracker.js
 否则会出现「先按默认色渲染、再被 JS 改成品牌色」的闪烁（FOUC），
 SSR 场景下还会变成 hydration 样式不一致。
 
-改主题只需改 `theme.js` —— dev 下由 `builder:watch` 自动重建，无需重启。
+改主题（默认色板）只需改 `theme.js` —— dev 下由 `builder:watch` 自动重建，无需重启。
+
+### 站点主题色（后台可配）
+
+除内置默认色板外，站长可在后台「博客 → 站点设置 → 站点主题色」改站点品牌配色。
+它来自公开接口 `/app-api/blog/public/site` 的 `themeColor`，与其他站点设置一起在
+`app/plugins/blog-config.server.js` 写进 `useState`，所以 SSR 期间就已就绪。
+
+- 覆盖方式：`AppShell.vue` 用 `theme.js` 的 `buildColors` 从主色派生整套品牌色
+  （hover / pressed / light / soft / 渐变等，算法与 admin-web 一致），再把 CSS 变量
+  以内联 `style` 写到内容容器 `.app-view` 上；Naive UI 的 `theme-overrides` 同步换一份。
+- 为什么是内联变量而不是改 `tokens.css`：变量随 SSR 首屏 HTML 一起下发（爬虫与访客
+  拿到同一份，无水合差异），且内联变量是「更近的祖先」，天然胜过 `:root`，
+  不必纠结样式顺序。
+- 未配置 / 非法 / **等于内置默认**时都不覆盖，直接用 `tokens.css` 的默认色板：
+  派生公式与手绘默认色板并非逐位相同，覆盖会让默认观感发生肉眼可见的变化。
 
 ## Naive UI 的 SSR 样式
 

@@ -124,6 +124,6 @@ INSERT INTO `blog_link` (`id`, `name`, `url`, `icon`, `sort`, `status`, `remark`
 (2, 'Gitee',  'https://gitee.com/rainterm',  'gitee',  2, 1, '代码托管', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 站点设置（单行，id=1）-------------------------
-INSERT INTO `blog_setting` (`id`, `site_name`, `site_subtitle`, `logo_url`, `logo_radius`, `copyright`, `icp`, `icp_url`, `seo_keywords`, `seo_description`, `comment_enabled`, `owner_nickname`, `reserved_nicknames`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
-(1, 'Designer Blog', '记录技术与生活', '', 6, '© 2026 Designer. All rights reserved.', '粤ICP备XXXXXX号', 'https://beian.miit.gov.cn/', 'Designer,个人博客,技术与生活', 'Designer 的个人博客，分享技术与生活。', 1, '博主', '博主,站长,管理员,admin', 'system', NOW(), 'system', NOW());
+INSERT INTO `blog_setting` (`id`, `site_name`, `site_subtitle`, `logo_url`, `logo_radius`, `theme_color`, `copyright`, `icp`, `icp_url`, `seo_keywords`, `seo_description`, `comment_enabled`, `owner_nickname`, `reserved_nicknames`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+(1, 'Designer Blog', '记录技术与生活', '', 6, '#16A34A', '© 2026 Designer. All rights reserved.', '粤ICP备XXXXXX号', 'https://beian.miit.gov.cn/', 'Designer,个人博客,技术与生活', 'Designer 的个人博客，分享技术与生活。', 1, '博主', '博主,站长,管理员,admin', 'system', NOW(), 'system', NOW());
 
