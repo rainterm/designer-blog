@@ -16,6 +16,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 
@@ -66,7 +67,7 @@ public class SysMenuController {
     @Mapping("/add")
     @OperLog(title = "菜单管理", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:menu:add")
-    public R<Void> add(@Body MenuSaveDTO dto) {
+    public R<Void> add(@Body @Validated MenuSaveDTO dto) {
         menuService.save(dto);
         return R.ok();
     }
@@ -78,7 +79,7 @@ public class SysMenuController {
     @Mapping("/update")
     @OperLog(title = "菜单管理", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:menu:edit")
-    public R<Void> update(@Body MenuSaveDTO dto) {
+    public R<Void> update(@Body @Validated MenuSaveDTO dto) {
         menuService.update(dto);
         return R.ok();
     }

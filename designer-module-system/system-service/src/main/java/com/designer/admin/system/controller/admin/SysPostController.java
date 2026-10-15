@@ -18,6 +18,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 
@@ -68,7 +69,7 @@ public class SysPostController {
     @Mapping("/add")
     @OperLog(title = "岗位管理", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:post:add")
-    public R<Void> add(@Body PostSaveDTO dto) {
+    public R<Void> add(@Body @Validated PostSaveDTO dto) {
         postService.save(dto);
         return R.ok();
     }
@@ -80,7 +81,7 @@ public class SysPostController {
     @Mapping("/update")
     @OperLog(title = "岗位管理", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:post:edit")
-    public R<Void> update(@Body PostSaveDTO dto) {
+    public R<Void> update(@Body @Validated PostSaveDTO dto) {
         postService.update(dto);
         return R.ok();
     }

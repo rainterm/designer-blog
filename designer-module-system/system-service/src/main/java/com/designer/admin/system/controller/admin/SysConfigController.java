@@ -18,6 +18,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.Arrays;
 import java.util.List;
@@ -58,7 +59,7 @@ public class SysConfigController {
     @Mapping("/add")
     @OperLog(title = "参数设置", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:config:add")
-    public R<Void> add(@Body ConfigSaveDTO dto) {
+    public R<Void> add(@Body @Validated ConfigSaveDTO dto) {
         configService.save(dto);
         return R.ok();
     }
@@ -67,7 +68,7 @@ public class SysConfigController {
     @Mapping("/update")
     @OperLog(title = "参数设置", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:config:edit")
-    public R<Void> update(@Body ConfigSaveDTO dto) {
+    public R<Void> update(@Body @Validated ConfigSaveDTO dto) {
         configService.update(dto);
         return R.ok();
     }

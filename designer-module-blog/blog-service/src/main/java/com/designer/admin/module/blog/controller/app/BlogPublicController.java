@@ -36,6 +36,7 @@ import org.noear.solon.annotation.Post;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.data.annotation.Cache;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 
@@ -170,7 +171,7 @@ public class BlogPublicController {
             @RateLimit.Rule(count = 20, window = 24 * 60 * 60,
                     message = "24 小时内评论条数已达上限，请稍后再试")
     })
-    public R<Void> submitComment(@Body PublicCommentSaveDTO dto) {
+    public R<Void> submitComment(@Body @Validated PublicCommentSaveDTO dto) {
         commentService.submitPublic(dto);
         return R.ok();
     }
@@ -187,7 +188,7 @@ public class BlogPublicController {
      */
     @Post
     @Mapping("/visit")
-    public R<Void> visit(@Body VisitReportDTO dto) {
+    public R<Void> visit(@Body @Validated VisitReportDTO dto) {
         visitService.record(dto);
         return R.ok();
     }

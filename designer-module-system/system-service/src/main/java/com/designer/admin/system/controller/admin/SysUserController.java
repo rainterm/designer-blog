@@ -25,6 +25,7 @@ import org.noear.solon.annotation.Put;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Map;
@@ -86,7 +87,7 @@ public class SysUserController {
     @Mapping("/add")
     @OperLog(title = "用户管理", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:user:add")
-    public R<Void> add(@Body UserSaveDTO dto) {
+    public R<Void> add(@Body @Validated UserSaveDTO dto) {
         userService.save(dto);
         return R.ok();
     }
@@ -98,7 +99,7 @@ public class SysUserController {
     @Mapping("/update")
     @OperLog(title = "用户管理", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:user:edit")
-    public R<Void> update(@Body UserSaveDTO dto) {
+    public R<Void> update(@Body @Validated UserSaveDTO dto) {
         userService.update(dto);
         return R.ok();
     }
@@ -122,7 +123,7 @@ public class SysUserController {
     @Mapping("/password")
     @OperLog(title = "用户管理", businessType = BusinessType.UPDATE, saveParam = false)
     @SaCheckPermission("system:user:resetPwd")
-    public R<Void> resetPassword(@Body ResetPwdDTO dto) {
+    public R<Void> resetPassword(@Body @Validated ResetPwdDTO dto) {
         userService.resetPassword(dto);
         return R.ok();
     }
@@ -155,7 +156,7 @@ public class SysUserController {
         ExcelUtil.writeTemplate(ctx, "用户导入模板.xlsx", "用户", UserExcelVO.class);
     }
 
-    /** 导入用户 Excel；已存在账号跳过；密码为空时默认 Admin@123 */
+    /** 导入用户 Excel；已存在账号跳过；密码为必填项，且逐行按密码策略校验 */
     @Post
     @Mapping("/import")
     @OperLog(title = "用户管理", businessType = BusinessType.IMPORT, saveParam = false, saveResult = false)

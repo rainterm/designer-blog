@@ -51,6 +51,7 @@ import { PersonOutline, LockClosedOutline } from '@vicons/ionicons5'
 import { SliderCaptcha } from '@captcha'
 import { getCaptcha } from '@/api/auth'
 import { captchaApi } from '@/api/captcha'
+import { buildPasswordRules } from '@/constants/password'
 import { useUserStore } from '@/store/user'
 import { appTitle } from '@/settings'
 import BrandLogo from '@/components/BrandLogo.vue'
@@ -83,9 +84,28 @@ const form = reactive({
  */
 const captchaVerification = ref('')
 
+/**
+ * 账号长度上限，与后端 LoginDTO.USERNAME_MAX_LENGTH 保持一致
+ * （designer-module-system/.../model/dto/LoginDTO.java），改动时两边一起改。
+ */
+const USERNAME_MAX_LENGTH = 50
+
 const rules = {
-  username: [{ required: true, message: '请输入登录账号', trigger: ['input', 'blur'] }],
-  password: [{ required: true, message: '请输入登录密码', trigger: ['input', 'blur'] }]
+  username: [
+    { required: true, message: '请输入登录账号', trigger: ['input', 'blur'] },
+    {
+      max: USERNAME_MAX_LENGTH,
+      message: `账号长度不能超过 ${USERNAME_MAX_LENGTH} 个字符`,
+      trigger: ['input', 'blur']
+    }
+  ],
+  // 登录只卡长度、不卡复杂度：复杂度是对「新设密码」的要求，
+  // 放到登录上会让纯字母/纯数字的老密码即使输对也登不进来（后端 LoginDTO 同理）
+  password: buildPasswordRules({
+    required: true,
+    requiredMessage: '请输入登录密码',
+    complexity: false
+  })
 }
 
 async function loadCaptcha() {

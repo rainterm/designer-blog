@@ -18,6 +18,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 
@@ -63,7 +64,7 @@ public class SysSsoClientController {
     @Mapping("/add")
     @OperLog(title = "SSO客户端", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:ssoclient:add")
-    public R<Void> add(@Body SsoClientSaveDTO dto) {
+    public R<Void> add(@Body @Validated SsoClientSaveDTO dto) {
         ssoClientService.save(dto);
         return R.ok();
     }
@@ -72,7 +73,7 @@ public class SysSsoClientController {
     @Mapping("/update")
     @OperLog(title = "SSO客户端", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:ssoclient:edit")
-    public R<Void> update(@Body SsoClientSaveDTO dto) {
+    public R<Void> update(@Body @Validated SsoClientSaveDTO dto) {
         ssoClientService.update(dto);
         return R.ok();
     }

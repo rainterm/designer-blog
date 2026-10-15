@@ -20,7 +20,11 @@ public class StorageConfigSaveDTO {
     /** 是否设为默认 */
     private Integer isDefault;
     private Integer status;
-    @NotBlank(message = "下载前缀不能为空")
+    /**
+     * 下载 URL 前缀。**允许留空**：留空表示沿用服务端默认值
+     * （见 {@code SysStorageConfigService#fillEntity} 的 {@code blankToDefault}），
+     * 前端的存储配置表单也没有把它标成必填，所以这里不能加 {@code @NotBlank}。
+     */
     private String urlPrefix;
     private String allowedExtensions;
     private Long maxSize;

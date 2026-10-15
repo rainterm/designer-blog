@@ -3,6 +3,7 @@ package com.designer.admin.system.service;
 import cn.dev33.satoken.secure.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.designer.admin.common.constant.PasswordPolicy;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.system.model.dto.ResetPwdDTO;
 import com.designer.admin.system.model.dto.UserOptionQueryDTO;
@@ -39,7 +40,6 @@ import java.util.stream.Collectors;
 @Component
 public class SysUserService {
 
-    private static final String DEFAULT_IMPORT_PASSWORD = "Admin@123";
     private static final int EXPORT_LIMIT = 10000;
 
     @Db
@@ -133,6 +133,7 @@ public class SysUserService {
         if (!notBlank(dto.getPassword())) {
             throw new BizException("新增用户时密码不能为空");
         }
+        assertPasswordPolicy(dto.getPassword());
         String username = requireUsername(dto.getUsername());
         assertUsernameUnique(username, null);
         dto.setUsername(username);
@@ -166,6 +167,7 @@ public class SysUserService {
         user.setId(dto.getId());
         copyEditable(dto, user);
         if (notBlank(dto.getPassword())) {
+            assertPasswordPolicy(dto.getPassword());
             user.setPassword(BCrypt.hashpw(dto.getPassword()));
         }
         userMapper.updateById(user);
@@ -218,9 +220,25 @@ public class SysUserService {
         }
     }
 
+    /**
+     * 重置指定用户的密码（管理员操作）。
+     *
+     * <p>除长度与复杂度外，还要求新密码与该用户**当前**密码不同 ——
+     * 「重置」却写回原密码，等于什么都没做，却会让管理员误以为已经改过。
+     * 存在性校验是顺带补上的：原先直接 {@code updateById}，
+     * 传一个不存在的 ID 会静默成功（影响 0 行）。</p>
+     */
     public void resetPassword(ResetPwdDTO dto) {
         if (dto.getUserId() == null || !notBlank(dto.getPassword())) {
             throw new BizException("参数不完整");
+        }
+        SysUser target = userMapper.selectById(dto.getUserId());
+        if (target == null) {
+            throw new BizException("用户不存在");
+        }
+        assertPasswordPolicy(dto.getPassword());
+        if (BCrypt.checkpw(dto.getPassword(), target.getPassword())) {
+            throw new BizException("新密码不能与该用户当前密码相同");
         }
         SysUser user = new SysUser();
         user.setId(dto.getUserId());
@@ -255,7 +273,10 @@ public class SysUserService {
     /**
      * 个人中心：修改自己的密码，BCrypt 校验原密码后写入新密码。
      *
-     * @throws BizException 原密码不正确或用户不存在
+     * <p>长度与复杂度在 Controller 参数上已校验；这里再补一条策略之外的约束 ——
+     * 新密码不能与原密码相同（原密码已验证过，直接比字符串即可，省一次 BCrypt）。</p>
+     *
+     * @throws BizException 原密码不正确、新密码不符合策略、或与新密码相同
      */
     public void changePassword(Long userId, String oldPwd, String newPwd) {
         SysUser db = userMapper.selectById(userId);
@@ -265,10 +286,29 @@ public class SysUserService {
         if (!BCrypt.checkpw(oldPwd, db.getPassword())) {
             throw new BizException("原密码不正确");
         }
+        assertPasswordPolicy(newPwd);
+        if (newPwd.equals(oldPwd)) {
+            throw new BizException("新密码不能与原密码相同");
+        }
         SysUser user = new SysUser();
         user.setId(userId);
         user.setPassword(BCrypt.hashpw(newPwd));
         userMapper.updateById(user);
+    }
+
+    /**
+     * 密码长度与复杂度的兜底校验，规则见 {@link PasswordPolicy}。
+     *
+     * <p>参数注解已经卡过一遍，这里再卡是因为「写入密码」的路径不止 Controller 一条：
+     * Excel 导入完全绕过 DTO，将来其它模块（建号、定时任务）也可能直接调本服务。
+     * 只有让这条界限在服务层也成立，登录侧才敢同样卡下限 ——
+     * 否则一旦漏掉某个写入口子，就会产出「库里躺着 3 位密码、但永远登不进去」的账号。</p>
+     */
+    private void assertPasswordPolicy(String rawPassword) {
+        String violation = PasswordPolicy.firstViolation(rawPassword);
+        if (violation != null) {
+            throw new BizException(violation);
+        }
     }
 
     /** 按当前查询条件导出用户（不含密码） */
@@ -294,7 +334,10 @@ public class SysUserService {
     }
 
     /**
-     * 批量导入用户：账号已存在则跳过；密码为空时使用默认 Admin@123。
+     * 批量导入用户：账号已存在则跳过；**密码必填**，且逐行按 {@link PasswordPolicy} 卡长度与复杂度。
+     *
+     * <p>这里刻意不提供「留空则使用默认密码」的兜底：那会让一批账号拥有一个人人皆知的口令，
+     * 而导入又是批量操作，一旦成灾很难逐个纠正。密码必须由导入方在 Excel 里逐行给出。</p>
      *
      * @return 成功导入条数
      */
@@ -325,7 +368,16 @@ public class SysUserService {
             user.setDeptId(row.getDeptId());
             user.setStatus(row.getStatus() == null ? 1 : row.getStatus());
             user.setRemark(row.getRemark() == null ? "" : row.getRemark());
-            String pwd = notBlank(row.getPassword()) ? row.getPassword().trim() : DEFAULT_IMPORT_PASSWORD;
+            // 导入绕过 DTO，密码策略必须在这里自己把住，否则 Excel 就是绕开校验的后门。
+            // 空密码直接判失败，不兜底成默认密码 —— 见方法注释。
+            String pwd = notBlank(row.getPassword()) ? row.getPassword().trim() : null;
+            if (pwd == null) {
+                throw new BizException("第 " + line + " 行密码不能为空");
+            }
+            String pwdViolation = PasswordPolicy.firstViolation(pwd);
+            if (pwdViolation != null) {
+                throw new BizException("第 " + line + " 行密码不符合要求：" + pwdViolation);
+            }
             user.setPassword(BCrypt.hashpw(pwd));
             userMapper.insert(user);
             success++;

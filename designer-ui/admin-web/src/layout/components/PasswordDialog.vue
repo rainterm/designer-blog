@@ -34,6 +34,12 @@
           show-password-on="click"
           placeholder="请输入新密码"
         />
+        <!--
+          规则说明直接跟在输入框后面。**不要**用 n-form-item 的 #feedback 插槽：
+          naive-ui 一旦拿到 feedback 插槽（或 feedback 属性）就不再渲染校验错误
+          （见 FormItem.mjs 的 resolveWrappedSlot 分支），提示和报错会二选一。
+        -->
+        <div class="password-dialog__hint">{{ PASSWORD_HINT }}</div>
       </n-form-item>
       <n-form-item label="确认密码" path="confirmPassword">
         <n-input
@@ -52,6 +58,12 @@ import { reactive, ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useRouter } from 'vue-router'
 import { changePassword } from '@/api/auth'
+import {
+  PASSWORD_HINT,
+  buildEqualToRule,
+  buildNotEqualToRule,
+  buildPasswordRules
+} from '@/constants/password'
 import { useUserStore } from '@/store/user'
 
 const props = defineProps({
@@ -70,16 +82,15 @@ const form = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const rules = {
   oldPassword: [{ required: true, message: '请输入原密码', trigger: ['input', 'blur'] }],
   newPassword: [
-    { required: true, message: '请输入新密码', trigger: ['input', 'blur'] },
-    { min: 6, max: 50, message: '密码长度需在 6~50 之间', trigger: ['input', 'blur'] }
+    // 长度 + 复杂度，与新增用户、重置密码共用同一份策略
+    ...buildPasswordRules({ required: true, requiredMessage: '请输入新密码' }),
+    // 前端拿得到用户刚输入的原密码，可以就地拦下「换个新密码还是老的」这种白折腾；
+    // 后端仍会再判一次（那里比对的是库里的哈希，见 SysUserService#changePassword）
+    buildNotEqualToRule(() => form.oldPassword, '新密码不能与原密码相同')
   ],
   confirmPassword: [
     { required: true, message: '请再次输入新密码', trigger: ['input', 'blur'] },
-    {
-      validator: (rule, value) => value === form.newPassword,
-      message: '两次输入的密码不一致',
-      trigger: ['input', 'blur']
-    }
+    buildEqualToRule(() => form.newPassword, '两次输入的密码不一致')
   ]
 }
 
@@ -119,5 +130,12 @@ watch(
 
 .password-dialog__form {
   padding-top: 4px;
+}
+
+.password-dialog__hint {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
 }
 </style>

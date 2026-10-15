@@ -18,6 +18,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.Arrays;
 import java.util.List;
@@ -56,7 +57,7 @@ public class BlogTagController {
     @Mapping("/add")
     @OperLog(title = "博客标签", businessType = BusinessType.INSERT)
     @SaCheckPermission("blog:tag:add")
-    public R<Void> add(@Body TagSaveDTO dto) {
+    public R<Void> add(@Body @Validated TagSaveDTO dto) {
         tagService.save(dto);
         return R.ok();
     }
@@ -65,7 +66,7 @@ public class BlogTagController {
     @Mapping("/update")
     @OperLog(title = "博客标签", businessType = BusinessType.UPDATE)
     @SaCheckPermission("blog:tag:edit")
-    public R<Void> update(@Body TagSaveDTO dto) {
+    public R<Void> update(@Body @Validated TagSaveDTO dto) {
         tagService.update(dto);
         return R.ok();
     }

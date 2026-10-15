@@ -30,7 +30,7 @@ public class UserExcelVO {
     @ExcelProperty("备注")
     private String remark;
 
-    /** 仅导入使用；导出为空。留空则使用默认密码 Admin@123 */
+    /** 仅导入使用；导出为空。**导入时必填**，不提供默认密码 */
     @ExcelProperty("初始密码")
     private String password;
 }

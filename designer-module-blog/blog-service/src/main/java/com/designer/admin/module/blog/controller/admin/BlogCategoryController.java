@@ -18,6 +18,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.Arrays;
 import java.util.List;
@@ -56,7 +57,7 @@ public class BlogCategoryController {
     @Mapping("/add")
     @OperLog(title = "博客分类", businessType = BusinessType.INSERT)
     @SaCheckPermission("blog:category:add")
-    public R<Void> add(@Body CategorySaveDTO dto) {
+    public R<Void> add(@Body @Validated CategorySaveDTO dto) {
         categoryService.save(dto);
         return R.ok();
     }
@@ -65,7 +66,7 @@ public class BlogCategoryController {
     @Mapping("/update")
     @OperLog(title = "博客分类", businessType = BusinessType.UPDATE)
     @SaCheckPermission("blog:category:edit")
-    public R<Void> update(@Body CategorySaveDTO dto) {
+    public R<Void> update(@Body @Validated CategorySaveDTO dto) {
         categoryService.update(dto);
         return R.ok();
     }

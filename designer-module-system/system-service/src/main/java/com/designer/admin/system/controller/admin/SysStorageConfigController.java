@@ -19,6 +19,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class SysStorageConfigController {
     @Mapping("/add")
     @OperLog(title = "存储配置", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:storage:add")
-    public R<Void> add(@Body StorageConfigSaveDTO dto) {
+    public R<Void> add(@Body @Validated StorageConfigSaveDTO dto) {
         storageConfigService.save(dto);
         return R.ok();
     }
@@ -68,7 +69,7 @@ public class SysStorageConfigController {
     @Mapping("/update")
     @OperLog(title = "存储配置", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:storage:edit")
-    public R<Void> update(@Body StorageConfigSaveDTO dto) {
+    public R<Void> update(@Body @Validated StorageConfigSaveDTO dto) {
         storageConfigService.update(dto);
         return R.ok();
     }

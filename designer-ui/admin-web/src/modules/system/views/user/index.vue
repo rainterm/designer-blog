@@ -114,6 +114,8 @@
             show-password-on="click"
             :placeholder="form.id ? '留空表示不修改密码' : '请输入初始密码'"
           />
+          <!-- 提示不要放进 n-form-item 的 #feedback 插槽：naive-ui 拿到该插槽后不再渲染校验错误 -->
+          <div class="pwd-form__hint">{{ PASSWORD_HINT }}</div>
         </n-form-item>
         <n-form-item label="昵称" path="nickname">
           <n-input v-model:value="form.nickname" placeholder="请输入昵称" />
@@ -169,6 +171,17 @@
             show-password-on="click"
             placeholder="请输入新密码"
           />
+          <!-- 提示不要放进 n-form-item 的 #feedback 插槽：naive-ui 拿到该插槽后不再渲染校验错误 -->
+          <div class="pwd-form__hint">{{ PASSWORD_HINT }}</div>
+        </n-form-item>
+        <!-- 重置密码由管理员代填，多一个确认框可以拦住「手抖输错、把别人的密码改成一个自己都不知道的值」 -->
+        <n-form-item label="确认密码" path="confirmPassword">
+          <n-input
+            v-model:value="pwdForm.confirmPassword"
+            type="password"
+            show-password-on="click"
+            placeholder="请再次输入新密码"
+          />
         </n-form-item>
       </n-form>
     </Dialog>
@@ -197,6 +210,11 @@ import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useFormDialog } from '@/composables/useFormDialog'
+import {
+  PASSWORD_HINT,
+  buildEqualToRule,
+  buildPasswordRules
+} from '@/constants/password'
 import { useUserStore } from '@/store/user'
 import { fileDownloading } from '@/utils/download'
 
@@ -268,7 +286,7 @@ const {
   openCreate: openPwdForm,
   submit: handleResetPwd
 } = useFormDialog({
-  defaults: { userId: null, username: '', password: '' },
+  defaults: { userId: null, username: '', password: '', confirmPassword: '' },
   async onSubmit(payload) {
     await resetUserPassword({ userId: payload.userId, password: payload.password })
     message.success('密码重置成功')
@@ -282,6 +300,17 @@ const statusOptions = [
 
 const formRules = {
   username: [{ required: true, message: '请输入登录账号', trigger: ['input', 'blur'] }],
+  password: [
+    {
+      // 新增必填、编辑留空表示不修改密码（与后端 UserSaveDTO 同语义），
+      // 所以「要不要必填」不能写死，得看当前是不是新增（form.id 为空）
+      validator: (rule, value) => Boolean(form.id) || Boolean(value),
+      message: '请输入初始密码',
+      trigger: ['input', 'blur']
+    },
+    // 长度 + 复杂度，与重置密码、个人改密共用同一份策略（登录页只卡长度，不校验复杂度）
+    ...buildPasswordRules()
+  ],
   nickname: [{ required: true, message: '请输入昵称', trigger: ['input', 'blur'] }],
   roleIds: [
     {
@@ -296,9 +325,11 @@ const formRules = {
 }
 
 const pwdRules = {
-  password: [
-    { required: true, message: '请输入新密码', trigger: ['input', 'blur'] },
-    { min: 6, message: '密码长度不能少于 6 位', trigger: ['input', 'blur'] }
+  password: buildPasswordRules({ required: true, requiredMessage: '请输入新密码' }),
+  // 与个人改密一致：确认框只负责「两次输入一致」，空值交给 required 规则提示
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: ['input', 'blur'] },
+    buildEqualToRule(() => pwdForm.password, '两次输入的密码不一致')
   ]
 }
 
@@ -504,6 +535,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.pwd-form__hint {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
 .user-layout {
   display: flex;
   align-items: stretch;

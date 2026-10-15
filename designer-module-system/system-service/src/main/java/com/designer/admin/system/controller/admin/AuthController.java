@@ -22,7 +22,9 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.core.handle.Context;
+import org.noear.solon.validation.annotation.Length;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 
@@ -45,12 +47,17 @@ public class AuthController {
      * <p>只返回「要不要验」，不返回图片：滑块由 AJ-Captcha 的 {@code /captcha/get}
      * 下发（与博客前台评论共用同一套端点）。</p>
      *
+     * <p>本端点免登录、无限流，而 {@code username} 会被拼进 Redis 的失败计数键，
+     * 所以这里先卡长度上限，避免超长串直接撑出一个超大 key。</p>
+     *
      * @param username 登录账号（用于判断是否已达失败阈值）
      */
     @SaIgnore
     @Get
     @Mapping("/captcha")
-    public R<CaptchaVO> captcha(String username) {
+    public R<CaptchaVO> captcha(
+            @Length(max = LoginDTO.USERNAME_MAX_LENGTH,
+                    message = "账号长度不能超过 " + LoginDTO.USERNAME_MAX_LENGTH + " 个字符") String username) {
         return R.ok(authService.captcha(username));
     }
 
@@ -68,8 +75,11 @@ public class AuthController {
      * <p>阈值刻意偏宽松：同一出口 IP（公司 NAT）后可能坐着多个管理员，
      * 卡太紧会把他们一起误伤。真正的强约束仍交给账号锁定 —— 那里按账号、按失败次数精确计算。</p>
      *
-     * <p>⚠ {@code @Valid} 参数校验是 Filter、先于本拦截器执行，
-     * 所以「账号/密码为空」的请求会先被校验拦下、不消耗额度；能消耗额度的都是形态完整的登录尝试。</p>
+     * <p>⚠ 顺序上有一个反直觉之处：{@code @Validated} 触发的 DTO 校验**不是**先于限流执行的。
+     * 它由 {@code solon-security-validation} 注册成 index=1 的 bean 拦截器，
+     * 而本注解的 {@code @Around(index = -1)} 在外层，所以「账号/密码为空或超长」的请求
+     * 会先消耗一次额度、再被校验打回。对登录接口这可以接受：额度足够宽松，
+     * 被拦下的也都是本该被拦下的请求；但别把它理解成「非法请求不占额度」。</p>
      */
     @SaIgnore
     @Post
@@ -79,7 +89,7 @@ public class AuthController {
             @RateLimit.Rule(count = 100, window = 24 * 60 * 60,
                     message = "24 小时内登录尝试次数过多，请稍后再试")
     })
-    public R<LoginVO> login(@Body LoginDTO dto, Context ctx) {
+    public R<LoginVO> login(@Body @Validated LoginDTO dto, Context ctx) {
         return R.ok(authService.login(dto, ctx));
     }
 
@@ -117,7 +127,7 @@ public class AuthController {
      */
     @Post
     @Mapping("/sso/ticket")
-    public R<SsoTicketVO> ssoTicket(@Body SsoTicketDTO dto) {
+    public R<SsoTicketVO> ssoTicket(@Body @Validated SsoTicketDTO dto) {
         return R.ok(ssoService.issueTicket(dto == null ? null : dto.getRedirect()));
     }
 
@@ -127,7 +137,7 @@ public class AuthController {
     @SaIgnore
     @Post
     @Mapping("/sso/exchange")
-    public R<LoginVO> ssoExchange(@Body SsoExchangeDTO dto) {
+    public R<LoginVO> ssoExchange(@Body @Validated SsoExchangeDTO dto) {
         return R.ok(ssoService.exchange(dto == null ? null : dto.getTicket()));
     }
 }

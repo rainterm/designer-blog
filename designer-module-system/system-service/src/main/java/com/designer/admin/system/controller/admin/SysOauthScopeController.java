@@ -19,6 +19,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 
@@ -58,7 +59,7 @@ public class SysOauthScopeController {
     @Mapping("/add")
     @OperLog(title = "OAuth开放接口", businessType = BusinessType.INSERT)
     @SaCheckPermission(value = {"system:oauthclient:add", "system:oauthclient:edit"}, mode = SaMode.OR)
-    public R<SysOauthScope> add(@Body OauthScopeSaveDTO dto) {
+    public R<SysOauthScope> add(@Body @Validated OauthScopeSaveDTO dto) {
         return R.ok(scopeService.save(dto));
     }
 
@@ -66,7 +67,7 @@ public class SysOauthScopeController {
     @Mapping("/update")
     @OperLog(title = "OAuth开放接口", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:oauthclient:edit")
-    public R<Void> update(@Body OauthScopeSaveDTO dto) {
+    public R<Void> update(@Body @Validated OauthScopeSaveDTO dto) {
         scopeService.update(dto);
         return R.ok();
     }

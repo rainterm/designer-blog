@@ -19,6 +19,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.Arrays;
 import java.util.List;
@@ -43,7 +44,7 @@ public class BlogCommentController {
     @Mapping("/audit")
     @OperLog(title = "博客评论", businessType = BusinessType.UPDATE)
     @SaCheckPermission("blog:comment:audit")
-    public R<Void> audit(@Body CommentAuditDTO dto) {
+    public R<Void> audit(@Body @Validated CommentAuditDTO dto) {
         commentService.audit(dto);
         return R.ok();
     }
@@ -64,7 +65,7 @@ public class BlogCommentController {
     @Mapping("/reply")
     @OperLog(title = "博客评论", businessType = BusinessType.INSERT)
     @SaCheckPermission("blog:comment:reply")
-    public R<Void> reply(@Body CommentReplyDTO dto) {
+    public R<Void> reply(@Body @Validated CommentReplyDTO dto) {
         commentService.reply(dto);
         return R.ok();
     }

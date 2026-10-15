@@ -14,6 +14,7 @@ import org.noear.solon.annotation.Inject;
 import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 /**
  * 博客站点设置（单行）
@@ -37,7 +38,7 @@ public class BlogSettingController {
     @Mapping("")
     @OperLog(title = "站点设置", businessType = BusinessType.UPDATE)
     @SaCheckPermission("blog:setting:edit")
-    public R<Void> update(@Body SettingSaveDTO dto) {
+    public R<Void> update(@Body @Validated SettingSaveDTO dto) {
         settingService.update(dto);
         return R.ok();
     }

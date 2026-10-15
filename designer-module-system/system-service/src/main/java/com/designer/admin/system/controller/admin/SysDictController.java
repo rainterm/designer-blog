@@ -24,6 +24,7 @@ import org.noear.solon.annotation.Put;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.UploadedFile;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Map;
@@ -67,7 +68,7 @@ public class SysDictController {
     @Mapping("/type")
     @OperLog(title = "字典管理", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:dict:add")
-    public R<Void> typeAdd(@Body DictTypeSaveDTO dto) {
+    public R<Void> typeAdd(@Body @Validated DictTypeSaveDTO dto) {
         dictService.typeSave(dto);
         return R.ok();
     }
@@ -79,7 +80,7 @@ public class SysDictController {
     @Mapping("/type")
     @OperLog(title = "字典管理", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:dict:edit")
-    public R<Void> typeUpdate(@Body DictTypeSaveDTO dto) {
+    public R<Void> typeUpdate(@Body @Validated DictTypeSaveDTO dto) {
         dictService.typeUpdate(dto);
         return R.ok();
     }
@@ -181,7 +182,7 @@ public class SysDictController {
     @Mapping("/data")
     @OperLog(title = "字典管理", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:dict:add")
-    public R<Void> dataAdd(@Body SysDictData data) {
+    public R<Void> dataAdd(@Body @Validated SysDictData data) {
         dictService.dataSave(data);
         return R.ok();
     }
@@ -193,7 +194,7 @@ public class SysDictController {
     @Mapping("/data")
     @OperLog(title = "字典管理", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:dict:edit")
-    public R<Void> dataUpdate(@Body SysDictData data) {
+    public R<Void> dataUpdate(@Body @Validated SysDictData data) {
         dictService.dataUpdate(data);
         return R.ok();
     }

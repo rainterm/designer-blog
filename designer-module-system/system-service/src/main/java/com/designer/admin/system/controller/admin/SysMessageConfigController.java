@@ -21,6 +21,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,7 @@ public class SysMessageConfigController {
     @Mapping("/add")
     @OperLog(title = "消息通道", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:message:add")
-    public R<Void> add(@Body MessageConfigSaveDTO dto) {
+    public R<Void> add(@Body @Validated MessageConfigSaveDTO dto) {
         messageConfigService.save(dto);
         return R.ok();
     }
@@ -70,7 +71,7 @@ public class SysMessageConfigController {
     @Mapping("/update")
     @OperLog(title = "消息通道", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:message:edit")
-    public R<Void> update(@Body MessageConfigSaveDTO dto) {
+    public R<Void> update(@Body @Validated MessageConfigSaveDTO dto) {
         messageConfigService.update(dto);
         return R.ok();
     }
@@ -106,7 +107,7 @@ public class SysMessageConfigController {
     @Mapping("/send")
     @OperLog(title = "消息通道", businessType = BusinessType.OTHER)
     @SaCheckPermission(value = {"system:message:send", "system:msgrecord:send"}, mode = SaMode.OR)
-    public R<Void> send(@Body MessageSendDTO dto) {
+    public R<Void> send(@Body @Validated MessageSendDTO dto) {
         messageConfigService.testSend(dto);
         return R.ok();
     }

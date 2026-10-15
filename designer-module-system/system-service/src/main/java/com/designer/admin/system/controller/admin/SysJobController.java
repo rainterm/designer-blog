@@ -18,6 +18,7 @@ import org.noear.solon.annotation.Mapping;
 import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
+import org.noear.solon.validation.annotation.Validated;
 
 import java.util.Map;
 
@@ -50,7 +51,7 @@ public class SysJobController {
     @Mapping("/add")
     @OperLog(title = "定时任务", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:job:add")
-    public R<Void> add(@Body JobSaveDTO dto) {
+    public R<Void> add(@Body @Validated JobSaveDTO dto) {
         jobService.save(dto);
         return R.ok();
     }
@@ -59,7 +60,7 @@ public class SysJobController {
     @Mapping("/update")
     @OperLog(title = "定时任务", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:job:edit")
-    public R<Void> update(@Body JobSaveDTO dto) {
+    public R<Void> update(@Body @Validated JobSaveDTO dto) {
         jobService.update(dto);
         return R.ok();
     }
