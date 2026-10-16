@@ -16,8 +16,8 @@
                   class="post-toc__catalog"
                   :editor-id="catalogEditorId"
                   :scroll-element="scrollEl"
-                  :offset-top="tocOffset"
-                  :scroll-element-offset-top="tocOffset"
+                  :offset-top="stickyOffset"
+                  :scroll-element-offset-top="stickyOffset"
                   :catalog-max-depth="3"
                 />
               </div>
@@ -55,7 +55,7 @@
                 <n-image :src="coverSrc" :alt="post.title" object-fit="contain" width="100%" />
               </div>
 
-              <div class="article-body">
+              <div class="article-body" ref="articleBodyEl" @click="onArticleClick">
                 <!--
                   直接渲染 md-editor-v3 预览器：与后台编辑器预览同一套渲染与样式
                   （代码块头部 / 复制按钮 / 折叠、图片点击放大均由组件自带）。
@@ -65,11 +65,14 @@
                   HTML 里，爬虫不需要执行任何 JS 就能读到。
 
                   onGetCatalog 回传正文标题列表，用来决定左侧大纲是否显示。
+                  md-heading-id 换成 GitHub 风格的 slug，让正文里手写的目录锚点能对上，
+                  详见 @/utils/headingAnchor。
                 -->
                 <MdPreview
                   :id="catalogEditorId"
                   :model-value="contentMd"
                   language="zh-CN"
+                  :md-heading-id="headingId"
                   :on-get-catalog="handleCatalog"
                 />
               </div>
@@ -131,6 +134,7 @@
 <script setup>
 import { MdCatalog, MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
+import { useMessage } from 'naive-ui'
 import '@/assets/styles/article.css'
 import CommentList from '@/components/CommentList.vue'
 import CommentForm from '@/components/CommentForm.vue'
@@ -140,16 +144,22 @@ import { fetchComments, fetchPostBySlug } from '@/api/blog'
 import { CODE } from '@/api/request'
 import { userFacingError } from '@/utils/routeError'
 import { formatDate, formatViews } from '@/utils/format'
+import { headingId, resolveHeading } from '@/utils/headingAnchor'
+import { isRepoRelativeLink } from '@/utils/articleLinks'
 import { siteSeoDescription, useSiteSetting } from '@/composables/useSiteSetting'
 import { useBlogSeo } from '@/composables/useBlogSeo'
 
 /** 正文预览器与大纲共用的 id，MdCatalog 靠它跟 MdPreview 建立联系 */
 const catalogEditorId = 'blog-post-preview'
-/** 大纲高亮 / 跳转的顶部偏移：吸顶导航高度 + 少量留白 */
-const tocOffset = 76
+/**
+ * 跳转时的顶部留白：吸顶导航高度 + 少量留白。
+ * 大纲（MdCatalog）与正文内的锚点跳转共用，两者落点才一致。
+ */
+const stickyOffset = 76
 
 const route = useRoute()
 const site = useSiteSetting()
+const message = useMessage()
 /**
  * 请求自身的地址（服务端取自请求头，浏览器取自 location）。
  * 必须在 setup 阶段取：`useRequestURL()` 依赖当前 Nuxt 实例，
@@ -278,6 +288,95 @@ const showToc = computed(() => headings.value.length > 0)
 function handleCatalog(list) {
   headings.value = Array.isArray(list) ? list : []
 }
+
+/* ---------- 正文内的锚点跳转 ---------- */
+
+/** 正文容器：既作为锚点查找范围，也用来做点击事件委托 */
+const articleBodyEl = ref(null)
+
+/**
+ * 把某个标题滚到可视区（让开吸顶导航）。
+ *
+ * <p>**不能**靠浏览器的原生片段跳转（`<a href="#foo">` 的默认行为）：全站真正的滚动容器是
+ * `layouts/default.vue` 的 `.blog-scroll`，而 `html / body / #__nuxt` 都是
+ * `overflow: hidden`（见 `assets/styles/index.css`）。document 本身不可滚动，
+ * 浏览器找不到可滚动的祖先，结果是地址栏 hash 变了、页面一动不动。</p>
+ *
+ * <p>所以这里自己算出相对于滚动容器的位置再滚。</p>
+ */
+function scrollHeadingIntoView(el, behavior = 'smooth') {
+  const scroller = blogScrollEl?.value
+  if (!scroller || !el) return
+  const target =
+    scroller.scrollTop +
+    (el.getBoundingClientRect().top - scroller.getBoundingClientRect().top) -
+    stickyOffset
+  scroller.scrollTo({ top: Math.max(0, target), behavior })
+}
+
+/**
+ * 正文内的链接点击处理（委托在正文容器上），分两类接管：
+ *
+ * <p>1. **页内锚点** `#xxx`：滚动到对应标题（原因见 {@link scrollHeadingIntoView}）。
+ * 只拦「能在正文里找到目标」的锚点，找不到就放行。</p>
+ *
+ * <p>2. **仓库内相对路径** `docs/开发规范.md` 这类：博客站内没有对应文件，
+ * 放行只会 404，所以直接禁止跳转，并提示文件在代码仓库里（判定见
+ * `@/utils/articleLinks`）。</p>
+ *
+ * <p>其余链接（`https://…`、`mailto:`、站内根路径等）一律不干预，交给浏览器默认行为 ——
+ * 包括 md-editor-v3 图片放大用的那些 `<a>`。</p>
+ *
+ * <p>锚点跳转时 URL 用 `history.replaceState` 更新而不是走 `router.push`：布局里 watch 了
+ * `route.fullPath`，一旦路由变化就把 `.blog-scroll` 滚回顶部 —— 那会和这里的滚动打架，
+ * 表现为「点一下先跳过去、马上又弹回顶部」。`replaceState` 不通知 vue-router，
+ * 既保住了可分享的地址栏 hash，又不触发那次回顶。用 replace 而非 push 是为了不让
+ * 每一次目录点击都塞一条历史记录，返回时直接回到上一页更符合直觉。</p>
+ */
+function onArticleClick(event) {
+  const link = event.target?.closest?.('a[href]')
+  if (!link) return
+  const href = link.getAttribute('href') || ''
+
+  // 仓库内相对路径（如 docs/开发规范.md）：博客站内没有这些文件，
+  // 放行只会跳到 404，所以拦下并说明原因
+  if (isRepoRelativeLink(href)) {
+    event.preventDefault()
+    message.info('该文件位于代码仓库中，博客站内无法打开')
+    return
+  }
+
+  if (!href.startsWith('#')) return
+
+  const target = resolveHeading(href, articleBodyEl.value)
+  // 解析不到就别拦：让浏览器按原样试一次，比静默什么都不做更好排查
+  if (!target) return
+
+  event.preventDefault()
+  scrollHeadingIntoView(target)
+  history.replaceState(history.state, '', href)
+}
+
+/**
+ * 首屏深链（分享出去带 `#锚点` 的地址）也要落到对应标题。
+ *
+ * <p>**不能**放在 `onMounted`：那时 MdPreview 的正文还没进 DOM —— 标题及其 id 都是
+ * 客户端渲染完才生成的，`resolveHeading` 只会拿到 null，深链就静默失效了。
+ * 等预览器回传标题列表（`headings` 非空，说明正文已渲染）再补跳一次，且只跳一次，
+ * 避免后续任何重渲染又跳一回。</p>
+ */
+const pendingHash = ref(
+  typeof route.hash === 'string' && route.hash.length > 1 ? route.hash : ''
+)
+
+watch(headings, async (list) => {
+  if (!pendingHash.value || !list.length) return
+  const hash = pendingHash.value
+  pendingHash.value = ''
+  await nextTick()
+  const target = resolveHeading(hash, articleBodyEl.value)
+  if (target) scrollHeadingIntoView(target, 'auto')
+})
 
 /* ---------- SEO ---------- */
 

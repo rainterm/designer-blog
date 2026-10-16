@@ -43,6 +43,34 @@
 }
 
 /*
+ * 锚点定位时给吸顶导航让位。
+ *
+ * <p>正文里的 `[文字](#锚点)` 由页面接管滚动（原因见 pages/post/[slug].vue 的
+ * scrollHeadingIntoView），那里是手动减偏移；这条 scroll-margin-top 是给**原生**锚点定位
+ * 兜底的路径 —— 例如中键 / 新标签页直接打开带 `#锚点` 的地址、或浏览器自己处理片段跳转时，
+ * 没有它标题会正好被 64px 的吸顶导航盖住。</p>
+ */
+.article-body .md-editor-preview :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: calc(var(--layout-nav-height) + 12px);
+}
+
+/*
+ * 仓库内相对路径链接去掉「可点」的视觉暗示。
+ *
+ * <p>`docs/开发规范.md`、`deploy/README.md`、`LICENSE` 这类是相对「代码仓库根目录」的路径，
+ * 博客站内没有对应文件，点击已被 pages/post/[slug].vue 拦下并提示。
+ * 但主题仍会把它们渲染成蓝色带下划线的链接，光标也是手型 —— 用户会反复去点。
+ * 这里把光标改回默认，让它看起来就是「一段说明文字」。</p>
+ *
+ * <p>选择器与 `@/utils/articleLinks` 的判定保持一致（排除法）：排除页内锚点、
+ * 站内根路径、以及任何含协议（`https:` / `mailto:` …）的地址，剩下的即仓库相对路径。
+ * 用 `[href*=':']` 代替逐个列举协议，是为了不依赖具体有哪些 scheme。</p>
+ */
+.article-body .md-editor-preview a[href]:not([href^='#']):not([href^='/']):not([href*=':']) {
+  cursor: default;
+}
+
+/*
  * 正文首个元素不吃顶部外边距。
  *
  * <p>预览主题给标题的是 `margin: 1.4em 0`（h1 即 44.8px），那是用来分隔正文内部
