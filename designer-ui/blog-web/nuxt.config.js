@@ -151,7 +151,8 @@ export default defineNuxtConfig({
      * 点链接进去就报错」，很容易被误判成前端 bug。</p>
      *
      * <p>与 admin-web 的 Vite `server.proxy` 是同一件事，只是 Nuxt 走 Nitro。
-     * 只代理 `/app-api`：博客站点不暴露 `/admin-api`（nginx 里也是显式 404）。</p>
+     * 只代理 `/app-api`：博客站点不暴露 `/admin-api`（nginx 里也是显式 404）。
+     * 唯一的例外是下面的图片下载路径，见那处注释。</p>
      */
     devProxy: {
       '/app-api': {
@@ -175,6 +176,22 @@ export default defineNuxtConfig({
        */
       '/captcha': {
         target: `${apiInternalBase}/captcha`,
+        changeOrigin: true
+      },
+      /**
+       * 文章封面 / 正文图片。
+       *
+       * <p>存储模块下发的 URL 是 `/admin-api/system/file/download/...`（见 app.yml 的
+       * `designer.storage.default-url-prefix`），而博客域名刻意不暴露 `/admin-api`。
+       * 于是封面在 dev 与生产都取不到 —— 图片请求落到 SSR 路由上被当成页面，返回 404。</p>
+       *
+       * <p>这里**只放行下载这一个子路径**，而不是把 `/admin-api` 整个代理进来：
+       * `FileController#download` 本身就是 `@SaIgnore` 的公开接口（图片要能匿名访问），
+       * 但没有理由顺带把后台的用户 / 角色 / 配置接口也暴露给博客域名。
+       * 生产 nginx 是同一条规则（见 deploy/nginx/default.conf 的博客 server 块）。</p>
+       */
+      '/admin-api/system/file/download': {
+        target: `${apiInternalBase}/admin-api/system/file/download`,
         changeOrigin: true
       }
     }

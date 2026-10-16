@@ -47,7 +47,12 @@
 
             <n-image-group>
               <div v-if="coverSrc" class="post-cover">
-                <n-image :src="coverSrc" :alt="post.title" object-fit="cover" width="100%" />
+                <!--
+                  object-fit 必须是 contain：封面按原图比例完整展示。
+                  用 cover 会为了填满固定高度的容器而裁掉上下两端（图片一旦被判为
+                  「横幅」，原图里的顶栏 / 底栏就会被切掉），这里以「看全」优先。
+                -->
+                <n-image :src="coverSrc" :alt="post.title" object-fit="contain" width="100%" />
               </div>
 
               <div class="article-body">
@@ -399,7 +404,7 @@ function toIso(value) {
 }
 
 .post-header {
-  margin-bottom: 32px;
+  margin-bottom: 16px;
 }
 
 .post-header h1 {
@@ -451,10 +456,22 @@ function toIso(value) {
   display: block;
 }
 
+/*
+ * 封面完整展示，不裁剪。
+ *
+ * <p>这里曾用 `max-height: 420px` + `object-fit: cover`，把封面压成一条固定高度的横幅：
+ * 宽度 872px 时按原图比例需要 452px 高，被压到 420px 后，多出来的部分由 cover 从
+ * 上下两端各裁掉一截 —— 原图是完整的界面截图（顶栏和底栏都有内容），于是看起来
+ * 「显示不全」。高度改由原图比例决定（height: auto），宽度撑满即可。</p>
+ *
+ * <p>代价：特别高的封面（竖图）会占掉较多首屏。这是有意的取舍 —— 封面按原样呈现，
+ * 不为了排版整齐去裁用户上传的图。</p>
+ */
 .post-cover :deep(img) {
+  display: block;
   width: 100%;
-  max-height: 420px;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
 }
 
 .comments {
