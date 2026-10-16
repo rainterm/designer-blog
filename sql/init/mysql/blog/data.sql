@@ -36,6 +36,9 @@ INSERT INTO `sys_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `path`, `co
 (8041, 8004, '评论审核', 'F', '', '', 'blog:comment:audit',  '', 2, 1, 1, 'system', NOW(), 'system', NOW()),
 (8042, 8004, '评论删除', 'F', '', '', 'blog:comment:remove', '', 3, 1, 1, 'system', NOW(), 'system', NOW()),
 (8043, 8004, '评论回复', 'F', '', '', 'blog:comment:reply',  '', 4, 1, 1, 'system', NOW(), 'system', NOW()),
+(8044, 8004, '评论新增', 'F', '', '', 'blog:comment:add',    '', 5, 1, 1, 'system', NOW(), 'system', NOW()),
+(8045, 8004, '评论编辑', 'F', '', '', 'blog:comment:edit',   '', 6, 1, 1, 'system', NOW(), 'system', NOW()),
+(8046, 8004, '评论置顶', 'F', '', '', 'blog:comment:top',    '', 7, 1, 1, 'system', NOW(), 'system', NOW()),
 -- 链接按钮
 (8050, 8006, '链接查询', 'F', '', '', 'blog:link:query',  '', 1, 1, 1, 'system', NOW(), 'system', NOW()),
 (8051, 8006, '链接新增', 'F', '', '', 'blog:link:add',    '', 2, 1, 1, 'system', NOW(), 'system', NOW()),

@@ -30,8 +30,12 @@ export const deletePosts = (ids) =>
 
 // ---------------------- 评论 ----------------------
 export const pageComments = (params) => request.get('/admin-api/blog/comment/page', { params })
+export const treeComments = (params) => request.get('/admin-api/blog/comment/tree', { params })
 export const auditComment = (data) => request.put('/admin-api/blog/comment/audit', data)
 export const replyComment = (data) => request.post('/admin-api/blog/comment/reply', data)
+export const addComment = (data) => request.post('/admin-api/blog/comment/add', data)
+export const updateComment = (data) => request.put('/admin-api/blog/comment/update', data)
+export const topComment = (data) => request.put('/admin-api/blog/comment/top', data)
 export const deleteComments = (ids) =>
   request.delete('/admin-api/blog/comment/remove', { params: { ids: ids.join(',') } })
 

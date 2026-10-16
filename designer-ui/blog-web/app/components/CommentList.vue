@@ -7,6 +7,11 @@
       <div class="comment-item__head">
         <span class="comment-item__name">{{ item.nickname }}</span>
         <!--
+          置顶：由站长在后台设置。服务端已把它排在该层的靠前位置，
+          这里只需标出来 —— 否则读者不知道这条为什么排在最前面。
+        -->
+        <span v-if="item.isTop" class="comment-item__top">置顶</span>
+        <!--
           博主标识只看服务端下发的 authorType，不看昵称文本：
           否则访客把昵称写成「博主」就能冒充。后端已在提交时强制访客为 0。
         -->
@@ -106,6 +111,22 @@ const flat = computed(() => {
 .comment-item__time {
   font-size: 12px;
   color: var(--color-text-muted);
+}
+
+/* 「置顶」标识：与「博主」的实底胶囊同形但改用描边+主题色，
+   这样「身份（实底）」与「编辑标记（描边）」在视觉层级上仍分得开，
+   同时又比纯元信息（时间、归属地）更醒目。 */
+.comment-item__top {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.02em;
+  color: var(--color-primary);
+  white-space: nowrap;
 }
 
 .comment-item__location {

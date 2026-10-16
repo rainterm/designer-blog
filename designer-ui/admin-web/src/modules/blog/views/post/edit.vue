@@ -123,6 +123,12 @@
         </n-space>
       </div>
     </n-card>
+
+    <!--
+      评论面板：正文与表单之外独立一块，避免和「保存 / 发布」按钮抢视觉权重。
+      只有已保存的文章才有 id，未保存时组件内部会给出提示。
+    -->
+    <PostCommentPanel :post-id="form.id" :allow-comment="form.allowComment" />
   </div>
 </template>
 
@@ -141,6 +147,7 @@ import {
   updatePost
 } from '@/modules/blog/api'
 import { uploadFile } from '@/modules/system/api/file'
+import PostCommentPanel from './PostCommentPanel.vue'
 
 const route = useRoute()
 const router = useRouter()

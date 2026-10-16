@@ -51,6 +51,13 @@ public class BlogComment extends BaseEntity {
     /** 0待审 1通过 2拒绝 */
     private Integer status;
 
+    /**
+     * 是否置顶：0 否，1 是。
+     *
+     * <p>只影响**展示顺序**，不改 status：审核与置顶是两件事，待审评论同样可以置顶。</p>
+     */
+    private Integer isTop;
+
     /** 文章标题（非库字段） */
     @TableField(exist = false)
     private String postTitle;

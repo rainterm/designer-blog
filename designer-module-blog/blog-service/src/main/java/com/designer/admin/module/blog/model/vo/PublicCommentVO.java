@@ -26,6 +26,9 @@ public class PublicCommentVO {
     /** IP 归属地（省级，如「广东」） */
     private String ipLocation;
 
+    /** 是否置顶：0 否，1 是。置顶的评论排在前面，前台展示为「置顶」标识 */
+    private Integer isTop;
+
     /**
      * 被回复者的昵称：仅第 2 层有值，用于显示「某某 回复 某某」。
      * 被回复评论不可见时为 null。

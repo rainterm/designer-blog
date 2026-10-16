@@ -128,6 +128,7 @@ CREATE TABLE `blog_comment` (
     `ip_location`   VARCHAR(64)   NOT NULL DEFAULT ''     COMMENT 'IP归属地（省级，如「广东」；内网为「内网」）',
     `commenter_key` VARCHAR(64)   NOT NULL DEFAULT ''     COMMENT '评论人匿名标识（客户端密钥的 SHA-256，用于本人查看/删除）',
     `status`        TINYINT       NOT NULL DEFAULT 0      COMMENT '状态：0待审 1通过 2拒绝',
+    `is_top`        TINYINT       NOT NULL DEFAULT 0      COMMENT '是否置顶：0否 1是（只影响展示顺序，不改状态；排序在应用层做，故无需索引）',
     `create_by`     VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '创建人',
     `create_time`   DATETIME      DEFAULT NULL            COMMENT '创建时间',
     `update_by`     VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
