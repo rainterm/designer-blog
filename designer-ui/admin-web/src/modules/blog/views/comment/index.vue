@@ -49,7 +49,8 @@
       >
         <!-- 署名不在这里填：统一用「站点设置 → 站长署名」，避免同一个人出现多个署名 -->
         <n-form-item label="署名">
-          <span class="reply-owner">{{ ownerNickname }}</span>
+          <!-- 读不到设置时给个占位符，不拿一个假名字顶上 -->
+          <span class="reply-owner">{{ ownerNickname || '—' }}</span>
         </n-form-item>
         <n-form-item label="回复内容" path="content">
           <n-input
@@ -67,7 +68,7 @@
 </template>
 
 <script setup>
-import { computed, h, onMounted, ref } from 'vue'
+import { computed, h, onActivated, ref } from 'vue'
 import { NTag, useMessage } from 'naive-ui'
 import { ArrowUndoOutline, CheckmarkOutline, CloseOutline, TrashOutline } from '@vicons/ionicons5'
 import { hActionBtn, hActionConfirm, hActionGroup } from '@/utils/actionBtn'
@@ -98,15 +99,16 @@ const { handleBatchDelete } = useBatchDelete(pager, deleteComments, {
 const replyTarget = ref(null)
 
 /**
- * 站点评论总开关：关闭时回复按钮置灰。
- * 后端同样会拒绝，这里只是提前给出可理解的反馈，避免点了才报错。
+ * 站长署名：**取自「站点设置 → 站长署名」**，不是写死的值，初始留空等接口回填。
+ *
+ * <p>弹窗里只做展示、不给编辑入口：回复接口不接受前端传署名，落库时后端同样读这份
+ * 配置（{@code BlogSettingService#getOwnerNickname}），两处同源才不会出现「弹窗显示的
+ * 名字」与「评论上显示的名字」不一致。</p>
+ *
+ * <p>只读署名，不读「开启评论」：那个开关约束访客入口，站长在关闭评论后仍需要能回复
+ * （后端 {@code BlogCommentService#reply} 同样不拦截）。</p>
  */
-const commentEnabled = ref(1)
-const replyDisabled = computed(() => commentEnabled.value !== 1)
-const replyTip = computed(() => (replyDisabled.value ? '站点已关闭评论功能' : '回复'))
-
-/** 站长署名（站点设置）：回复固定用它，弹窗里只做展示，不给编辑入口 */
-const ownerNickname = ref('博主')
+const ownerNickname = ref('')
 
 const {
   visible: replyVisible,
@@ -187,10 +189,10 @@ const columns = computed(() => [
           userStore.hasPerm('blog:comment:reply') &&
             row.status === 1 &&
             hActionBtn({
-              tip: replyTip.value,
+              tip: '回复',
               type: 'primary',
               icon: ArrowUndoOutline,
-              disabled: busy(row.id) || replyDisabled.value,
+              disabled: busy(row.id),
               onClick: () => handleReply(row)
             }),
           userStore.hasPerm('blog:comment:audit') &&
@@ -237,18 +239,24 @@ async function handleDelete(row) {
   loadData()
 }
 
-/** 拉取站点评论总开关与站长署名；失败时按默认处理，不阻塞列表（后端仍会兜底校验） */
-async function loadCommentSwitch() {
+/**
+ * 拉取站长署名。读不到就留空、不编造默认名：回复真正用的署名由后端在提交时取配置，
+ * 这里只是弹窗的一次展示，宁可显示「—」也不显示一个可能与设置不符的名字。
+ */
+async function loadOwnerNickname() {
   try {
     const res = await getSetting()
-    commentEnabled.value = res.data?.commentEnabled != null ? res.data.commentEnabled : 1
-    ownerNickname.value = res.data?.ownerNickname || '博主'
+    ownerNickname.value = res.data?.ownerNickname || ''
   } catch {
-    commentEnabled.value = 1
+    ownerNickname.value = ''
   }
 }
 
-onMounted(loadCommentSwitch)
+/*
+ * 用 activated 而不是 mounted：布局开了 keep-alive，本页离开再回来不会重新挂载，
+ * 若只在 mounted 读一次，「站点设置」里改了署名后回到这里，弹窗会一直显示旧名字。
+ */
+onActivated(loadOwnerNickname)
 </script>
 
 <style scoped>

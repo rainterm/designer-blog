@@ -111,6 +111,7 @@ public class BlogCommentService {
      * <ul>
      *   <li>不走验证码与频率限制——这是站长的正常运营动作；</li>
      *   <li>{@code status} 直接置 1，回复即刻对访客可见；</li>
+     *   <li><b>不受站点评论总开关限制</b>：开关约束的是访客入口，站长关闭评论后仍需要能补充说明；</li>
      *   <li><b>不记录 IP / 归属地</b>：回复代表站点方，公开归属地会暴露站长的位置信息，没有展示价值。</li>
      * </ul>
      *
@@ -122,8 +123,6 @@ public class BlogCommentService {
             throw new BizException("评论ID不能为空");
         }
         String content = requireContent(dto.getContent(), "回复");
-        // 全局关闭时前台整个输入区都不渲染，此时允许回复只会造出「看不见的评论」
-        assertCommentEnabled();
         BlogComment parent = commentMapper.selectById(dto.getId());
         if (parent == null) {
             throw new BizException("评论不存在");
@@ -163,24 +162,23 @@ public class BlogCommentService {
      * 这里是站长自己开一个话题，所以没有父评论。署名同样固定取站点配置的站长署名，
      * 不接受调用方自定义 —— 理由与 reply 一致，见那里的说明。</p>
      *
-     * <p>为什么这里比 reply 多校验了文章状态与「允许评论」：reply 的父评论已经审核通过，
-     * 说明这篇文章的评论区本来就是公开可见的，那两项校验对它是冗余的；
-     * 而顶级评论没有这个隐含前提，文章未发布或已关闭评论时发出去的评论访客根本看不到，
-     * 所以必须显式拦住，而不是静默落库一条没人能看见的评论。</p>
+     * <p>不受站点评论总开关与文章「允许评论」开关限制：两个开关约束的是**访客**入口，
+     * 关闭后前台只是收起输入框，已发布的评论仍然可读（见 {@code [slug].vue} 的
+     * {@code commentable}），所以站长在关闭评论后补充说明依然是有意义、也看得到的。
+     * 后台是站长的运营工具，不该被「给访客看」的开关挡住。</p>
+     *
+     * <p>只保留「文章已发布」校验：草稿没有任何公开访问入口，写在上面的评论永远无处展示，
+     * 静默落库只会让站长误以为发表成功。</p>
      */
     public void addByOwner(CommentAddDTO dto) {
         if (dto.getPostId() == null) {
             throw new BizException("文章ID不能为空");
         }
         String content = requireContent(dto.getContent(), "评论");
-        assertCommentEnabled();
 
         BlogPost post = postMapper.selectById(dto.getPostId());
         if (post == null || !Objects.equals(post.getStatus(), 1)) {
             throw new BizException("文章不存在或未发布");
-        }
-        if (!Objects.equals(post.getAllowComment(), 1)) {
-            throw new BizException("该文章已关闭评论");
         }
 
         BlogComment comment = new BlogComment();
@@ -493,11 +491,14 @@ public class BlogCommentService {
     }
 
     /**
-     * 评论总开关校验：站点级关闭时直接拒绝写入。
+     * 访客评论总开关校验：站点级关闭时直接拒绝写入。
      *
      * <p>与 {@code blog_post.allow_comment} 是「与」关系，两级都要开启才能评论：
      * 这里是站点级（后台「站点设置」），单篇级在 {@link #submitPublic} 里按文章判断。
      * 提示语刻意区分，便于访客判断是站点关了还是这篇关了。</p>
+     *
+     * <p><b>只用于访客入口</b>（{@link #submitPublic}）：后台的回复与主动评论由站长发起，
+     * 不受这两个开关约束，理由见 {@link #addByOwner}。</p>
      */
     private void assertCommentEnabled() {
         if (!settingService.isCommentEnabled()) {

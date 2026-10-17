@@ -14,10 +14,10 @@
 
     <template v-else>
       <!--
-        评论不可见时提前说明：后端同样会拒绝（见 BlogCommentService#addByOwner），
-        但在这里讲清楚原因，比让用户点了才发现发不出去更好。
+        评论开关关闭时给个说明：开关只约束访客入口，站长仍需要能补充说明
+        （前台会收起输入框，但已发布的评论照常展示），所以这里不禁用发表。
       -->
-      <n-alert v-if="!canComment" type="warning" :bordered="false" class="post-comments__hint">
+      <n-alert v-if="commentsClosed" type="info" :bordered="false" class="post-comments__hint">
         {{ closedReason }}
       </n-alert>
 
@@ -29,15 +29,16 @@
           :rows="3"
           maxlength="2000"
           show-count
-          :placeholder="canComment ? `以「${ownerNickname}」的身份发表评论` : '当前不可发表评论'"
-          :disabled="!canComment || adding"
+          :placeholder="ownerNickname ? `以「${ownerNickname}」的身份发表评论` : '发表评论'"
+          :disabled="adding"
         />
         <div class="comment-compose__foot">
-          <span class="comment-compose__sign">署名：{{ ownerNickname }}</span>
+          <!-- 署名读自「站点设置」，未读到时给占位符，不预置一个写死的名字 -->
+          <span class="comment-compose__sign">署名：{{ ownerNickname || '—' }}</span>
           <n-button
             type="primary"
             :loading="adding"
-            :disabled="!canComment || !draft.trim()"
+            :disabled="!draft.trim()"
             @click="handleAdd"
           >
             发表评论
@@ -80,7 +81,28 @@
               </span>
 
               <!-- 操作与昵称同行、贴右；只显示图标，悬浮给出文字 -->
-              <div v-if="editingId !== item.id" class="comment-item__actions">
+              <div v-if="editingId !== item.id && replyingId !== item.id" class="comment-item__actions">
+                <!--
+                  回复：后端只允许回复**已通过**的评论（回复会以「已通过」立即公开，
+                  父评论若还在待审/已拒绝，公开列表会把它孤儿提升成顶级评论），
+                  所以待审行给一个置灰按钮并说明原因，而不是干脆不显示、让人以为漏了功能。
+                -->
+                <n-tooltip v-if="canReply" placement="top">
+                  <template #trigger>
+                    <n-button
+                      quaternary
+                      circle
+                      type="primary"
+                      :disabled="item.status !== 1"
+                      @click="startReply(item)"
+                    >
+                      <template #icon>
+                        <n-icon :component="ArrowUndoOutline" />
+                      </template>
+                    </n-button>
+                  </template>
+                  {{ item.status === 1 ? '回复' : '只能回复已通过的评论，请先审核通过' }}
+                </n-tooltip>
                 <!--
                   置顶用向上箭头。箭头类图标没有实心/描边两种字形可用，
                   所以「已置顶」靠按钮变主题色 + 提示语改成「取消置顶」来区分，
@@ -176,6 +198,33 @@
               </div>
             </template>
             <p v-else class="comment-item__content">{{ item.content }}</p>
+
+            <!--
+              回复态：原位写回复（不再弹窗，避免在长列表里丢失上下文）。
+              提交后服务端以「已通过」落库并署名站长，立刻对访客可见。
+            -->
+            <div v-if="replyingId === item.id" class="comment-item__reply">
+              <n-input
+                v-model:value="replyDraft"
+                type="textarea"
+                :rows="3"
+                maxlength="2000"
+                show-count
+                :placeholder="`回复 ${item.nickname}`"
+                :disabled="replying"
+              />
+              <div class="comment-item__edit-foot">
+                <n-button :disabled="replying" @click="cancelReply">取消</n-button>
+                <n-button
+                  type="primary"
+                  :loading="replying"
+                  :disabled="!replyDraft.trim()"
+                  @click="handleReply(item)"
+                >
+                  回复
+                </n-button>
+              </div>
+            </div>
           </div>
         </div>
       </n-spin>
@@ -196,6 +245,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import {
+  ArrowUndoOutline,
   ArrowUpOutline,
   CheckmarkOutline,
   CloseOutline,
@@ -207,6 +257,7 @@ import {
   auditComment,
   deleteComments,
   getSetting,
+  replyComment,
   topComment,
   treeComments,
   updateComment
@@ -241,9 +292,20 @@ const editingId = ref(null)
 const editingDraft = ref('')
 const saving = ref(false)
 
+/** 回复态：正在回复哪条评论，以及回复草稿 */
+const replyingId = ref(null)
+const replyDraft = ref('')
+const replying = ref(false)
+
 /** 站点评论总开关与站长署名，来自「站点设置」 */
 const siteCommentEnabled = ref(1)
-const ownerNickname = ref('博主')
+/**
+ * 站长署名：取自「站点设置 → 站长署名」，初始留空等接口回填（不预置一个写死的名字）。
+ *
+ * <p>发表评论时前端不传署名，后端落库取同一份配置，所以这里只影响提示文案；
+ * 读不到设置时按「未知」展示，而不是显示一个可能与设置不符的名字。</p>
+ */
+const ownerNickname = ref('')
 
 /**
  * 操作按钮逐个判权限（而不是用 v-perm 指令）。
@@ -255,14 +317,24 @@ const canAudit = computed(() => userStore.hasPerm('blog:comment:audit'))
 const canRemove = computed(() => userStore.hasPerm('blog:comment:remove'))
 const canTop = computed(() => userStore.hasPerm('blog:comment:top'))
 const canAdd = computed(() => userStore.hasPerm('blog:comment:add'))
-const canComment = computed(
-  () => siteCommentEnabled.value === 1 && props.allowComment === 1
+const canReply = computed(() => userStore.hasPerm('blog:comment:reply'))
+
+/**
+ * 访客是否已不能评论：站点总开关与单篇开关是「与」关系，任一关闭即关闭。
+ *
+ * <p>这个值只用于决定是否显示说明，**不再用于禁用后台发表**：两个开关约束的是
+ * 访客入口，前台只是收起输入框、已有评论照常展示，所以站长在关闭评论后
+ * 仍可能需要补充说明。后端 {@code BlogCommentService#addByOwner} 同样不再拦截。</p>
+ */
+const commentsClosed = computed(
+  () => siteCommentEnabled.value !== 1 || props.allowComment !== 1
 )
-const closedReason = computed(() =>
-  siteCommentEnabled.value !== 1
-    ? '站点已关闭评论功能，发表后访客看不到。'
-    : '该文章已关闭评论，发表后访客看不到。'
-)
+const closedReason = computed(() => {
+  const reason = siteCommentEnabled.value !== 1
+    ? '站点已关闭评论功能'
+    : '该文章已关闭评论'
+  return `${reason}，前台已隐藏评论输入框；你仍可以站长身份发表，已有评论照常展示。`
+})
 
 /**
  * 把两层评论树摊平成带缩进层级的列表，与前台 CommentList.vue 的算法一致。
@@ -314,15 +386,20 @@ async function loadComments() {
   }
 }
 
-/** 站点开关与站长署名：拉取失败按「开启 + 默认署名」处理，不阻塞评论展示 */
+/**
+ * 站点开关与站长署名：拉取失败按「开启 + 署名未知」处理，不阻塞评论展示。
+ *
+ * <p>署名只用于提示文案，真正落库的署名由后端取同一份配置，
+ * 所以失败时留空（展示成「—」）比填一个默认名字更准确。</p>
+ */
 async function loadSetting() {
   try {
     const res = await getSetting()
     siteCommentEnabled.value = res.data?.commentEnabled ?? 1
-    ownerNickname.value = res.data?.ownerNickname || '博主'
+    ownerNickname.value = res.data?.ownerNickname || ''
   } catch {
     siteCommentEnabled.value = 1
-    ownerNickname.value = '博主'
+    ownerNickname.value = ''
   }
 }
 
@@ -343,6 +420,8 @@ async function handleAdd() {
 }
 
 function startEdit(item) {
+  // 编辑与回复共用同一条评论正文的位置，两个态不能同时开
+  cancelReply()
   editingId.value = item.id
   editingDraft.value = item.content || ''
 }
@@ -350,6 +429,45 @@ function startEdit(item) {
 function cancelEdit() {
   editingId.value = null
   editingDraft.value = ''
+}
+
+/**
+ * 打开某条评论的回复框。
+ *
+ * <p>不弹窗而是原位展开：编辑页的评论是带层级的列表，弹窗会盖住上下文
+ * （回复的到底是哪条、它下面是哪些对话），原位写更不容易回错人。</p>
+ */
+function startReply(item) {
+  // 同一位置不能同时是编辑态
+  cancelEdit()
+  replyingId.value = item.id
+  replyDraft.value = ''
+}
+
+function cancelReply() {
+  replyingId.value = null
+  replyDraft.value = ''
+}
+
+/**
+ * 提交回复。
+ *
+ * <p>不带署名、不带 status：服务端固定用「站点设置 → 站长署名」并直接置为已通过，
+ * 前端多传一份只会产生两套规则。提交后不重置页码 —— 分页按**顶级评论**切，
+ * 回复不会改变顶级评论的条数与顺序。</p>
+ */
+async function handleReply(item) {
+  const content = replyDraft.value.trim()
+  if (!content) return
+  replying.value = true
+  try {
+    await replyComment({ id: item.id, content })
+    message.success('回复成功')
+    cancelReply()
+    await loadComments()
+  } finally {
+    replying.value = false
+  }
 }
 
 async function saveEdit(item) {
@@ -402,7 +520,7 @@ function handlePage(page) {
 }
 
 /**
- * 文章切换时重置分页与编辑态并重新拉取。
+ * 文章切换时重置分页、编辑/回复态并重新拉取。
  *
  * <p>用 immediate 兼作首次加载，省掉一个 onMounted。</p>
  */
@@ -411,6 +529,7 @@ watch(
   () => {
     pageNum.value = 1
     cancelEdit()
+    cancelReply()
     draft.value = ''
     if (props.postId) {
       loadComments()
@@ -590,6 +709,16 @@ onMounted(loadSetting)
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
+}
+
+/*
+ * 回复框：与正文留一点间距，并在左侧拉一条细线，
+ * 让「这是对上面那条评论的回复」在视觉上有个挂靠，而不只是一段飘着的新正文。
+ */
+.comment-item__reply {
+  margin-top: 12px;
+  padding-left: 12px;
+  border-left: 2px solid var(--color-border);
 }
 
 .post-comments__pager {

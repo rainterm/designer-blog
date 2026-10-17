@@ -112,7 +112,7 @@
               <n-switch v-model:value="form.commentEnabled" :checked-value="1" :unchecked-value="0" />
               <span class="switch-field__hint">
                 站点总开关。关闭后前台不再显示评论输入框（已有评论仍可阅读），
-                且单篇文章的「允许评论」不再生效。
+                但后台仍可正常发表评论与回复。
               </span>
             </div>
           </n-form-item>
