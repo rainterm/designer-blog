@@ -1,18 +1,40 @@
 <template>
   <n-card :bordered="false" class="post-comments">
     <template #header>
-      <div class="post-comments__title">文章评论</div>
+      <!--
+        标题本身也是折叠开关：折叠后整块只剩这一行，
+        只让右侧一个小按钮负责展开会更好点，语义上「点标题」也更符合直觉。
+      -->
+      <div
+        class="post-comments__title"
+        role="button"
+        tabindex="0"
+        @click="toggleExpanded"
+        @keydown.enter.prevent="toggleExpanded"
+        @keydown.space.prevent="toggleExpanded"
+      >
+        <n-icon :component="expanded ? ChevronDownOutline : ChevronForwardOutline" />
+        <span>文章评论</span>
+      </div>
     </template>
     <template #header-extra>
-      <n-button v-if="postId" :loading="loading" @click="loadComments">刷新</n-button>
+      <n-space :size="8" align="center">
+        <!-- 折叠时列表没拉过，刷新无从判断拉的是什么，故只在展开态提供 -->
+        <n-button v-if="expanded && postId" :loading="loading" @click="loadComments">刷新</n-button>
+        <n-button quaternary @click="toggleExpanded">{{ expanded ? '收起' : '展开' }}</n-button>
+      </n-space>
     </template>
 
+    <!--
+      默认折叠：文章编辑的主任务是改正文，评论区在页面最下方且条数可能很多，
+      每次打开都铺开会把「保存/发布」推得很远。折叠时也不拉接口，展开才取。
+    -->
     <!-- 新文章还没有 id，评论无处可挂，先提示而不是给一个点了会报错的空表单 -->
     <n-alert v-if="!postId" type="info" :bordered="false">
       文章保存后即可在这里查看评论、发表评论。
     </n-alert>
 
-    <template v-else>
+    <template v-else-if="expanded">
       <!--
         评论开关关闭时给个说明：开关只约束访客入口，站长仍需要能补充说明
         （前台会收起输入框，但已发布的评论照常展示），所以这里不禁用发表。
@@ -248,6 +270,8 @@ import {
   ArrowUndoOutline,
   ArrowUpOutline,
   CheckmarkOutline,
+  ChevronDownOutline,
+  ChevronForwardOutline,
   CloseOutline,
   CreateOutline,
   TrashOutline
@@ -287,6 +311,15 @@ const roots = ref([])
 const total = ref(0)
 const loading = ref(false)
 const pageNum = ref(1)
+
+/**
+ * 是否展开评论面板，默认折叠。
+ *
+ * <p>文章编辑的主任务是改正文与保存，评论区在页面最下方且条数可能很多，
+ * 每次进来都铺开会把「保存 / 发布」按钮推得很远。折叠时也**不拉接口**，
+ * 展开才取 —— 既省一次请求，也让页面首屏更快。</p>
+ */
+const expanded = ref(false)
 
 const draft = ref('')
 const adding = ref(false)
@@ -526,9 +559,23 @@ function handlePage(page) {
 }
 
 /**
+ * 展开 / 收起。
+ *
+ * <p>展开时总是重新拉一次：面板可能折叠了很久，期间评论可能被审核、被删，
+ * 显示折叠前的旧列表比多一次请求更容易误导人。</p>
+ */
+function toggleExpanded() {
+  expanded.value = !expanded.value
+  if (expanded.value && props.postId) {
+    loadComments()
+  }
+}
+
+/**
  * 文章切换时重置分页、编辑/回复态并重新拉取。
  *
- * <p>用 immediate 兼作首次加载，省掉一个 onMounted。</p>
+ * <p>用 immediate 兼作首次加载，省掉一个 onMounted。
+ * 折叠态下不拉评论（见 {@link expanded}），展开时由 toggleExpanded 负责取。</p>
  */
 watch(
   () => props.postId,
@@ -537,11 +584,10 @@ watch(
     cancelEdit()
     cancelReply()
     draft.value = ''
-    if (props.postId) {
+    roots.value = []
+    total.value = 0
+    if (props.postId && expanded.value) {
       loadComments()
-    } else {
-      roots.value = []
-      total.value = 0
     }
   },
   { immediate: true }
@@ -562,8 +608,19 @@ onMounted(loadSetting)
 }
 
 .post-comments__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 16px;
   font-weight: 600;
+  /* 标题兼作折叠开关：给出手型光标与悬停反馈，否则看起来像纯文本 */
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.post-comments__title:hover {
+  color: var(--color-primary);
 }
 
 .post-comments__hint {
