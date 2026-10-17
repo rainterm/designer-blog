@@ -12,6 +12,7 @@
 </template>
 
 <script setup>
+import { useFaviconHref } from '@/composables/useFavicon'
 import { useSiteSetting } from '@/composables/useSiteSetting'
 
 /**
@@ -75,8 +76,12 @@ const site = useSiteSetting()
 const config = useRuntimeConfig()
 const siteName = computed(() => site.value.siteName || config.public.appTitle)
 
+// 错误页与 app.vue 互斥渲染，图标链接得在这里再注册一次（state 是共享的）
+const faviconHref = useFaviconHref()
+
 useHead({
   title: computed(() => `${title.value} · ${siteName.value}`),
+  link: computed(() => [{ rel: 'icon', href: faviconHref.value, key: 'favicon' }]),
   meta: [{ name: 'robots', content: 'noindex, follow' }]
 })
 

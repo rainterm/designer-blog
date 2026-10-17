@@ -116,7 +116,9 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1.0' }
       ],
       link: [
-        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        // favicon 不写死在这里：它要跟随站点 Logo，由 app.vue / error.vue 的
+        // useHead（见 composables/useFavicon.js）统一渲染。两处都写会让 head 里
+        // 出现两个 rel="icon"，浏览器挑哪个不确定，刷新时图标就会时而对、时而错。
         // 字体走 Google Fonts：SSR 首屏同样要等它，所以放 head 里预连接
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },

@@ -1,3 +1,4 @@
+import { useFaviconOverride } from '@/composables/useFavicon'
 import { useSiteSetting } from '@/composables/useSiteSetting'
 import { brandMarkSvg } from '@/config/brandMark'
 import { normalizePrimaryColor } from '@/config/theme'
@@ -5,8 +6,12 @@ import { normalizePrimaryColor } from '@/config/theme'
 /**
  * 浏览器标签图标跟随站点 Logo（应用圆角）；未配置时用构建期生成的内置图标。
  *
- * <p>纯客户端行为，所以放在 `.client` 插件里：要读 `document`、要画 canvas，
+ * <p>纯客户端行为，所以放在 `.client` 插件里：要读图片、要画 canvas，
  * 而且 favicon 本来就不参与 SEO（爬虫不看它）。</p>
+ *
+ * <p>这里**只改 `useFaviconOverride` 的状态**，由 `useHead`（见 app.vue / error.vue）
+ * 去更新 `<link rel="icon">`。直接改 DOM 会和 unhead 抢同一个标签，导致 head 里
+ * 出现两个图标链接，浏览器时而挑上传的、时而挑默认的（刷新一次换一个）。</p>
  */
 
 /** favicon 画布尺寸 */
@@ -17,18 +22,6 @@ const LOGO_DISPLAY_SIZE = 28
 
 /** 生成序号，避免异步竞态导致旧图覆盖新图 */
 let token = 0
-
-function ensureIconLink() {
-  let link = document.querySelector('link[rel="icon"]')
-  if (!link) {
-    link = document.createElement('link')
-    link.rel = 'icon'
-    document.head.appendChild(link)
-  }
-  // 类型交给浏览器嗅探，避免上传 png/jpg 时与 svg 类型冲突
-  link.removeAttribute('type')
-  return link
-}
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -89,40 +82,39 @@ async function buildRoundedFavicon(src, radius) {
   return canvas.toDataURL('image/png')
 }
 
-function applyFavicon(logoUrl, logoRadius, themeColor) {
-  const link = ensureIconLink()
+function applyFavicon(override, logoUrl, logoRadius, themeColor) {
+  const current = ++token
 
   // 未配置 Logo：用内置图形，并按圆角 / 主题色重绘（标签图标不受 CSS 影响）
   if (!logoUrl) {
-    token++
-    link.href = builtinFaviconDataUrl(logoRadius, themeColor)
+    override.value = builtinFaviconDataUrl(logoRadius, themeColor)
     return
   }
 
-  const current = ++token
-
-  // 直角：直接用原图
+  // 直角：直接用原图。清空覆盖值后 useFaviconHref 会退回 site.logoUrl
   if (!(logoRadius > 0)) {
-    link.href = logoUrl
+    override.value = ''
     return
   }
 
   buildRoundedFavicon(logoUrl, logoRadius)
     .then((dataUrl) => {
-      if (current === token) link.href = dataUrl
+      if (current === token) override.value = dataUrl
     })
     .catch(() => {
       // 跨域图片会污染 canvas 导致导出失败：退回原始图片，至少保证有图标
-      if (current === token) link.href = logoUrl
+      if (current === token) override.value = ''
     })
 }
 
 export default defineNuxtPlugin(() => {
   const site = useSiteSetting()
+  const override = useFaviconOverride()
+
   watch(
     () => [site.value.logoUrl, site.value.logoRadius, site.value.themeColor],
     ([logoUrl, logoRadius, themeColor]) =>
-      applyFavicon(logoUrl, logoRadius, normalizePrimaryColor(themeColor)),
+      applyFavicon(override, logoUrl, logoRadius, normalizePrimaryColor(themeColor)),
     { immediate: true }
   )
 })
