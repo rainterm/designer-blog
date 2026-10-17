@@ -12,6 +12,7 @@ import { useDialog, useMessage } from 'naive-ui'
  * @param {string} [options.successMessage='删除成功']
  * @param {(ids: any[], rows: any[]) => any[]} [options.filter] 过滤不可删 id
  * @param {string} [options.emptyWarning] filter 后为空时的提示
+ * @param {() => void} [options.onSuccess] 删除并刷新列表后的回调（如同步菜单红点）
  */
 export function useBatchDelete(pager, deleteApi, options = {}) {
   const {
@@ -20,7 +21,8 @@ export function useBatchDelete(pager, deleteApi, options = {}) {
     positiveText = '确定删除',
     successMessage = '删除成功',
     filter,
-    emptyWarning = '没有可删除的项'
+    emptyWarning = '没有可删除的项',
+    onSuccess
   } = options
 
   const dialog = useDialog()
@@ -47,6 +49,7 @@ export function useBatchDelete(pager, deleteApi, options = {}) {
         message.success(successMessage)
         pager.clearSelection?.()
         await pager.loadData?.()
+        onSuccess?.()
       }
     })
   }

@@ -131,9 +131,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useAppStore } from '@/store/app'
 import { useSettingStore } from '@/store/setting'
+import { useMenuBadgeStore } from '@/store/menuBadge'
 import {
   hasSider,
   isDualColumn,
@@ -151,6 +152,7 @@ import PreferenceSettings from './components/PreferenceSettings.vue'
 
 const appStore = useAppStore()
 const settingStore = useSettingStore()
+const badgeStore = useMenuBadgeStore()
 const { currentTop } = useSidebarMenu()
 
 const layoutMode = computed(() => appStore.layoutMode)
@@ -196,6 +198,12 @@ onMounted(() => {
   if (window.innerWidth < 1200 && layoutMode.value === LAYOUT_MODES.VERTICAL) {
     appStore.collapsed = true
   }
+  // 菜单红点（待审评论等）：布局存活期间按各自间隔轮询
+  badgeStore.start()
+})
+
+onBeforeUnmount(() => {
+  badgeStore.stop()
 })
 </script>
 

@@ -1,8 +1,9 @@
 import { computed, h, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NIcon } from 'naive-ui'
+import { NBadge, NIcon } from 'naive-ui'
 import { useAppStore } from '@/store/app'
 import { useUserStore } from '@/store/user'
+import { useMenuBadgeStore } from '@/store/menuBadge'
 import { resolveIcon } from '@/utils/icon'
 import { openSsoClient } from '@/utils/sso'
 
@@ -18,13 +19,56 @@ function isJumpPage(item) {
  * @param {{
  *   collapsed?: import('vue').Ref<boolean>|import('vue').ComputedRef<boolean>
  *   scope?: import('vue').Ref<string>|import('vue').ComputedRef<string>|string
- * }} [options]
+ *   iconBadge?: import('vue').Ref<boolean>|import('vue').ComputedRef<boolean>|boolean
+ * }} [options] 图标栏（标题不可见）时是否把红点挂到图标上，见 {@link iconBadge}
  */
 export function useSidebarMenu(options = {}) {
   const route = useRoute()
   const router = useRouter()
   const appStore = useAppStore()
   const userStore = useUserStore()
+  const badgeStore = useMenuBadgeStore()
+
+  /**
+   * 菜单红点。
+   *
+   * <p>返回渲染函数而不是数量：数字变化时只有这一个节点重渲染，不必重建整棵菜单。
+   * {@code showZero=false} 让数量为 0 时什么都不显示。</p>
+   */
+  function renderBadge(value) {
+    return h(NBadge, {
+      value,
+      max: 99,
+      showZero: false
+    })
+  }
+
+  /** 节点自身是否注册了红点 */
+  function hasOwnBadge(node) {
+    return badgeStore.isRegistered(node?.path)
+  }
+
+  /**
+   * 节点在菜单树里是否有红点（自身或子孙）。
+   *
+   * <p>只看子孙里有没有注册，不依赖当前数量：数量是动态的，若按「数量 > 0」决定
+   * 挂不挂 extra，菜单结构会随轮询结果反复变化。</p>
+   */
+  function hasBadgeInTree(node) {
+    if (hasOwnBadge(node)) return true
+    return (node?.children || []).some(hasBadgeInTree)
+  }
+
+  /**
+   * 节点要展示的红点数量。
+   *
+   * <p>自身注册了就用自身数量；否则汇总子孙，让折叠起来的父级菜单也能看到待办。
+   * 汇总到最近的注册节点为止，避免嵌套注册时重复计数。</p>
+   */
+  function badgeTotal(node) {
+    if (hasOwnBadge(node)) return badgeStore.countOf(node.path)
+    return (node?.children || []).reduce((sum, child) => sum + badgeTotal(child), 0)
+  }
 
   const collapsedRef = computed(() => {
     if (options.collapsed) return !!options.collapsed.value
@@ -43,9 +87,28 @@ export function useSidebarMenu(options = {}) {
     set: (keys) => appStore.setExpandedKeys(keys)
   })
 
-  function menuIcon(item) {
+  /** 只有图标可见（侧栏折叠）时，红点改挂到图标上，否则会被隐藏的标题区一起藏掉 */
+  const iconBadgeRef = computed(() => {
+    const v = options.iconBadge
+    if (v && typeof v === 'object' && 'value' in v) return !!v.value
+    return !!v
+  })
+
+  /**
+   * 菜单图标。
+   *
+   * <p>图标栏里红点只能压在图标上：折叠态下 naive 会给标题区设 opacity:0，
+   * 挂在标题区的徽标随之不可见。</p>
+   */
+  function menuIcon(item, node) {
     const IconComp = resolveIcon(item.meta?.icon)
-    return () => h(NIcon, null, { default: () => h(IconComp) })
+    return () => {
+      const icon = h(NIcon, null, { default: () => h(IconComp) })
+      if (!iconBadgeRef.value || !node || !hasBadgeInTree(node)) return icon
+      return h(NBadge, { value: badgeTotal(node), max: 99, showZero: false }, {
+        default: () => icon
+      })
+    }
   }
 
   /** 把后端路由树转换成 n-menu 需要的 options（跳过 hidden 跳转页） */
@@ -64,7 +127,7 @@ export function useSidebarMenu(options = {}) {
         const node = {
           label: item.meta?.title || item.name,
           key: hasVisibleChildren ? String(item.id || item.name) : item.path,
-          icon: menuIcon(item),
+          icon: null,
           /** 原始路径，双列一级栏定位用 */
           path: item.path,
           component: item.component,
@@ -73,6 +136,13 @@ export function useSidebarMenu(options = {}) {
         if (hasVisibleChildren) {
           node.children = children
         }
+        // 红点按路径注册（见 constants/menuBadge.js），这里不需要知道是哪个业务：
+        // 自身注册的直接展示，父级汇总子级数字，折叠起来也能看到待办。
+        if (hasBadgeInTree(node)) {
+          node.extra = () => renderBadge(badgeTotal(node))
+        }
+        // 图标要等 children / 红点信息就绪后再建，折叠态需要把红点画在图标上
+        node.icon = menuIcon(item, node)
         return node
       })
       .filter(Boolean)

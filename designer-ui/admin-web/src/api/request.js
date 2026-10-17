@@ -71,7 +71,10 @@ service.interceptors.response.use(
       return Promise.reject(new Error(res.msg || '未登录'))
     }
 
-    message.error(res.msg || '请求失败')
+    // silent：后台轮询类请求（如菜单红点）失败时不弹提示，避免反复打扰
+    if (!response.config.silent) {
+      message.error(res.msg || '请求失败')
+    }
     return Promise.reject(new Error(res.msg || '请求失败'))
   },
   (error) => {
@@ -82,7 +85,7 @@ service.interceptors.response.use(
         onUnauthorized()
       }
       message.warning('登录状态已失效，请重新登录')
-    } else {
+    } else if (!error.config?.silent) {
       message.error(error.message || '网络异常，请稍后重试')
     }
     return Promise.reject(error)

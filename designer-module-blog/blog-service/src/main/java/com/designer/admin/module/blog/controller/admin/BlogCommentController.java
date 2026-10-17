@@ -46,6 +46,19 @@ public class BlogCommentController {
     }
 
     /**
+     * 待审批评论数：侧栏「评论管理」菜单红点。
+     *
+     * <p>权限跟列表页一致（{@code blog:comment:list}）：看得到菜单的人才需要这个数字，
+     * 也不额外引入一个只服务于红点的权限点。</p>
+     */
+    @Get
+    @Mapping("/pending-count")
+    @SaCheckPermission("blog:comment:list")
+    public R<Long> pendingCount() {
+        return R.ok(commentService.countPending());
+    }
+
+    /**
      * 评论树（后台）：两层结构，与前台展示逻辑一致。
      *
      * <p>与 {@code /page} 的分工：{@code /page} 是扁平分页，适合「评论管理」列表页的

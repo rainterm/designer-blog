@@ -263,6 +263,8 @@ import {
   updateComment
 } from '@/modules/blog/api'
 import { useUserStore } from '@/store/user'
+import { useMenuBadgeStore } from '@/store/menuBadge'
+import { BLOG_MENU_BADGE } from '@/modules/blog/menuBadges'
 
 const props = defineProps({
   /** 文章ID。为新文章（未保存）时为 null，此时评论无从挂载 */
@@ -273,6 +275,7 @@ const props = defineProps({
 
 const message = useMessage()
 const userStore = useUserStore()
+const badgeStore = useMenuBadgeStore()
 
 /**
  * 每页**顶级评论**条数（后端按顶级评论分页，每条带上它的全部回复），
@@ -488,6 +491,8 @@ async function handleAudit(item, status) {
   await auditComment({ id: item.id, status })
   message.success(status === 1 ? '已通过' : '已拒绝')
   await loadComments()
+  // 文章编辑页也能审核，菜单红点要同步，不能等下一轮轮询
+  badgeStore.refresh(BLOG_MENU_BADGE.COMMENT)
 }
 
 /**
@@ -512,6 +517,7 @@ async function handleDelete(item) {
     pageNum.value -= 1
   }
   await loadComments()
+  badgeStore.refresh(BLOG_MENU_BADGE.COMMENT)
 }
 
 function handlePage(page) {

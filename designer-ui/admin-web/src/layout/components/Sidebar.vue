@@ -38,12 +38,14 @@ const collapsedOverride = computed(() =>
 
 const scopeRef = computed(() => props.scope)
 
+const isCollapsed = computed(() => (props.mode === 'horizontal' ? false : collapsedOverride.value))
+
 const { activeKey, expandedKeys, menuOptions, handleSelect } = useSidebarMenu({
   collapsed: collapsedOverride,
-  scope: scopeRef
+  scope: scopeRef,
+  // 折叠成图标栏后标题区被隐藏，红点改挂到图标上
+  iconBadge: isCollapsed
 })
-
-const isCollapsed = computed(() => (props.mode === 'horizontal' ? false : collapsedOverride.value))
 
 const menuRef = ref(null)
 
@@ -101,13 +103,27 @@ watch(activeKey, () => syncResponsive())
 }
 :deep(.n-menu-item-content-header__extra) {
   position: absolute;
-  top: 2px;
+  top: 50%;
   right: 10px;
+  transform: translateY(-50%);
   line-height: 1;
   pointer-events: none;
 }
-:deep(.n-submenu > .n-menu-item-content .n-menu-item-content-header__extra) {
-  right: 28px;
+/* 父级菜单右侧还有展开箭头，徽标要让开它（结构是 .n-submenu > .n-menu-item > .n-menu-item-content） */
+:deep(.n-submenu > .n-menu-item > .n-menu-item-content .n-menu-item-content-header__extra) {
+  right: 38px;
+}
+/* 顶栏菜单每个 item 按内容撑宽，徽标钉在右上角会压到文字，改为跟在标题后面 */
+:deep(.n-menu--horizontal .n-menu-item-content-header__extra),
+:deep(.n-menu--horizontal .n-submenu > .n-menu-item > .n-menu-item-content .n-menu-item-content-header__extra) {
+  position: static;
+  right: auto;
+  top: auto;
+  transform: none;
+}
+/* 间距加在徽标本体上：没有待办时徽标不渲染，也就不会留下多余空隙 */
+:deep(.n-menu--horizontal .n-menu-item-content-header__extra .n-badge-sup) {
+  margin-left: 6px;
 }
 :deep(.n-menu-item-content-header__extra .n-badge) {
   display: inline-flex;

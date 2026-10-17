@@ -17,7 +17,13 @@
         :title="typeof item.label === 'string' ? item.label : ''"
         @click="selectTop(item)"
       >
-        <IconSlot v-if="item.icon" :fn="item.icon" />
+        <span class="dual-icon-item__icon">
+          <IconSlot v-if="item.icon" :fn="item.icon" />
+          <!-- 一级图标栏也要能看到待办数：这里没有文字标题，只能把徽标压在图标右上角 -->
+          <span v-if="item.extra" class="dual-icon-item__badge">
+            <IconSlot :fn="item.extra" />
+          </span>
+        </span>
         <span class="dual-icon-item__label">{{ item.label }}</span>
       </button>
     </div>
@@ -70,6 +76,7 @@ const topOptions = computed(() =>
     key: opt.key,
     label: opt.label,
     icon: opt.icon,
+    extra: opt.extra,
     path: opt.path,
     meta: opt.meta,
     component: opt.component,
@@ -89,7 +96,16 @@ const subOptions = computed(() => {
   if (!top) return []
   if (top.children?.length) return top.children
   // 一级叶子：二级栏展示自身，避免出现空白列
-  return [{ label: top.label, key: top.key, icon: top.icon, meta: top.meta, component: top.component }]
+  return [
+    {
+      label: top.label,
+      key: top.key,
+      icon: top.icon,
+      extra: top.extra,
+      meta: top.meta,
+      component: top.component
+    }
+  ]
 })
 
 function selectTop(item) {
@@ -194,6 +210,35 @@ watch(
   line-height: 1;
 }
 
+.dual-icon-item__icon {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+}
+
+/* 徽标压在图标右上角：图标栏只有 20px 图标，放在标题旁会把「模块名」挤掉 */
+.dual-icon-item__badge {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  line-height: 0;
+  pointer-events: none;
+}
+
+.dual-icon-item__badge :deep(.n-badge) {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.dual-icon-item__badge :deep(.n-badge-sup) {
+  font-size: 11px;
+  height: 16px;
+  line-height: 16px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+}
+
 .dual-icon-item__label {
   max-width: 100%;
   font-size: 12px;
@@ -243,5 +288,19 @@ watch(
 
 .dual-sidebar__subs :deep(.n-menu-item-content) {
   border-radius: var(--radius) !important;
+}
+
+/* 与经典侧栏一致：徽标靠右对齐，不挤占菜单标题 */
+.dual-sidebar__subs :deep(.n-menu-item-content-header__extra) {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.dual-sidebar__subs :deep(.n-menu-item-content-header__extra .n-badge) {
+  display: inline-flex;
 }
 </style>

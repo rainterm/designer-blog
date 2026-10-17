@@ -30,6 +30,9 @@ export const deletePosts = (ids) =>
 
 // ---------------------- 评论 ----------------------
 export const pageComments = (params) => request.get('/admin-api/blog/comment/page', { params })
+/** 待审批评论数：菜单红点用；轮询请求失败不弹提示 */
+export const getPendingCommentCount = () =>
+  request.get('/admin-api/blog/comment/pending-count', { silent: true })
 export const treeComments = (params) => request.get('/admin-api/blog/comment/tree', { params })
 export const auditComment = (data) => request.put('/admin-api/blog/comment/audit', data)
 export const replyComment = (data) => request.post('/admin-api/blog/comment/reply', data)

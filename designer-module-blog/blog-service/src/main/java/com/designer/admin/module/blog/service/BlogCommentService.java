@@ -80,6 +80,18 @@ public class BlogCommentService {
         return page;
     }
 
+    /**
+     * 待审批评论数：侧栏「评论管理」菜单红点用。
+     *
+     * <p>只做一次 count，不复用 {@link #page}：红点每次轮询都要拉，没必要为此
+     * 查出一行数据、再补一次文章标题。筛选条件与列表页「状态 = 待审」完全一致。</p>
+     */
+    public long countPending() {
+        Long count = commentMapper.selectCount(new LambdaQueryWrapper<BlogComment>()
+                .eq(BlogComment::getStatus, 0));
+        return count == null ? 0L : count;
+    }
+
     public void audit(CommentAuditDTO dto) {
         if (dto.getId() == null) {
             throw new BizException("评论ID不能为空");

@@ -78,9 +78,12 @@ import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useFormDialog } from '@/composables/useFormDialog'
 import { useUserStore } from '@/store/user'
+import { useMenuBadgeStore } from '@/store/menuBadge'
+import { BLOG_MENU_BADGE } from '@/modules/blog/menuBadges'
 
 const message = useMessage()
 const userStore = useUserStore()
+const badgeStore = useMenuBadgeStore()
 const { locked, busy, run } = useActionLock()
 
 const pager = usePagination((q) => pageComments(q), {
@@ -92,7 +95,9 @@ const pager = usePagination((q) => pageComments(q), {
 const { query, loadData, checkedRowKeys } = pager
 const { handleBatchDelete } = useBatchDelete(pager, deleteComments, {
   confirm: (n) => `确定删除选中的 ${n} 条评论吗？`,
-  positiveText: '删除'
+  positiveText: '删除',
+  // 待审评论被删掉后，侧栏红点要立刻跟着减，不能等下一轮轮询
+  onSuccess: () => badgeStore.refresh(BLOG_MENU_BADGE.COMMENT)
 })
 
 /** 当前正在回复的评论，仅用于弹窗里展示原文 */
@@ -231,12 +236,15 @@ async function handleAudit(row, status) {
   await auditComment({ id: row.id, status })
   message.success(status === 1 ? '已通过' : '已拒绝')
   loadData()
+  // 待审批数量变了，同步菜单红点
+  badgeStore.refresh(BLOG_MENU_BADGE.COMMENT)
 }
 
 async function handleDelete(row) {
   await deleteComments([row.id])
   message.success('删除成功')
   loadData()
+  badgeStore.refresh(BLOG_MENU_BADGE.COMMENT)
 }
 
 /**
@@ -256,7 +264,11 @@ async function loadOwnerNickname() {
  * 用 activated 而不是 mounted：布局开了 keep-alive，本页离开再回来不会重新挂载，
  * 若只在 mounted 读一次，「站点设置」里改了署名后回到这里，弹窗会一直显示旧名字。
  */
-onActivated(loadOwnerNickname)
+onActivated(() => {
+  loadOwnerNickname()
+  // 页面走 keep-alive，切回来时补拉红点，避免停留在上一次的旧数字
+  badgeStore.refresh(BLOG_MENU_BADGE.COMMENT)
+})
 </script>
 
 <style scoped>
