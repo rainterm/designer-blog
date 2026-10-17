@@ -1,5 +1,5 @@
 <template>
-  <footer class="app-footer">
+  <footer v-if="hasContent" class="app-footer">
     <div class="page-container footer-inner">
       <p v-if="site.copyright" class="footer-line">{{ site.copyright }}</p>
       <p v-if="site.icp" class="footer-line">
@@ -22,6 +22,12 @@
 import { useSiteSetting } from '@/composables/useSiteSetting'
 
 const site = useSiteSetting()
+
+/**
+ * 版权 / 备案号都为空时不渲染页脚：否则会留下一条空的分隔线与空白高度，
+ * 视觉上像是「版权被吃掉了」。只有后台真的配了内容才出现。
+ */
+const hasContent = computed(() => Boolean(site.value.copyright || site.value.icp))
 </script>
 
 <style scoped>

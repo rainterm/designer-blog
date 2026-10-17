@@ -88,7 +88,7 @@
           <n-form-item label="页脚版权" path="copyright">
             <n-input
               v-model:value="form.copyright"
-              placeholder="如 © 2026 Designer. All rights reserved."
+              placeholder="如 © 2026 Designer. All rights reserved.，留空不显示"
             />
           </n-form-item>
 

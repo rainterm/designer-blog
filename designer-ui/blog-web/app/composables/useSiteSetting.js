@@ -26,7 +26,13 @@ export function siteDefaults() {
     logoRadius: 6,
     /** 站点主题色（后台可配），默认与内置色板一致 → 不触发覆盖 */
     themeColor: colors.primary,
-    copyright: brand.copyright,
+    /**
+     * 页脚版权：默认留空，后台没填就不显示。
+     *
+     * <p>不要在这里拼一个「© 年份 + 站点名」的兜底行 —— 版权方由站长决定，
+     * 猜错了比不显示更糟，而且会让人以为后台清空没生效。</p>
+     */
+    copyright: '',
     icp: '',
     icpUrl: '',
     seoKeywords: '',

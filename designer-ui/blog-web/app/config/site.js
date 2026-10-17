@@ -9,9 +9,7 @@
 /** 品牌信息（后端未配置时的兜底值） */
 export const brand = {
   /** 站点名称（导航 Logo 旁） */
-  name: 'Designer Blog',
-  /** 页脚版权 */
-  copyright: `© ${new Date().getFullYear()} Designer. All rights reserved.`
+  name: 'Designer Blog'
 }
 
 /** 文章列表页 */
