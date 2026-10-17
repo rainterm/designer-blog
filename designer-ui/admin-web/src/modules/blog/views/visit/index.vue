@@ -8,7 +8,7 @@
             <span class="section-tip">数据来自前台埋点，按天聚合</span>
           </div>
           <div class="section-head-right">
-            <n-radio-group v-model:value="days" size="small" @update:value="loadData">
+            <n-radio-group v-model:value="days" @update:value="loadData">
               <n-radio-button v-for="opt in rangeOptions" :key="opt.value" :value="opt.value">
                 {{ opt.label }}
               </n-radio-button>
@@ -33,7 +33,7 @@
             <span class="panel-tip">PV 为浏览量，UV 为按访客去重的独立访客数</span>
           </div>
           <div v-show="hasTrend" ref="trendEl" class="chart chart--tall" />
-          <n-empty v-if="!hasTrend" size="small" description="暂无访问数据" class="chart-empty" />
+          <n-empty v-if="!hasTrend" description="暂无访问数据" class="chart-empty" />
         </div>
 
         <div class="chart-grid">
@@ -44,7 +44,7 @@
               <span class="panel-tip">仅统计文章详情页</span>
             </div>
             <div v-show="hasCategories" ref="categoryEl" class="chart" />
-            <n-empty v-if="!hasCategories" size="small" description="暂无数据" class="chart-empty" />
+            <n-empty v-if="!hasCategories" description="暂无数据" class="chart-empty" />
           </div>
 
           <!-- 设备占比 -->
@@ -54,7 +54,7 @@
               <span class="panel-tip">按 User-Agent 归类</span>
             </div>
             <div v-show="hasDevices" ref="deviceEl" class="chart" />
-            <n-empty v-if="!hasDevices" size="small" description="暂无数据" class="chart-empty" />
+            <n-empty v-if="!hasDevices" description="暂无数据" class="chart-empty" />
           </div>
 
           <!-- 来源 Top -->
@@ -64,7 +64,7 @@
               <span class="panel-tip">站内跳转不计入来源</span>
             </div>
             <div v-show="hasReferers" ref="refererEl" class="chart" />
-            <n-empty v-if="!hasReferers" size="small" description="暂无数据" class="chart-empty" />
+            <n-empty v-if="!hasReferers" description="暂无数据" class="chart-empty" />
           </div>
 
           <!-- 地域分布 -->
@@ -74,7 +74,7 @@
               <span class="panel-tip">Top 10 省份</span>
             </div>
             <div v-show="hasRegions" ref="regionEl" class="chart" />
-            <n-empty v-if="!hasRegions" size="small" description="暂无数据" class="chart-empty" />
+            <n-empty v-if="!hasRegions" description="暂无数据" class="chart-empty" />
           </div>
         </div>
       </section>

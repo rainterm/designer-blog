@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.storage.FileStorageService;
+import com.designer.admin.framework.storage.StorageRuntimeConfig;
 import com.designer.admin.framework.storage.StoredFile;
 import com.designer.admin.system.mapper.SysFileMapper;
 import com.designer.admin.system.model.dto.FileQueryDTO;
@@ -74,6 +75,9 @@ public class SysFileService {
     @Inject
     private FileStorageService storageService;
 
+    @Inject
+    private SysStorageConfigService storageConfigService;
+
     public IPage<SysFile> page(FileQueryDTO query) {
         LambdaQueryWrapper<SysFile> w = new LambdaQueryWrapper<SysFile>()
                 .like(notBlank(query.getOriginalName()), SysFile::getOriginalName, query.getOriginalName())
@@ -100,10 +104,21 @@ public class SysFileService {
         return file;
     }
 
-    /** 上传并写入元数据 */
+    /** 上传并写入元数据（使用默认存储配置） */
     public SysFile upload(UploadedFile file, String dir) {
+        return upload(file, dir, null, false);
+    }
+
+    /**
+     * 上传并写入元数据。
+     *
+     * @param configId      指定存储配置；null 表示默认配置
+     * @param requirePublic 是否要求该配置为公开（登录页 Logo 等匿名可访问的资源）
+     */
+    public SysFile upload(UploadedFile file, String dir, Long configId, boolean requirePublic) {
         String bizDir = dir == null || dir.isBlank() ? "common" : dir.trim();
-        StoredFile stored = storageService.store(file, bizDir);
+        StorageRuntimeConfig config = storageConfigService.requireUploadRuntime(configId, requirePublic);
+        StoredFile stored = storageService.store(file, bizDir, config);
 
         SysFile entity = new SysFile();
         entity.setOriginalName(stored.getOriginalName());

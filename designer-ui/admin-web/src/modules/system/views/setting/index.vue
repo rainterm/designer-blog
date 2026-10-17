@@ -52,12 +52,36 @@
                 </span>
               </div>
               <div class="logo-field__actions">
-                <n-space align="center">
-                  <n-button :loading="uploading" @click="triggerUpload">上传图片</n-button>
+                <n-space align="center" :size="8" wrap>
+                  <n-select
+                    v-model:value="logoConfigId"
+                    class="logo-field__storage"
+                    :options="storageSelectOptions"
+                    :loading="storageLoading"
+                    :disabled="uploading || !storageOptions.length"
+                    :placeholder="storageOptions.length ? '选择公开存储配置' : '暂无公开存储配置'"
+                  />
+                  <n-button
+                    :loading="uploading"
+                    :disabled="!logoConfigId"
+                    @click="triggerUpload"
+                  >
+                    上传图片
+                  </n-button>
                   <n-button v-if="form.logoUrl" text type="error" @click="form.logoUrl = ''">
                     清除
                   </n-button>
                 </n-space>
+                <span v-if="!storageLoading && !storageOptions.length" class="logo-field__tip">
+                  没有可用的公开存储配置：请到「存储配置」把某项改为公开并启用后再上传，
+                  否则匿名访客打开登录页时会取不到 Logo。
+                </span>
+                <span v-else-if="selectedStorageLabel" class="logo-field__tip">
+                  登录页在未登录时就要展示 Logo，因此只能上传到公开配置（{{ selectedStorageLabel }}）
+                </span>
+                <span v-if="privateLogoUrl" class="logo-field__tip logo-field__tip--warn">
+                  当前 Logo 地址是私有下载前缀，匿名访客会收到 401，请重新上传到公开配置。
+                </span>
                 <n-input
                   v-model:value="form.logoUrl"
                   placeholder="或直接填写图片地址，留空使用内置 Logo"
@@ -124,15 +148,18 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useMessage } from 'naive-ui'
 import LayoutPicker from '@/components/LayoutPicker.vue'
 import ThemeColorPicker from '@/components/ThemeColorPicker.vue'
 import { getSystemSetting, updateSystemSetting } from '@/modules/system/api/system'
-import { uploadFile } from '@/modules/system/api/file'
+import { listPublicStorageOptions, uploadFile } from '@/modules/system/api/file'
 import { DEFAULT_LAYOUT_MODE } from '@/constants/layout'
 import { DEFAULT_PRIMARY } from '@/theme'
 import { useSettingStore } from '@/store/setting'
+
+/** 私有下载前缀：Logo 用这个前缀时匿名访客会 401 */
+const PRIVATE_PREFIX = '/admin-api/system/file/download/'
 
 const message = useMessage()
 const settingStore = useSettingStore()
@@ -141,6 +168,26 @@ const inputRef = ref(null)
 const loading = ref(false)
 const saving = ref(false)
 const uploading = ref(false)
+
+/** 上传目标：登录页要匿名展示 Logo，只能选公开存储配置 */
+const storageOptions = ref([])
+const logoConfigId = ref(null)
+const storageLoading = ref(false)
+
+const storageSelectOptions = computed(() =>
+  storageOptions.value.map((item) => ({
+    label: item.isDefault === 1 ? `${item.configName}（默认）` : item.configName,
+    value: item.id
+  }))
+)
+
+const selectedStorageLabel = computed(() => {
+  const hit = storageOptions.value.find((item) => item.id === logoConfigId.value)
+  return hit ? hit.configName : ''
+})
+
+/** 旧 Logo 指向私有前缀时提示：匿名访客会 401 */
+const privateLogoUrl = computed(() => String(form.logoUrl || '').startsWith(PRIVATE_PREFIX))
 
 const form = reactive({
   systemName: '',
@@ -169,9 +216,17 @@ async function onFileChange(e) {
   const file = e?.target?.files?.[0]
   if (e?.target) e.target.value = ''
   if (!file) return
+  if (!logoConfigId.value) {
+    message.warning('请先选择公开存储配置')
+    return
+  }
   uploading.value = true
   try {
-    const res = await uploadFile(file, 'system/logo')
+    // publicOnly：后端会再校验一次，避免把 Logo 传到私有配置导致登录页 401
+    const res = await uploadFile(file, 'system/logo', {
+      configId: logoConfigId.value,
+      publicOnly: true
+    })
     const url = res.data?.url
     if (!url) throw new Error('上传成功但未返回文件地址')
     form.logoUrl = url
@@ -204,6 +259,23 @@ async function loadSetting() {
   }
 }
 
+/** 拉取可选的公开存储配置，默认选中默认项（没有默认就取第一条） */
+async function loadStorageOptions() {
+  storageLoading.value = true
+  try {
+    const res = await listPublicStorageOptions()
+    storageOptions.value = res.data || []
+    const preferred =
+      storageOptions.value.find((item) => item.isDefault === 1) || storageOptions.value[0]
+    logoConfigId.value = preferred ? preferred.id : null
+  } catch {
+    storageOptions.value = []
+    logoConfigId.value = null
+  } finally {
+    storageLoading.value = false
+  }
+}
+
 async function handleSubmit() {
   try {
     await formRef.value?.validate()
@@ -227,7 +299,10 @@ async function handleSubmit() {
   }
 }
 
-onMounted(loadSetting)
+onMounted(() => {
+  loadSetting()
+  loadStorageOptions()
+})
 </script>
 
 <style scoped>
@@ -288,6 +363,22 @@ onMounted(loadSetting)
 
 .logo-field__input {
   display: none;
+}
+
+/* 存储配置下拉：跟随操作区宽度，最小 180px */
+.logo-field__storage {
+  width: 200px;
+  min-width: 160px;
+}
+
+.logo-field__tip {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.logo-field__tip--warn {
+  color: var(--color-warning, #f0a020);
 }
 
 .radius-field {

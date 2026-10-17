@@ -104,6 +104,10 @@ sa-token:
   is-share: false
   token-style: "uuid"
   # 纯 Header 模式，不读 cookie；SSE 需从 query 读 token（EventSource 无法自定义 Header）
+  # 唯一的例外是私有下载：登录时下发 designer_download_token（Path 限定为
+  # /admin-api/system/file/download/、HttpOnly），由 DownloadTokenCookieFilter 在进入
+  # Sa-Token 之前把它提升成请求头。这里仍保持 false —— 全局读 cookie 会让整个
+  # /admin-api/** 接受 Cookie 鉴权，等于把所有后台接口暴露在 CSRF 之下。
   is-read-cookie: false
   is-read-header: true
   is-read-param: true

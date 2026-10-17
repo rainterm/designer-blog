@@ -17,6 +17,7 @@ import com.designer.admin.system.model.dto.StorageConfigQueryDTO;
 import com.designer.admin.system.model.dto.StorageConfigSaveDTO;
 import com.designer.admin.system.model.entity.SysStorageConfig;
 import com.designer.admin.system.model.vo.ConfigFieldMeta;
+import com.designer.admin.system.model.vo.StorageOptionVO;
 import com.designer.admin.system.model.vo.StorageTypeVO;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
@@ -245,6 +246,58 @@ public class SysStorageConfigService implements StorageConfigSource {
             throw new BizException("文件对应的存储配置不存在");
         }
         return toRuntime(cfg);
+    }
+
+    /**
+     * 上传时可供选择的公开配置：只列「启用 + 公开」的项，默认项排在最前。
+     *
+     * <p>登录页 Logo、前台图片这类资源必须匿名可访问，落到私有配置上会直接 401，
+     * 所以上传入口只给公开项，不让人选错。</p>
+     */
+    public List<StorageOptionVO> listPublicOptions() {
+        List<SysStorageConfig> list = configMapper.selectList(new LambdaQueryWrapper<SysStorageConfig>()
+                .eq(SysStorageConfig::getStatus, 1)
+                .eq(SysStorageConfig::getIsPublic, 1)
+                .orderByDesc(SysStorageConfig::getIsDefault)
+                .orderByAsc(SysStorageConfig::getId));
+        return list.stream().map(cfg -> {
+            StorageOptionVO vo = new StorageOptionVO();
+            vo.setId(cfg.getId());
+            vo.setConfigName(cfg.getConfigName());
+            vo.setStorageType(cfg.getStorageType());
+            vo.setIsDefault(cfg.getIsDefault());
+            vo.setMaxSize(cfg.getMaxSize());
+            return vo;
+        }).toList();
+    }
+
+    /**
+     * 解析上传目标配置。
+     *
+     * <p>与下载不同：上传必须落在**启用**的配置上（停用配置只允许读旧文件），
+     * {@code requirePublic} 为 true 时还要求标记为公开。</p>
+     *
+     * @param configId      null 表示默认配置
+     * @param requirePublic 是否要求公开（前台匿名资源，如登录页 Logo）
+     */
+    public StorageRuntimeConfig requireUploadRuntime(Long configId, boolean requirePublic) {
+        StorageRuntimeConfig target;
+        if (configId == null) {
+            target = requireDefaultRuntime();
+        } else {
+            SysStorageConfig cfg = configMapper.selectById(configId);
+            if (cfg == null) {
+                throw new BizException("存储配置不存在");
+            }
+            if (cfg.getStatus() == null || cfg.getStatus() != 1) {
+                throw new BizException("存储配置「" + cfg.getConfigName() + "」已停用，请先启用");
+            }
+            target = toRuntime(cfg);
+        }
+        if (requirePublic && !target.isPublicAccess()) {
+            throw new BizException("该存储配置为私有，前台匿名访问的资源请选择公开配置");
+        }
+        return target;
     }
 
     public StorageRuntimeConfig toRuntime(SysStorageConfig cfg) {
