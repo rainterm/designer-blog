@@ -32,7 +32,10 @@ public class SysStorageConfig extends BaseEntity {
     /** 状态：1启用 0停用 */
     private Integer status;
 
-    /** 代理下载 URL 前缀 */
+    /** 是否公开访问：1公开（/app-api 匿名可访问） 0私有（/admin-api 需登录） */
+    private Integer isPublic;
+
+    /** 代理下载 URL 前缀（按 isPublic 自动生成） */
     private String urlPrefix;
 
     /** 允许的扩展名，逗号分隔 */

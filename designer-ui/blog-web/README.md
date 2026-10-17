@@ -258,11 +258,10 @@ Naive UI 走 `css-render` 在运行时注入样式。服务端渲染时这些样
 | 管理后台 | `/admin-api/{模块}/...` |
 | 公开前台 | `/app-api/{模块}/...` |
 
-博客站点不暴露 `/admin-api`（nginx 显式返回 404），唯一例外是图片下载
-`/admin-api/system/file/download/**` —— 存储模块下发的封面 / 正文图片 URL 就是这个前缀，
-而 `FileController#download` 本身是 `@SaIgnore` 的公开接口。
-dev 下由 `nuxt.config.js` 的 `devProxy` 单列一条，生产由 nginx 的博客 server 块单列一条
-（前缀匹配取最长者，所以它优先于 `/admin-api/` 的 404）。新增同类公开路径时两处都要加。
+博客站点完全不暴露 `/admin-api`（nginx 显式返回 404）。封面 / 正文图片等前台资源必须放在
+**公开**存储配置下：这类配置下发的 URL 是 `/app-api/system/file/download/**`，与其它公开接口
+共用同一条 `/app-api` 代理（dev 见 `nuxt.config.js` 的 `devProxy`，生产见 nginx 博客 server 块）。
+私有存储配置下发的 URL 是 `/admin-api/system/file/download/**`，需要后台登录态，前台取不到。
 
 ## 部署
 

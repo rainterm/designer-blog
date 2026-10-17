@@ -14,4 +14,6 @@ public class StorageConfigQueryDTO extends PageQuery {
     private String configName;
     private String storageType;
     private Integer status;
+    /** 访问类型：1公开 0私有 */
+    private Integer isPublic;
 }

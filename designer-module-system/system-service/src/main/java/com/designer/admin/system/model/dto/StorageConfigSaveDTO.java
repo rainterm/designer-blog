@@ -21,11 +21,10 @@ public class StorageConfigSaveDTO {
     private Integer isDefault;
     private Integer status;
     /**
-     * 下载 URL 前缀。**允许留空**：留空表示沿用服务端默认值
-     * （见 {@code SysStorageConfigService#fillEntity} 的 {@code blankToDefault}），
-     * 前端的存储配置表单也没有把它标成必填，所以这里不能加 {@code @NotBlank}。
+     * 访问类型：1公开 0私有。
+     * 公开配置的下载 URL 走 {@code /app-api}（匿名可访问），私有配置走 {@code /admin-api}（需登录）。
      */
-    private String urlPrefix;
+    private Integer isPublic;
     private String allowedExtensions;
     private Long maxSize;
     /** 类型专属配置（含密钥，序列化时整段脱敏） */

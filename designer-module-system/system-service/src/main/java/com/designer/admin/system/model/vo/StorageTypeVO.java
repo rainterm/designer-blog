@@ -13,6 +13,8 @@ public class StorageTypeVO {
     private String type;
     private String label;
     private List<ConfigFieldMeta> fields;
-    /** 全局默认代理下载前缀（来自 app.yml） */
+    /** 私有代理下载前缀（来自 app.yml） */
     private String defaultUrlPrefix;
+    /** 公开代理下载前缀（来自 app.yml） */
+    private String publicUrlPrefix;
 }

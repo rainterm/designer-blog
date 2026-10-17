@@ -78,6 +78,25 @@ public class FileStorageService {
         return providerRegistry.getRequired(config.getStorageType()).open(filePath, config);
     }
 
+    /**
+     * 文件所在存储配置是否允许公开访问。
+     * 公开下载接口据此决定是否匿名放行。
+     *
+     * <p>没有 configId 的历史数据只能落到默认配置；此时若记录的存储类型与默认配置不一致，
+     * 说明无法确认归属，按私有处理，避免借用默认配置的公开属性放行。</p>
+     */
+    public boolean isPublicAccess(Long configId, String storageType) {
+        if (configId != null) {
+            return storageConfigSource.requireRuntimeById(configId).isPublicAccess();
+        }
+        StorageRuntimeConfig def = storageConfigSource.requireDefaultRuntime();
+        if (storageType != null && !storageType.isBlank()
+                && !storageType.equalsIgnoreCase(def.getStorageType())) {
+            return false;
+        }
+        return def.isPublicAccess();
+    }
+
     private StorageRuntimeConfig resolveConfig(Long configId, String storageType) {
         if (configId != null) {
             return storageConfigSource.requireRuntimeById(configId);

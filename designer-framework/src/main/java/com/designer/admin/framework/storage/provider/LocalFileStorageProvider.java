@@ -98,7 +98,7 @@ public class LocalFileStorageProvider implements FileStorageProvider {
     public String buildAccessUrl(String filePath, StorageRuntimeConfig config) {
         String prefix = config.getUrlPrefix();
         if (prefix == null || prefix.isBlank()) {
-            prefix = storageProperties.normalizedUrlPrefix();
+            prefix = storageProperties.urlPrefix(config.isPublicAccess());
         }
         if (!prefix.endsWith("/")) {
             prefix = prefix + "/";

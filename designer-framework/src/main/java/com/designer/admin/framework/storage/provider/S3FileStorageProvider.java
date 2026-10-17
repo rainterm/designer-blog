@@ -121,13 +121,14 @@ public class S3FileStorageProvider implements FileStorageProvider {
 
     @Override
     public String buildAccessUrl(String filePath, StorageRuntimeConfig config) {
+        // 私有配置必须走代理下载（鉴权在 /admin-api），不能返回公网/CDN 直链
         String publicUrl = config.prop("publicUrl");
-        if (!publicUrl.isBlank()) {
+        if (config.isPublicAccess() && !publicUrl.isBlank()) {
             return publicUrl.replaceAll("/+$", "") + "/" + filePath;
         }
         String prefix = config.getUrlPrefix();
         if (prefix == null || prefix.isBlank()) {
-            prefix = storageProperties.normalizedUrlPrefix();
+            prefix = storageProperties.urlPrefix(config.isPublicAccess());
         }
         if (!prefix.endsWith("/")) {
             prefix = prefix + "/";

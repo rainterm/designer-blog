@@ -150,8 +150,10 @@ aj:
 # ============================ 文件存储默认项 ============================
 designer:
   storage:
-    # 代理下载 URL 前缀（须与 FileController /download/** 映射一致）
+    # 私有文件代理下载前缀（需登录，须与 FileController /download/** 映射一致）
     default-url-prefix: "/admin-api/system/file/download/"
+    # 公开文件代理下载前缀（免登录，须与 AppFileController /download/** 映射一致）
+    public-url-prefix: "/app-api/system/file/download/"
     # 本地存储默认根目录（相对进程工作目录或绝对路径）
     local-default-path: "./data/uploads"
   sso:

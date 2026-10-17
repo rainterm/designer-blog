@@ -58,6 +58,7 @@ public class SysStorageConfigService implements StorageConfigSource {
                 .like(notBlank(query.getConfigName()), SysStorageConfig::getConfigName, query.getConfigName())
                 .eq(notBlank(query.getStorageType()), SysStorageConfig::getStorageType, query.getStorageType())
                 .eq(query.getStatus() != null, SysStorageConfig::getStatus, query.getStatus())
+                .eq(query.getIsPublic() != null, SysStorageConfig::getIsPublic, query.getIsPublic())
                 .orderByDesc(SysStorageConfig::getIsDefault)
                 .orderByDesc(SysStorageConfig::getId));
         page.getRecords().forEach(this::maskSecrets);
@@ -81,6 +82,7 @@ public class SysStorageConfigService implements StorageConfigSource {
         view.put("storageType", cfg.getStorageType());
         view.put("isDefault", cfg.getIsDefault());
         view.put("status", cfg.getStatus());
+        view.put("isPublic", cfg.getIsPublic());
         view.put("urlPrefix", cfg.getUrlPrefix());
         view.put("allowedExtensions", cfg.getAllowedExtensions());
         view.put("maxSize", cfg.getMaxSize());
@@ -92,13 +94,15 @@ public class SysStorageConfigService implements StorageConfigSource {
     }
 
     public List<StorageTypeVO> listTypes() {
-        String defaultUrlPrefix = storageProperties.normalizedUrlPrefix();
+        String privateUrlPrefix = storageProperties.normalizedPrivateUrlPrefix();
+        String publicUrlPrefix = storageProperties.normalizedPublicUrlPrefix();
         return providerRegistry.list().stream().map(p -> {
             StorageTypeVO vo = new StorageTypeVO();
             vo.setType(p.type());
             vo.setLabel(p.label());
             vo.setFields(p.configFields().stream().map(this::toConfigField).toList());
-            vo.setDefaultUrlPrefix(defaultUrlPrefix);
+            vo.setDefaultUrlPrefix(privateUrlPrefix);
+            vo.setPublicUrlPrefix(publicUrlPrefix);
             return vo;
         }).toList();
     }
@@ -137,6 +141,11 @@ public class SysStorageConfigService implements StorageConfigSource {
         Map<String, Object> props = mergeConfig(existing, dto);
         validateRequiredFields(provider, props);
         provider.validateConfig(props);
+
+        // 旧客户端未传访问类型时保持原值，避免默认值把公开配置误改成私有
+        if (dto.getIsPublic() == null) {
+            dto.setIsPublic(existing.getIsPublic() == null ? 0 : existing.getIsPublic());
+        }
 
         SysStorageConfig entity = new SysStorageConfig();
         entity.setId(dto.getId());
@@ -239,11 +248,14 @@ public class SysStorageConfigService implements StorageConfigSource {
     }
 
     public StorageRuntimeConfig toRuntime(SysStorageConfig cfg) {
+        boolean publicAccess = cfg.getIsPublic() != null && cfg.getIsPublic() == 1;
         return StorageRuntimeConfig.builder()
                 .configId(cfg.getId())
                 .configName(cfg.getConfigName())
                 .storageType(cfg.getStorageType())
-                .urlPrefix(cfg.getUrlPrefix())
+                // 前缀由访问类型决定，避免私有配置误配成公开前缀绕过鉴权
+                .urlPrefix(storageProperties.urlPrefix(publicAccess))
+                .publicAccess(publicAccess)
                 .allowedExtensions(cfg.getAllowedExtensions())
                 .maxSize(cfg.getMaxSize() == null ? 5242880L : cfg.getMaxSize())
                 .props(JsonUtil.toMap(cfg.getConfigJson()))
@@ -259,7 +271,8 @@ public class SysStorageConfigService implements StorageConfigSource {
         entity.setStorageType(dto.getStorageType().trim());
         entity.setIsDefault(dto.getIsDefault() == null ? 0 : dto.getIsDefault());
         entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
-        entity.setUrlPrefix(blankToDefault(dto.getUrlPrefix(), storageProperties.normalizedUrlPrefix()));
+        entity.setIsPublic(dto.getIsPublic() == null ? 0 : dto.getIsPublic());
+        entity.setUrlPrefix(storageProperties.urlPrefix(entity.getIsPublic() == 1));
         entity.setAllowedExtensions(blankToDefault(dto.getAllowedExtensions(),
                 "jpg,jpeg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt"));
         entity.setMaxSize(dto.getMaxSize() == null || dto.getMaxSize() <= 0 ? 5242880L : dto.getMaxSize());
@@ -315,6 +328,9 @@ public class SysStorageConfigService implements StorageConfigSource {
         }
         if (!notBlank(dto.getStorageType())) {
             throw new BizException("存储类型不能为空");
+        }
+        if (dto.getIsPublic() != null && dto.getIsPublic() != 0 && dto.getIsPublic() != 1) {
+            throw new BizException("访问类型只能是公开或私有");
         }
         if (!providerRegistry.supports(dto.getStorageType())) {
             throw new BizException("不支持的存储类型：" + dto.getStorageType());

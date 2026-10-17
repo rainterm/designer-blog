@@ -19,6 +19,8 @@ public class StorageRuntimeConfig {
     private String urlPrefix;
     private String allowedExtensions;
     private long maxSize;
+    /** 是否公开访问：公开配置的 URL 走 /app-api，私有配置走 /admin-api */
+    private boolean publicAccess;
     /** 类型专属配置（已解析的 JSON Map） */
     @Builder.Default
     private Map<String, Object> props = Collections.emptyMap();

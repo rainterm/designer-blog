@@ -258,7 +258,8 @@ CREATE TABLE `sys_storage_config` (
     `storage_type`       VARCHAR(32)   NOT NULL                COMMENT '存储类型：local/s3/...',
     `is_default`         TINYINT       NOT NULL DEFAULT 0      COMMENT '是否默认：1是 0否',
     `status`             TINYINT       NOT NULL DEFAULT 1      COMMENT '状态：1启用 0停用',
-    `url_prefix`         VARCHAR(255)  NOT NULL DEFAULT '/admin-api/system/file/download/' COMMENT '代理下载前缀',
+    `is_public`          TINYINT       NOT NULL DEFAULT 0      COMMENT '是否公开访问：1公开 0私有',
+    `url_prefix`         VARCHAR(255)  NOT NULL DEFAULT '/admin-api/system/file/download/' COMMENT '代理下载前缀（按访问类型自动生成）',
     `allowed_extensions` VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '允许扩展名，逗号分隔',
     `max_size`           BIGINT        NOT NULL DEFAULT 5242880 COMMENT '单文件大小上限（字节）',
     `config_json`        TEXT          DEFAULT NULL            COMMENT '类型专属配置JSON',
@@ -270,7 +271,8 @@ CREATE TABLE `sys_storage_config` (
     `deleted`            TINYINT       NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
     KEY `idx_sys_storage_type` (`storage_type`),
-    KEY `idx_sys_storage_default` (`is_default`)
+    KEY `idx_sys_storage_default` (`is_default`),
+    KEY `idx_sys_storage_public` (`is_public`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '文件存储配置';
 
 DROP TABLE IF EXISTS `sys_message_config`;

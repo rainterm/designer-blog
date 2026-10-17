@@ -11,6 +11,9 @@
         <n-form-item label="状态">
           <n-select v-model:value="query.status" :options="statusOptions" placeholder="全部" clearable />
         </n-form-item>
+        <n-form-item label="访问类型">
+          <n-select v-model:value="query.isPublic" :options="accessOptions" placeholder="全部" clearable />
+        </n-form-item>
       </template>
     </SearchBar>
 
@@ -61,8 +64,24 @@
             <n-radio :value="0">停用</n-radio>
           </n-radio-group>
         </n-form-item>
+        <n-form-item label="访问类型">
+          <n-radio-group v-model:value="form.isPublic">
+            <n-space>
+              <n-radio :value="1">公开</n-radio>
+              <n-radio :value="0">私有</n-radio>
+            </n-space>
+          </n-radio-group>
+          <span class="form-tip">
+            <template v-if="form.isPublic === 1">
+              匿名可访问，适用无需登录公开访问的前台资源
+            </template>
+            <template v-else>
+              仅登录后可访问，适用于敏感文件
+            </template>
+          </span>
+        </n-form-item>
         <n-form-item label="下载前缀">
-          <n-input v-model:value="form.urlPrefix" :placeholder="defaultUrlPrefix || '下载 URL 前缀'" />
+          <n-input :value="form.isPublic === 1 ? publicUrlPrefix : privateUrlPrefix" disabled />
         </n-form-item>
         <n-form-item label="允许扩展名">
           <n-input
@@ -168,7 +187,8 @@ const pager = usePagination((q) => pageStorageConfigs(q), {
   defaults: {
     configName: '',
     storageType: null,
-    status: null
+    status: null,
+    isPublic: null
   },
   immediate: false
 })
@@ -195,7 +215,7 @@ const {
     storageType: null,
     isDefault: 0,
     status: 1,
-    urlPrefix: '',
+    isPublic: 0,
     allowedExtensions: 'jpg,jpeg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt',
     maxSizeMb: 5,
     config: {},
@@ -208,7 +228,7 @@ const {
       storageType: payload.storageType,
       isDefault: payload.isDefault,
       status: payload.status,
-      urlPrefix: payload.urlPrefix,
+      isPublic: payload.isPublic,
       allowedExtensions: payload.allowedExtensions,
       maxSize: mbToBytes(payload.maxSizeMb),
       remark: payload.remark,
@@ -229,6 +249,11 @@ const statusOptions = [
   { label: '停用', value: 0 }
 ]
 
+const accessOptions = [
+  { label: '公开', value: 1 },
+  { label: '私有', value: 0 }
+]
+
 const typeOptions = computed(() =>
   storageTypes.value.map((t) => ({ label: t.label, value: t.type }))
 )
@@ -246,8 +271,16 @@ const activeFields = computed(() => {
   return t?.fields || []
 })
 
-const defaultUrlPrefix = computed(
-  () => storageTypes.value.find((x) => x.defaultUrlPrefix)?.defaultUrlPrefix || ''
+const privateUrlPrefix = computed(
+  () =>
+    storageTypes.value.find((x) => x.defaultUrlPrefix)?.defaultUrlPrefix ||
+    '/admin-api/system/file/download/'
+)
+
+const publicUrlPrefix = computed(
+  () =>
+    storageTypes.value.find((x) => x.publicUrlPrefix)?.publicUrlPrefix ||
+    '/app-api/system/file/download/'
 )
 
 const formRules = {
@@ -269,6 +302,17 @@ const columns = computed(() => [
       h(NTag, { bordered: false, type: 'info' }, {
         default: () => typeLabelMap.value[row.storageType] || row.storageType
       })
+  },
+  {
+    title: '访问类型',
+    key: 'isPublic',
+    width: 100,
+    render: (row) =>
+      h(
+        NTag,
+        { bordered: false, type: row.isPublic === 1 ? 'success' : 'warning' },
+        { default: () => (row.isPublic === 1 ? '公开' : '私有') }
+      )
   },
   {
     title: '默认',
@@ -414,7 +458,7 @@ function openCreate() {
     storageType,
     isDefault: 0,
     status: 1,
-    urlPrefix: defaultUrlPrefix.value,
+    isPublic: 0,
     allowedExtensions: 'jpg,jpeg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt',
     maxSizeMb: 5,
     remark: '',
@@ -431,7 +475,7 @@ async function openEdit(row) {
     storageType: d.storageType,
     isDefault: d.isDefault,
     status: d.status,
-    urlPrefix: d.urlPrefix,
+    isPublic: d.isPublic,
     allowedExtensions: d.allowedExtensions,
     maxSizeMb: bytesToMb(d.maxSize),
     remark: d.remark || '',
@@ -463,3 +507,11 @@ onMounted(async () => {
   await loadData()
 })
 </script>
+
+<style scoped>
+.form-tip {
+  margin-left: 10px;
+  color: var(--n-text-color-3);
+  font-size: 12px;
+}
+</style>
