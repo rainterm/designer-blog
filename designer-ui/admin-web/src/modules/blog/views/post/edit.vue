@@ -55,9 +55,10 @@
         <n-form-item label="正文" path="content">
           <div class="md-wrap">
             <MdEditor
+              ref="mdEditorRef"
               v-model="form.content"
               language="zh-CN"
-              :preview="true"
+              :preview="showPreview"
               @onUploadImg="handleEditorUploadImg"
             />
           </div>
@@ -133,7 +134,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { CloseCircleOutline, CloudUploadOutline } from '@vicons/ionicons5'
@@ -154,11 +155,26 @@ const router = useRouter()
 const message = useMessage()
 
 const formRef = ref(null)
+const mdEditorRef = ref(null)
 const submitting = ref(false)
 const uploading = ref(false)
 const loading = ref(false)
 const categoryOptions = ref([])
 const tagOptions = ref([])
+
+/**
+ * 移动端屏幕窄，编辑区与预览区并排会导致两边都难以阅读，
+ * 因此默认收起预览（仅编辑）；桌面端仍保持分屏预览。
+ * 注意：md-editor-v3 的 preview 只在初始化时生效，后续由内部状态控制。
+ */
+const MOBILE_QUERY = '(max-width: 768px)'
+const showPreview = !window.matchMedia(MOBILE_QUERY).matches
+let mobileQuery = null
+
+function handleViewportChange(event) {
+  // 视口变窄时自动收起预览；恢复宽屏时不强制打开，尊重用户当前选择
+  if (event.matches) mdEditorRef.value?.togglePreview(false)
+}
 
 const emptyForm = () => ({
   id: null,
@@ -296,8 +312,14 @@ async function handleSave(status) {
 }
 
 onMounted(async () => {
+  mobileQuery = window.matchMedia(MOBILE_QUERY)
+  mobileQuery.addEventListener('change', handleViewportChange)
   await loadOptions()
   await syncFromRoute()
+})
+
+onBeforeUnmount(() => {
+  mobileQuery?.removeEventListener('change', handleViewportChange)
 })
 
 watch(
