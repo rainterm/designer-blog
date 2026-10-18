@@ -48,7 +48,7 @@ export function fetchComments(postId, params, options) {
   return apiFetch(`/app-api/blog/public/posts/${postId}/comments`, { query: params, ...options })
 }
 
-/** 提交评论（待审核）。滑块验证码凭据由 /captcha/check 得到，见 @captcha 共享模块 */
+/** 提交评论（待审核）。滑块验证码凭据由 /app-api/captcha/check 得到，见 @captcha 共享模块 */
 export function submitComment(data, options) {
   return apiFetch('/app-api/blog/public/comments', { method: 'POST', body: data, ...options })
 }

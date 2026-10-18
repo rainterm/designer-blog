@@ -177,17 +177,6 @@ export default defineNuxtConfig({
          */
         target: `${apiInternalBase}/app-api`,
         changeOrigin: true
-      },
-      /**
-       * 滑块验证码：AJ-Captcha 插件的端点挂在根路径 `/captcha/**`（不在 `/app-api` 下），
-       * 生产环境由 nginx 单独反代一次，dev 这里同样得补一条。
-       *
-       * <p>target 带 `/captcha` 的原因与上面 `/app-api` 完全相同（h3 剥前缀 +
-       * httpxy 前置 target 的 pathname），漏了就会得到 `/get`、`/check` 这样的后端未知路由。</p>
-       */
-      '/captcha': {
-        target: `${apiInternalBase}/captcha`,
-        changeOrigin: true
       }
     }
   }

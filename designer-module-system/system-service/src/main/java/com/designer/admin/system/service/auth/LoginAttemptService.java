@@ -24,7 +24,7 @@ public interface LoginAttemptService {
      * 是否需要校验人机验证：全局开启且该账号失败次数达到阈值。
      *
      * <p>滑块本身不需要「按账号生成」，所以这里只回答是 / 否，
-     * 前端据此决定要不要调 {@code /captcha/get} 取一张。</p>
+     * 前端据此决定要不要调 {@code /app-api/captcha/get} 取一张。</p>
      *
      * @param username 登录账号
      * @return 是否需要滑块验证

@@ -58,10 +58,14 @@ nginx 只能发文件，做不到这件事，所以 `blog-web` 的产物是一�
 > 之所以要分开：直连内网时后端看到的 IP 是 `blog` 容器，**不是访客**，
 > 所以任何依赖真实 IP 的能力（限流、IP 归属地、访问统计）都必须留在浏览器侧发起。
 >
-> **滑块验证码是两个例外之一，且两个站点都要单独反代。**
-> 它的端点是 AJ-Captcha 插件写死的 `/captcha/get`、`/captcha/check`，挂在**根路径**上
-> （不在 `/app-api`、`/admin-api` 前缀下），所以博客与后台两个 `server` 块各有一条
-> `location /captcha/`（限流桶分别是 `blog_captcha` 与 `admin_captcha`）。
+> **滑块验证码的路径：插件原生 + 自己包的公开前缀。**
+> 后端插件把端点注册在根路径 `/captcha/get`、`/captcha/check`（路径不可配置），
+> framework 里的 `AppCaptchaController` 另外映射 `/app-api/captcha/**`，
+> 复用同一个 `CaptchaService` 并用插件的 `getRemoteId` 保证 `browserInfo` 一致。
+> 因此浏览器侧只有一套 URL：`/app-api/captcha/get`、`/app-api/captcha/check`，
+> nginx 与 dev 代理都按普通 `/app-api` 转发，**不做前缀改写**；
+> 两个站点的 nginx 仍各有 `location /app-api/captcha/`，只为用独立的限流桶
+> （`blog_captcha` / `admin_captcha`）。插件原生的 `/captcha/**` 两个站点都显式 404。
 > 漏掉任何一条，请求会落到该站点的兜底 location（`location /` 或 `try_files`）上，
 > 拿到一个 HTML 而不是 JSON —— 症状是「验证码加载失败」而不是 404，排查时容易走弯路。
 

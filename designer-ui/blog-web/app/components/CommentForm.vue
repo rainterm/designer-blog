@@ -69,7 +69,7 @@ const submitting = ref(false)
 const captchaVisible = ref(false)
 
 /**
- * /captcha/check 下发的二次校验凭据。**一次性**：被服务端消费后必须重新拖滑块，
+ * /app-api/captcha/check 下发的二次校验凭据。**一次性**：被服务端消费后必须重新拖滑块，
  * 所以每次提交失败（除限流外）都要清掉它。
  */
 const captchaVerification = ref('')

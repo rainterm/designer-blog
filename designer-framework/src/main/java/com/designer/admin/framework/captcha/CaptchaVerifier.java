@@ -13,7 +13,8 @@ import org.noear.solon.annotation.Inject;
  *
  * <p><b>为什么业务侧还要再校验一次</b>：AJ-Captcha 是两段式设计。</p>
  * <ol>
- *   <li>前端拖完滑块调 {@code POST /captcha/check}，服务端比对偏移量、判定「是不是人」。
+ *   <li>前端拖完滑块调 {@code POST /app-api/captcha/check}，服务端比对偏移量、
+ *       判定「是不是人」。
  *       通过后它会往缓存里写一条以本次 token 为键的「二次校验凭据」，并把
  *       {@code captchaVerification}（= {@code AES(token + "---" + {x,y})}）交给前端；</li>
  *   <li>业务请求带上这个 {@code captchaVerification}，服务端调
@@ -47,7 +48,7 @@ public class CaptchaVerifier {
     /**
      * 校验并通过则返回；失败抛业务异常。
      *
-     * @param captchaVerification 前端从 {@code POST /captcha/check} 拿到的凭据
+     * @param captchaVerification 前端从 {@code POST /app-api/captcha/check} 拿到的凭据
      */
     public void assertVerified(String captchaVerification) {
         if (captchaVerification == null || captchaVerification.isBlank()) {

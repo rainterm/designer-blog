@@ -104,9 +104,11 @@
         </dependency>
 
         <!-- 图形验证码：anji-plus AJ-Captcha 的 Solon 封装（版本由 solon-parent 统一管理）。
-             放在 framework 而不是某个业务模块里，是因为**所有**需要验证码的入口共用同一套
-             端点：插件自带的 @Controller 把 /captcha/get、/captcha/check 注册在根路径下，
-             进程里只可能有一份，业务侧再各自引一遍只会带来「谁负责装配」的歧义。
+             放在 framework 而不是某个业务模块里，是因为**所有**需要验证码的入口共用同一个
+             CaptchaService，业务侧再各自引一遍只会带来「谁负责装配」的歧义。
+             插件自带的 @Controller 把 /captcha/get、/captcha/check 注册在根路径下（路径写死、
+             不可配置）；浏览器侧统一走 /app-api/captcha/**，由本模块的 AppCaptchaController
+             映射并复用同一个 CaptchaService，插件原生路径不对外。
              配套的 RedisCaptchaCacheServiceImpl / CaptchaVerifier 见 com.designer.admin.framework.captcha。 -->
         <dependency>
             <groupId>org.noear</groupId>

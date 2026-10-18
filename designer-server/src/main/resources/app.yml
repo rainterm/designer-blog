@@ -145,12 +145,16 @@ sa-token:
 # designer-framework 的 com.designer.admin.framework.captcha 包）。
 # 类型只有 blockPuzzle（滑块拼图）与 clickWord（文字点选）两种，没有字符型。
 #
-# 端点由插件自带的 CaptchaController 注册，路径**写死**为 /captcha/get、/captcha/check，
-# 不在 /admin-api、/app-api 前缀之下，因此：
-#   · 天然免登录 —— Sa-Token 只拦 /admin-api/** 与 /app-api/**，匿名访客可直达（正是我们需要的）；
-#   · 也**不受**业务 controller 上 @RateLimit 的覆盖 —— 注解加不到第三方 controller 上，
+# 端点由插件自带的 CaptchaController 注册在根路径 /captcha/get、/captcha/check
+# （路径写死，插件没有前缀配置项）。浏览器侧统一走 /app-api/captcha/**：
+# framework 里另注册了一个薄 controller（AppCaptchaController）映射该前缀，
+# 复用同一个 CaptchaService，并直接用插件的 getRemoteId 保证 browserInfo 一致。
+# nginx 与 dev 代理都按普通 /app-api 转发，不做前缀改写；插件原生的 /captcha/** 两个站点都已显式 404。
+# 因此：
+#   · 公开 URL 落在 /app-api/** 下，Sa-Token 对该前缀默认免登录（正是我们需要的）；
+#   · 后端真实端点仍**不受**业务 controller 上 @RateLimit 的覆盖 —— 注解加不到该 controller 上，
 #     所以频控改由下面的 req-* 内置限流承担（它基于同一套 cache-type 计数，多实例下同样生效）；
-#   · 两个站点的 nginx server 块都必须各自反代一次 /captcha/**（见 deploy/nginx/default.conf）。
+#   · 两个站点的 nginx server 块都各有一条 /app-api/captcha/ location，只为把限流桶与普通 API 分开。
 #
 # 「要不要验」属于业务策略，不在这一层：前台看站点评论总开关，
 # 后台看该账号连续失败是否达阈值（见 system 模块的 LoginAttemptService）。

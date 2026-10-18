@@ -126,8 +126,8 @@ scripts/                 # 构建期同步 tokens.css 与 favicon.svg（见「�
 
 | 接口 | 说明 |
 |------|------|
-| `POST /captcha/get` | 取一张滑块验证码：底图 + 拼图 + `token` + `secretKey`（**根路径**，不在 `/app-api` 下，dev 由 `nitro.devProxy` 转发） |
-| `POST /captcha/check` | 提交拖拽位置，通过则拿到 `captchaVerification` 凭据 |
+| `POST /app-api/captcha/get` | 取一张滑块验证码：底图 + 拼图 + `token` + `secretKey`（公开前缀与其它浏览器侧 API 一致，后端由 `AppCaptchaController` 映射） |
+| `POST /app-api/captcha/check` | 提交拖拽位置，通过则拿到 `captchaVerification` 凭据 |
 | `POST /app-api/blog/public/comments` | 提交评论，需带 `captchaVerification`（+ `commenterKey`） |
 | `GET /app-api/blog/public/posts/{id}/comments` | 分页拉取已通过评论（`pageNum`/`pageSize`），按顶级评论分页 |
 | `GET /app-api/blog/public/posts/{id}/comments/mine` | 我的待审评论（需请求头 `X-Commenter-Key`） |
@@ -140,7 +140,7 @@ scripts/                 # 构建期同步 tokens.css 与 favicon.svg（见「�
   传输层由各站注入 —— blog-web 这侧只是一行 `app/utils/captchaApi.js`。
 - 滑块**按需展示**：评论表单初始不渲染、也就不请求验证码；首次点击「提交评论」且昵称/内容校验通过后，
   才展开面板（`captchaVisible`）。拖到对齐就**自动提交**，不必再点一次按钮。
-- 凭据**一次性**：`/captcha/check` 得到的 `captchaVerification` 被服务端消费后即失效，
+- 凭据**一次性**：`/app-api/captcha/check` 得到的 `captchaVerification` 被服务端消费后即失效，
   所以提交失败要清掉它并重拖；但 **429 除外** —— 那是被限流拦在业务代码之外，
   凭据根本没被消费，清掉只会让人白拖一次。这条分支写在 `CommentForm.vue#doSubmit` 里。
 - 面板内有「换一张」可手动刷新；拖错会自动换一张并抖动提示

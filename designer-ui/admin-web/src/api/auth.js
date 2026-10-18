@@ -6,7 +6,7 @@ export const login = (data) => request.post('/admin-api/system/auth/login', data
 /**
  * 询问该账号本次登录是否需要人机验证。
  *
- * <p>只返回 `{ enabled }` —— 滑块本身由 AJ-Captcha 的 `/captcha/get` 下发
+ * <p>只返回 `{ enabled }` —— 滑块本身由 AJ-Captcha 的 `/app-api/captcha/get` 下发
  * （与博客前台评论共用同一套端点，见 `@/api/captcha`）。</p>
  */
 export const getCaptcha = (username) =>

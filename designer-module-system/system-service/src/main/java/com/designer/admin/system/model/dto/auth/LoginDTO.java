@@ -28,6 +28,6 @@ public class LoginDTO {
     @Length(min = 6, max = 50, message = "密码长度需在 6~50 个字符之间")
     private String password;
 
-    @ApiModelProperty("滑块验证码的二次校验凭据，由 POST /captcha/check 下发，一次性有效；仅在验证码开启时必填")
+    @ApiModelProperty("滑块验证码的二次校验凭据，由 POST /app-api/captcha/check 下发，一次性有效；仅在验证码开启时必填")
     private String captchaVerification;
 }

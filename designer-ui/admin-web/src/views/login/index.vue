@@ -80,7 +80,7 @@ const form = reactive({
 })
 
 /**
- * /captcha/check 下发的二次校验凭据。**一次性**：服务端在登录流程里消费掉它
+ * /app-api/captcha/check 下发的二次校验凭据。**一次性**：服务端在登录流程里消费掉它
  * （无论登录成败），所以每次提交失败后都必须清掉并重新拖滑块。
  */
 const captchaVerification = ref('')

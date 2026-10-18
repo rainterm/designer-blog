@@ -31,8 +31,10 @@ com/designer/admin/system/
 
 登录本身在 `AuthService`，人机验证的能力**不在本模块**：滑块（AJ-Captcha）的实现与配置
 都在 `designer-framework` 的 `com.designer.admin.framework.captcha`
-—— 端点 `POST /captcha/get`、`POST /captcha/check` 由插件自带的 controller 注册在**根路径**下，
-一个进程里只可能有一份，后台登录与博客前台评论共用它。
+—— 后端端点 `POST /captcha/get`、`POST /captcha/check` 由插件自带的 controller 注册在**根路径**下
+（路径写死、不可配置）；浏览器侧统一走 `/app-api/captcha/**`，由 framework 的
+`AppCaptchaController` 映射并复用同一个 `CaptchaService`，插件原生路径不对外。
+一个进程里只可能有一份验证码服务，后台登录与博客前台评论共用它。
 
 本模块只保留**策略**，落在 `LoginAttemptService`（原先叫 `CaptchaService`；改名是因为
 画算术题那部分已整体删除，剩下的是「失败计数 + 锁定 + 要不要验」，与验证码形态无关，
@@ -49,8 +51,10 @@ com/designer/admin/system/
 时每个账号只错一两次，够不到验证码阈值也触发不了锁定，所以还需要按 **IP** 记一份总额度。
 阈值写在 `AuthController#login` 的 `@RateLimit` 注解上，改这里即可
 （注解本身的能力见 `designer-framework` 的 `@RateLimit`）；IP 维度复用框架的
-`ClientIpUtil`，与落库 IP、评论限流是同一个值。滑块凭据端点 `/captcha/**`
-标注不到（第三方 controller），频控由 AJ-Captcha 内置 `req-*` 与 nginx 的 `admin_captcha` 桶承担。
+`ClientIpUtil`，与落库 IP、评论限流是同一个值。滑块凭据端点（公开 URL 为
+`/app-api/captcha/**`，由 framework 的 `AppCaptchaController` 映射）标注不到
+（注解加不到该 controller 上），
+频控由 AJ-Captcha 内置 `req-*` 与 nginx 的 `admin_captcha` 桶承担。
 
 ⚠️ 顺序不能反：`AuthService#login` 先问 `isCaptchaRequired`，需要验才去调 `assertVerified`。
 凭据是**一次性**的，对不需要验证的账号调一次校验只会把它白白消费掉。

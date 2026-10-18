@@ -26,7 +26,7 @@ public class PublicCommentSaveDTO {
     @ApiModelProperty(value = "评论内容", required = true)
     private String content;
 
-    @ApiModelProperty("滑块验证码的二次校验凭据，由 POST /captcha/check 下发，一次性有效")
+    @ApiModelProperty("滑块验证码的二次校验凭据，由 POST /app-api/captcha/check 下发，一次性有效")
     private String captchaVerification;
 
     @ApiModelProperty("评论人匿名标识（前端 localStorage 里的随机密钥），用于查看 / 删除自己的评论")

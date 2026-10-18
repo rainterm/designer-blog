@@ -60,21 +60,12 @@ export default defineConfig({
         timeout: 0,
         proxyTimeout: 0
       },
-      // 公开前台接口（文件公开访问等）
+      // 公开前台接口（文件公开访问、滑块验证码等）
       '/app-api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         timeout: 0,
         proxyTimeout: 0
-      },
-      /**
-       * 滑块验证码：AJ-Captcha 插件的端点挂在根路径 `/captcha/**`（不在 `/admin-api` 下），
-       * 生产环境由 nginx 单独反代一次，dev 这里同样得补一条，
-       * 否则浏览器侧请求会落到 Vite 自己的静态服务上，拿到 index.html（表现为 JSON 解析失败）。
-       */
-      '/captcha': {
-        target: 'http://localhost:8080',
-        changeOrigin: true
       }
     }
   },

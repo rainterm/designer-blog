@@ -23,6 +23,17 @@ export const REP_CODE_SUCCESS = '0000'
 export const CAPTCHA_TYPE = 'blockPuzzle'
 
 /**
+ * 公开 URL 前缀。
+ *
+ * <p>AJ-Captcha 插件把端点注册在根路径 {@code /captcha/**}，且没有前缀配置项。
+ * 后端在 framework 里另注册了一个映射 {@code /app-api/captcha/**} 的薄 controller
+ * （见 {@code AppCaptchaController}），所以浏览器侧只需要认这一个前缀 ——
+ * nginx 与 dev 代理都按普通 {@code /app-api} 转发，不做任何改写。
+ * 插件原生的 {@code /captcha/**} 两个站点都已显式 404，不对外。</p>
+ */
+const BASE_PATH = '/app-api/captcha'
+
+/**
  * 造一个验证码接口客户端。
  *
  * @param {(path: string, body: object) => Promise<any>} request
@@ -37,7 +48,7 @@ export function createCaptchaApi(request) {
      * @returns {Promise<{token: string, secretKey: string, originalImageBase64: string, jigsawImageBase64: string}>}
      */
     async fetchPuzzle() {
-      const res = await request('/captcha/get', {
+      const res = await request(`${BASE_PATH}/get`, {
         captchaType: CAPTCHA_TYPE,
         clientUid: clientUid(),
         ts: Date.now()
@@ -56,7 +67,7 @@ export function createCaptchaApi(request) {
      * @returns {Promise<boolean>} 是否对齐（未对齐需要换一张重试）
      */
     async check(token, pointJson) {
-      const res = await request('/captcha/check', {
+      const res = await request(`${BASE_PATH}/check`, {
         captchaType: CAPTCHA_TYPE,
         token,
         pointJson,

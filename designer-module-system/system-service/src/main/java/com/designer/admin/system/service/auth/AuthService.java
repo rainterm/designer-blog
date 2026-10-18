@@ -36,7 +36,7 @@ public interface AuthService {
     /**
      * 登录前询问该账号是否需要人机验证。
      *
-     * <p>验证码本身由 AJ-Captcha 的 {@code /captcha/get} 下发（与博客前台评论共用同一套端点），
+     * <p>验证码本身由 AJ-Captcha 的 {@code /app-api/captcha/get} 下发（与博客前台评论共用同一套端点），
      * 这里只回答「要不要」，前端据此决定是否展示滑块。</p>
      *
      * @param username 登录账号
