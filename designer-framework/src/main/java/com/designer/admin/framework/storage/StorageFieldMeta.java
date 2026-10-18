@@ -5,6 +5,8 @@ import lombok.Data;
 
 /**
  * 存储类型配置项元数据（供前端动态渲染表单，新增 Provider 时自动扩展）
+ *
+ * @author 雨夜终端
  */
 @Data
 @Builder

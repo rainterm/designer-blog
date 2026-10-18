@@ -1,12 +1,11 @@
 package com.designer.admin.framework.message;
 
 import com.designer.admin.common.exception.BizException;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Init;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.core.AppContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,11 +15,12 @@ import java.util.Map;
 
 /**
  * 收集所有 {@link MessageChannelProvider}，按 type 索引。
+ *
+ * @author 雨夜终端
  */
 @Component
+@Slf4j
 public class MessageChannelRegistry {
-
-    private static final Logger log = LoggerFactory.getLogger(MessageChannelRegistry.class);
 
     @Inject
     private AppContext appContext;
@@ -30,15 +30,12 @@ public class MessageChannelRegistry {
     @Init
     public void init() {
         Map<String, MessageChannelProvider> map = new LinkedHashMap<>();
-        appContext.beanForeach((name, bw) -> {
-            Object raw = bw.raw();
-            if (raw instanceof MessageChannelProvider p) {
-                MessageChannelProvider old = map.put(p.type(), p);
-                if (old != null && old != p) {
-                    throw new IllegalStateException("重复的消息通道类型：" + p.type());
-                }
-                log.info("注册消息通道 Provider：{} ({})", p.type(), p.label());
+        appContext.subBeansOfType(MessageChannelProvider.class, p -> {
+            MessageChannelProvider old = map.put(p.type(), p);
+            if (old != null && old != p) {
+                throw new IllegalStateException("重复的消息通道类型：" + p.type());
             }
+            log.info("注册消息通道 Provider：{} ({})", p.type(), p.label());
         });
         this.providers = Collections.unmodifiableMap(map);
         if (map.isEmpty()) {

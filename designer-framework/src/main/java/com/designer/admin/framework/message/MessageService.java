@@ -6,6 +6,8 @@ import org.noear.solon.annotation.Inject;
 
 /**
  * 消息发送门面：按通道类型取默认配置（或指定配置）并委托 Provider，同时写入发送记录。
+ *
+ * @author 雨夜终端
  */
 @Component
 public class MessageService {

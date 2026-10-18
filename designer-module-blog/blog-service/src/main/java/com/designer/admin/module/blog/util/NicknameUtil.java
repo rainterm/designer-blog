@@ -25,25 +25,19 @@ import java.util.List;
  * 那么任何含「雨」的昵称都不行），所以保留词应填完整、有辨识度的词。</p>
  *
  * <p><b>保留名单由后台配置</b>（{@code blog_setting.reserved_nicknames}），
- * 不再硬编码在代码里；{@link #DEFAULT_RESERVED} 只用于新建库 / 设置行缺失时的兜底。
+ * 不再硬编码在代码里；{@code BlogSettingConsts#DEFAULT_RESERVED_NICKNAMES} 只用于新建库 / 设置行缺失时的兜底。
  * 站长署名会由 {@link #reserved} 自动追加，不必在配置里重复填一遍。</p>
  *
  * <p>⚠️ 归一化 + 包含匹配挡不住异体字 / 形近字（如「愽主」）。因此它只用于**减少**视觉混淆，
  * 不是身份鉴别的依据 —— 真正的身份由 {@code blog_comment.author_type} 决定，
  * 展示层认标记不认昵称。</p>
+ *
+ * @author 雨夜终端
  */
 public final class NicknameUtil {
 
-    /**
-     * 默认保留昵称：仅在「设置行缺失 / 新建库」时兜底。
-     *
-     * <p>不是运行时规则的一部分 —— 后台把 {@code reserved_nicknames} 改成什么，
-     * 就以什么为准（清空即表示不再拦截这些词，站长的显式操作不该被代码悄悄覆盖）。</p>
-     */
-    public static final List<String> DEFAULT_RESERVED = List.of("博主", "站长", "管理员", "admin");
-
-    /** 默认保留昵称的存储形态，与 {@code blog_setting.reserved_nicknames} 的列默认值保持一致 */
-    public static final String DEFAULT_RESERVED_TEXT = String.join(",", DEFAULT_RESERVED);
+    /** 保留昵称文本的分隔符：半角/全角逗号、分号、换行 */
+    private static final String RESERVED_SEPARATORS = "[,，;；\\r\\n]+";
 
     private NicknameUtil() {
     }
@@ -105,7 +99,7 @@ public final class NicknameUtil {
             return List.of();
         }
         LinkedHashMap<String, String> byKey = new LinkedHashMap<>();
-        for (String part : raw.split("[,，;；\\r\\n]+")) {
+        for (String part : raw.split(RESERVED_SEPARATORS)) {
             putReserved(byKey, part);
         }
         return List.copyOf(byKey.values());

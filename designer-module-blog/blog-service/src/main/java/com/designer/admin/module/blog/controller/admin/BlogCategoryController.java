@@ -1,8 +1,10 @@
 package com.designer.admin.module.blog.controller.admin;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.designer.admin.common.core.PageResult;
-import com.designer.admin.common.core.R;
+import com.designer.admin.common.core.Result;
 import com.designer.admin.framework.log.BusinessType;
 import com.designer.admin.framework.log.OperLog;
 import com.designer.admin.module.blog.model.dto.CategoryQueryDTO;
@@ -20,13 +22,17 @@ import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * 分类后台接口。
+ *
+ * @author 雨夜终端
+ */
 @Valid
 @Controller
 @Mapping("/admin-api/blog/category")
+@Api(tags = "博客分类")
 public class BlogCategoryController {
 
     @Inject
@@ -35,59 +41,54 @@ public class BlogCategoryController {
     @Get
     @Mapping("/page")
     @SaCheckPermission("blog:category:list")
-    public R<PageResult<BlogCategory>> page(CategoryQueryDTO query) {
-        return R.ok(PageResult.of(categoryService.page(query)));
+    @ApiOperation(value = "分页查询分类")
+    public Result<PageResult<BlogCategory>> page(CategoryQueryDTO query) {
+        return Result.ok(PageResult.of(categoryService.listPage(query)));
     }
 
     @Get
     @Mapping("/list")
     @SaCheckPermission("blog:category:list")
-    public R<List<BlogCategory>> list() {
-        return R.ok(categoryService.listEnabled());
+    @ApiOperation(value = "查询分类列表")
+    public Result<List<BlogCategory>> list() {
+        return Result.ok(categoryService.listEnabled());
     }
 
     @Get
     @Mapping("/{id}")
     @SaCheckPermission("blog:category:query")
-    public R<BlogCategory> detail(Long id) {
-        return R.ok(categoryService.getById(id));
+    @ApiOperation(value = "获取分类详情")
+    public Result<BlogCategory> detail(Long id) {
+        return Result.ok(categoryService.getById(id));
     }
 
     @Post
     @Mapping("/add")
     @OperLog(title = "博客分类", businessType = BusinessType.INSERT)
     @SaCheckPermission("blog:category:add")
-    public R<Void> add(@Body @Validated CategorySaveDTO dto) {
-        categoryService.save(dto);
-        return R.ok();
+    @ApiOperation(value = "新增分类")
+    public Result<Void> add(@Body @Validated CategorySaveDTO dto) {
+        categoryService.add(dto);
+        return Result.ok();
     }
 
     @Put
     @Mapping("/update")
     @OperLog(title = "博客分类", businessType = BusinessType.UPDATE)
     @SaCheckPermission("blog:category:edit")
-    public R<Void> update(@Body @Validated CategorySaveDTO dto) {
+    @ApiOperation(value = "修改分类")
+    public Result<Void> update(@Body @Validated CategorySaveDTO dto) {
         categoryService.update(dto);
-        return R.ok();
+        return Result.ok();
     }
 
     @Delete
     @Mapping("/remove")
     @OperLog(title = "博客分类", businessType = BusinessType.DELETE)
     @SaCheckPermission("blog:category:remove")
-    public R<Void> remove(String ids) {
-        categoryService.remove(parseIds(ids));
-        return R.ok();
-    }
-
-    private List<Long> parseIds(String ids) {
-        if (ids == null || ids.isBlank()) {
-            return List.of();
-        }
-        return Arrays.stream(ids.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .map(Long::valueOf)
-                .collect(Collectors.toList());
+    @ApiOperation(value = "删除分类")
+    public Result<Void> remove(List<Long> ids) {
+        categoryService.remove(ids);
+        return Result.ok();
     }
 }

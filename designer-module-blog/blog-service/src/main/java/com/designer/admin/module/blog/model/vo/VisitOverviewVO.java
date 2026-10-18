@@ -10,13 +10,16 @@ import java.util.List;
  *
  * <p>统计页是多图并存，拆成多个接口会让「同一时间窗口」难以保证一致，
  * 也会放大往返次数，故合并为一个响应体。</p>
+ *
+ * @author 雨夜终端
  */
 @Data
 public class VisitOverviewVO implements Serializable {
 
     /** 区间天数（后端归一化后的实际值） */
-    private int days;
+    private Integer days;
 
+    /** 顶部卡片：PV / UV 汇总 */
     private VisitSummaryVO summary;
 
     /** PV / UV 按天趋势 */

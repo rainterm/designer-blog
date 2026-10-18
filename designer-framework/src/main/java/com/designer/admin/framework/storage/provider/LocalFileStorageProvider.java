@@ -20,11 +20,16 @@ import java.util.Map;
 
 /**
  * 本地磁盘存储
+ *
+ * @author 雨夜终端
  */
 @Component
 public class LocalFileStorageProvider implements FileStorageProvider {
 
     public static final String TYPE = "local";
+
+    /** URL 路径分隔符 */
+    private static final String URL_SEPARATOR = "/";
 
     @Inject
     private StorageProperties storageProperties;
@@ -100,8 +105,8 @@ public class LocalFileStorageProvider implements FileStorageProvider {
         if (prefix == null || prefix.isBlank()) {
             prefix = storageProperties.urlPrefix(config.isPublicAccess());
         }
-        if (!prefix.endsWith("/")) {
-            prefix = prefix + "/";
+        if (!prefix.endsWith(URL_SEPARATOR)) {
+            prefix = prefix + URL_SEPARATOR;
         }
         return prefix + filePath;
     }

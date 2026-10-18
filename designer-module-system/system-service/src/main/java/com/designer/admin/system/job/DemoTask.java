@@ -1,8 +1,7 @@
 package com.designer.admin.system.job;
 
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 示例任务 Bean，页面 invoke_target 可填写：
@@ -10,11 +9,12 @@ import org.slf4j.LoggerFactory;
  *   <li>demoTask.noParams</li>
  *   <li>demoTask.withParams('hello')</li>
  * </ul>
+ *
+ * @author 雨夜终端
  */
 @Component("demoTask")
+@Slf4j
 public class DemoTask {
-
-    private static final Logger log = LoggerFactory.getLogger(DemoTask.class);
 
     public void noParams() {
         log.info("[demoTask] 执行无参方法");

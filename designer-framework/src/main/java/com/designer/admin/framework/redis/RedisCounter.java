@@ -40,6 +40,8 @@ import org.noear.solon.annotation.Inject;
  *
  * <p>⚠️ 固定窗口的边界锚在「窗口内第一次请求」，不是每条请求都往后推：
  * 阈值 20/分钟时，第 21 次请求会失败，但窗口结束后立刻可用。</p>
+ *
+ * @author 雨夜终端
  */
 @Component
 public class RedisCounter {

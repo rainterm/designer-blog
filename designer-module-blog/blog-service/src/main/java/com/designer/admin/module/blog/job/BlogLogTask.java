@@ -1,10 +1,9 @@
 package com.designer.admin.module.blog.job;
 
 import com.designer.admin.module.blog.service.BlogVisitService;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 博客内置日志清理任务。页面 invoke_target 示例：
@@ -15,17 +14,18 @@ import org.slf4j.LoggerFactory;
  *
  * <p>访问日志是明细表，会随流量持续增长；不清理的话既是存储负担，
  * 也会让聚合查询的扫描量越滚越大。</p>
+ *
+ * @author 雨夜终端
  */
 @Component("blogLogTask")
+@Slf4j
 public class BlogLogTask {
-
-    private static final Logger log = LoggerFactory.getLogger(BlogLogTask.class);
 
     @Inject
     private BlogVisitService visitService;
 
     public void cleanVisitLog(Integer days) {
-        int n = visitService.cleanOlderThan(days);
+        int n = visitService.removeOlderThan(days);
         log.info("[blogLogTask] 访问日志清理 {} 条 (keepDays={})", n, days);
     }
 }

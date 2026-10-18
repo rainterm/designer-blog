@@ -1,32 +1,34 @@
 package com.designer.admin.module.blog.model.dto;
 
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
+/**
+ * 前台评论提交入参。
+ *
+ * @author 雨夜终端
+ */
 @Data
 public class PublicCommentSaveDTO {
 
+    @ApiModelProperty(value = "评论所属文章 ID", required = true)
     private Long postId;
 
+    @ApiModelProperty("父评论 ID，顶级评论留空或传 0")
     private Long parentId;
 
+    @ApiModelProperty(value = "评论人昵称", required = true)
     private String nickname;
 
+    @ApiModelProperty("评论人邮箱，仅站长可见")
     private String email;
 
+    @ApiModelProperty(value = "评论内容", required = true)
     private String content;
 
-    /**
-     * 滑块验证码的二次校验凭据。
-     *
-     * <p>前端拖拽通过后调用 {@code POST /captcha/check} 得到，服务端再拿去复核一次
-     * （见 {@code com.designer.admin.framework.captcha.CaptchaVerifier}）。**一次性**：校验通过后服务端就把它作废，
-     * 所以同一个值不能重复提交。</p>
-     */
+    @ApiModelProperty("滑块验证码的二次校验凭据，由 POST /captcha/check 下发，一次性有效")
     private String captchaVerification;
 
-    /**
-     * 评论人匿名标识（前端 localStorage 里的随机密钥）。
-     * 用于让评论人查看 / 删除自己的评论；缺失时评论仍可提交，但作者无法自行管理。
-     */
+    @ApiModelProperty("评论人匿名标识（前端 localStorage 里的随机密钥），用于查看 / 删除自己的评论")
     private String commenterKey;
 }

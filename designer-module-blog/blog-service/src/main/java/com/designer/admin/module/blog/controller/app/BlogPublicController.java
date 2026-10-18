@@ -1,14 +1,17 @@
 package com.designer.admin.module.blog.controller.app;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import cn.dev33.satoken.annotation.SaIgnore;
+import com.designer.admin.module.blog.constant.BlogCommentConsts;
 import com.designer.admin.common.core.PageQuery;
 import com.designer.admin.common.core.PageResult;
-import com.designer.admin.common.core.R;
+import com.designer.admin.common.core.Result;
 import com.designer.admin.common.core.ResultCode;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.ratelimit.RateLimit;
 import com.designer.admin.framework.ratelimit.RateLimitDimension;
-import com.designer.admin.module.blog.constant.BlogCacheTags;
+import com.designer.admin.module.blog.constant.BlogCacheConsts;
 import com.designer.admin.module.blog.model.dto.PostQueryDTO;
 import com.designer.admin.module.blog.model.dto.PublicCommentSaveDTO;
 import com.designer.admin.module.blog.model.dto.VisitReportDTO;
@@ -42,20 +45,15 @@ import java.util.List;
 
 /**
  * 博客公开接口（免登录）
+ *
+ * @author 雨夜终端
  */
 @SaIgnore
 @Valid
 @Controller
 @Mapping("/app-api/blog/public")
+@Api(tags = "博客前台")
 public class BlogPublicController {
-
-    /** 评论人匿名标识的请求头名（与前端 blog-web 保持一致） */
-    private static final String COMMENTER_KEY_HEADER = "X-Commenter-Key";
-
-    /**
-     * 公开读缓存的兜底存活时间（秒）：1 小时。
-     */
-    private static final int CACHE_SECONDS = 3600;
 
     @Inject
     private BlogPostService postService;
@@ -74,14 +72,16 @@ public class BlogPublicController {
 
     @Get
     @Mapping("/site")
-    @Cache(tags = BlogCacheTags.SITE, seconds = CACHE_SECONDS)
-    public R<PublicSiteVO> site() {
-        return R.ok(settingService.getPublic());
+    @Cache(tags = BlogCacheConsts.SITE, seconds = BlogCacheConsts.CACHE_SECONDS)
+    @ApiOperation(value = "获取站点配置")
+    public Result<PublicSiteVO> getSite() {
+        return Result.ok(settingService.getPublic());
     }
 
     @Get
     @Mapping("/posts")
-    public R<PageResult<PublicPostVO>> posts(PostQueryDTO query, String categorySlug, String tagSlug) {
+    @ApiOperation(value = "分页查询文章")
+    public Result<PageResult<PublicPostVO>> listPosts(PostQueryDTO query, String categorySlug, String tagSlug) {
         if (categorySlug != null && !categorySlug.isBlank()) {
             BlogCategory cat = categoryService.getBySlug(categorySlug);
             if (cat == null || cat.getStatus() == null || cat.getStatus() != 1) {
@@ -96,74 +96,62 @@ public class BlogPublicController {
             }
             query.setTagId(tag.getId());
         }
-        return R.ok(PageResult.of(postService.publicPage(query)));
+        return Result.ok(PageResult.of(postService.listPublicPage(query)));
     }
 
     @Get
     @Mapping("/posts/{slug}")
-    public R<PublicPostVO> postDetail(String slug) {
-        return R.ok(postService.publicDetailBySlug(slug));
+    @ApiOperation(value = "获取文章详情")
+    public Result<PublicPostVO> getPostDetail(String slug) {
+        return Result.ok(postService.getPublicDetailBySlug(slug));
     }
 
     @Get
     @Mapping("/categories")
-    @Cache(tags = BlogCacheTags.CATEGORY, seconds = CACHE_SECONDS)
-    public R<List<BlogCategory>> categories() {
-        return R.ok(categoryService.listEnabled());
+    @Cache(tags = BlogCacheConsts.CATEGORY, seconds = BlogCacheConsts.CACHE_SECONDS)
+    @ApiOperation(value = "查询分类列表")
+    public Result<List<BlogCategory>> listCategories() {
+        return Result.ok(categoryService.listEnabled());
     }
 
     @Get
     @Mapping("/tags")
-    @Cache(tags = BlogCacheTags.TAG, seconds = CACHE_SECONDS)
-    public R<List<BlogTag>> tags() {
-        return R.ok(tagService.listEnabled());
+    @Cache(tags = BlogCacheConsts.TAG, seconds = BlogCacheConsts.CACHE_SECONDS)
+    @ApiOperation(value = "查询标签列表")
+    public Result<List<BlogTag>> listTags() {
+        return Result.ok(tagService.listEnabled());
     }
 
     @Get
     @Mapping("/links")
-    @Cache(tags = BlogCacheTags.LINK, seconds = CACHE_SECONDS)
-    public R<List<BlogLink>> links() {
-        return R.ok(linkService.listEnabled());
+    @Cache(tags = BlogCacheConsts.LINK, seconds = BlogCacheConsts.CACHE_SECONDS)
+    @ApiOperation(value = "查询友链列表")
+    public Result<List<BlogLink>> listLinks() {
+        return Result.ok(linkService.listEnabled());
     }
 
-    /** 已通过评论（按顶级评论分页，每条带完整子树） */
     @Get
     @Mapping("/posts/{id}/comments")
-    public R<PageResult<PublicCommentVO>> comments(Long id, PageQuery query) {
-        return R.ok(commentService.listApprovedPage(id, query));
+    @ApiOperation(value = "分页查询文章评论")
+    public Result<PageResult<PublicCommentVO>> listComments(Long id, PageQuery query) {
+        return Result.ok(commentService.listApprovedPage(id, query));
     }
 
-    /**
-     * 我的待审评论（当前文章）。
-     *
-     * <p>评论人身份靠请求头 {@value #COMMENTER_KEY_HEADER} 传递，而不是 query/body：
-     * 它等同于管理自己评论的凭证，放 URL 里会进访问日志、浏览器历史和 Referer。</p>
-     */
     @Get
     @Mapping("/posts/{id}/comments/mine")
-    public R<List<MyCommentVO>> myComments(Long id) {
-        return R.ok(commentService.listMyComments(id, commenterKey()));
+    @ApiOperation(value = "查询我的评论")
+    public Result<List<MyCommentVO>> listMyComments(Long id) {
+        return Result.ok(commentService.listMyComments(id, commenterKey()));
     }
 
-    /** 删除自己的评论（同样用请求头识别身份） */
     @Delete
-    @Mapping("/comments/mine/{id}")
-    public R<Void> removeMyComment(Long id) {
-        commentService.deleteMine(id, commenterKey());
-        return R.ok();
+    @Mapping("/comments/{id}/mine")
+    @ApiOperation(value = "删除我的评论")
+    public Result<Void> removeMyComment(Long id) {
+        commentService.removeMine(id, commenterKey());
+        return Result.ok();
     }
 
-    /**
-     * 提交评论（匿名）。
-     *
-     * <p>两条规则共用一个 {@code name}、按声明顺序校验：间隔在前，
-     * 被间隔挡下的突发请求就不会白吃掉日配额。</p>
-     *
-     * <p>限流先于方法体执行，所以它挡在验证码校验之前：连验证码都没填的垃圾请求
-     * 同样会被限速。代价是**填错验证码也占一次额度**（本接口的 DTO 没写校验约束，
-     * 因此不会先被参数校验拦下）。这是「把限流放在 API 边界」的必然结果，
-     * 也正是它比放在 service 里更严的地方。</p>
-     */
     @Post
     @Mapping("/comments")
     @RateLimit(name = "blog:comment-submit", dimension = RateLimitDimension.IP, rules = {
@@ -171,30 +159,22 @@ public class BlogPublicController {
             @RateLimit.Rule(count = 20, window = 24 * 60 * 60,
                     message = "24 小时内评论条数已达上限，请稍后再试")
     })
-    public R<Void> submitComment(@Body @Validated PublicCommentSaveDTO dto) {
-        commentService.submitPublic(dto);
-        return R.ok();
+    @ApiOperation(value = "发表评论")
+    public Result<Void> addComment(@Body @Validated PublicCommentSaveDTO dto) {
+        commentService.addPublic(dto);
+        return Result.ok();
     }
 
-    /**
-     * 访问埋点（匿名）。
-     *
-     * <p>永远返回成功：埋点是附加能力，让访客因为「统计失败」看到报错毫无意义，
-     * 服务端也已在 {@code BlogVisitService#record} 里吞掉异常。前端据此可以
-     * fire-and-forget 上报，不必处理失败分支。</p>
-     *
-     * <p>只接收路径，IP / UA / 来源 / 设备 / 归属分类一律由服务端从请求推导，
-     * 前端无法伪造统计。</p>
-     */
     @Post
     @Mapping("/visit")
-    public R<Void> visit(@Body @Validated VisitReportDTO dto) {
-        visitService.record(dto);
-        return R.ok();
+    @ApiOperation(value = "上报访问记录")
+    public Result<Void> addVisit(@Body @Validated VisitReportDTO dto) {
+        visitService.addVisit(dto);
+        return Result.ok();
     }
 
     private String commenterKey() {
         Context ctx = Context.current();
-        return ctx == null ? null : ctx.header(COMMENTER_KEY_HEADER);
+        return ctx == null ? null : ctx.header(BlogCommentConsts.COMMENTER_KEY_HEADER);
     }
 }

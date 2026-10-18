@@ -2,6 +2,8 @@ package com.designer.admin.common.core;
 
 /**
  * 统一业务状态码
+ *
+ * @author 雨夜终端
  */
 public interface ResultCode {
 

@@ -10,6 +10,8 @@ import java.lang.annotation.Target;
 
 /**
  * 操作日志注解：标注在 Controller 方法上，由 {@link OperLogInterceptor} 环绕记录。
+ *
+ * @author 雨夜终端
  */
 @Documented
 @Target(ElementType.METHOD)

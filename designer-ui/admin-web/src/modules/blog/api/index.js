@@ -24,7 +24,7 @@ export const getPost = (id) => request.get(`/admin-api/blog/post/${id}`)
 export const createPost = (data) => request.post('/admin-api/blog/post/add', data)
 export const updatePost = (data) => request.put('/admin-api/blog/post/update', data)
 export const publishPost = (id, publish = true) =>
-  request.put(`/admin-api/blog/post/publish/${id}`, { publish })
+  request.put(`/admin-api/blog/post/${id}/publish`, { publish })
 export const deletePosts = (ids) =>
   request.delete('/admin-api/blog/post/remove', { params: { ids: ids.join(',') } })
 

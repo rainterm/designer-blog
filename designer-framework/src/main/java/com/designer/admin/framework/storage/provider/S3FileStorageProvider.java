@@ -5,12 +5,11 @@ import com.designer.admin.framework.storage.FileStorageProvider;
 import com.designer.admin.framework.storage.StorageFieldMeta;
 import com.designer.admin.framework.storage.StorageProperties;
 import com.designer.admin.framework.storage.StorageRuntimeConfig;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Destroy;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.core.handle.UploadedFile;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -29,12 +28,26 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * S3 / MinIO 兼容对象存储
+ *
+ * @author 雨夜终端
  */
 @Component
+@Slf4j
 public class S3FileStorageProvider implements FileStorageProvider {
 
     public static final String TYPE = "s3";
-    private static final Logger log = LoggerFactory.getLogger(S3FileStorageProvider.class);
+
+    /** 访问密钥 */
+    private static final String KEY_ACCESS_KEY = "accessKey";
+
+    /** 密钥口令 */
+    private static final String KEY_SECRET_KEY = "secretKey";
+
+    /** 存储桶 */
+    private static final String KEY_BUCKET = "bucket";
+
+    /** URL 路径分隔符 */
+    private static final String URL_SEPARATOR = "/";
 
     /** configId -> client，配置变更后由 closeClient 清理 */
     private final ConcurrentHashMap<Long, S3Client> clients = new ConcurrentHashMap<>();
@@ -76,7 +89,7 @@ public class S3FileStorageProvider implements FileStorageProvider {
 
     @Override
     public void validateConfig(Map<String, Object> props) {
-        if (blank(props, "accessKey") || blank(props, "secretKey") || blank(props, "bucket")) {
+        if (blank(props, KEY_ACCESS_KEY) || blank(props, KEY_SECRET_KEY) || blank(props, KEY_BUCKET)) {
             throw new BizException("S3 需配置 accessKey / secretKey / bucket");
         }
     }
@@ -124,14 +137,14 @@ public class S3FileStorageProvider implements FileStorageProvider {
         // 私有配置必须走代理下载（鉴权在 /admin-api），不能返回公网/CDN 直链
         String publicUrl = config.prop("publicUrl");
         if (config.isPublicAccess() && !publicUrl.isBlank()) {
-            return publicUrl.replaceAll("/+$", "") + "/" + filePath;
+            return publicUrl.replaceAll("/+$", "") + URL_SEPARATOR + filePath;
         }
         String prefix = config.getUrlPrefix();
         if (prefix == null || prefix.isBlank()) {
             prefix = storageProperties.urlPrefix(config.isPublicAccess());
         }
-        if (!prefix.endsWith("/")) {
-            prefix = prefix + "/";
+        if (!prefix.endsWith(URL_SEPARATOR)) {
+            prefix = prefix + URL_SEPARATOR;
         }
         return prefix + filePath;
     }

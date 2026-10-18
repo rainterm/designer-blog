@@ -36,6 +36,11 @@
             <groupId>org.noear</groupId>
             <artifactId>solon-data</artifactId>
         </dependency>
+        <!-- 配置密钥落库加密（AES），主密钥由 solon.vault.password 提供 -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-security-vault</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.noear</groupId>
             <artifactId>solon-web-sse</artifactId>
@@ -102,7 +107,7 @@
              放在 framework 而不是某个业务模块里，是因为**所有**需要验证码的入口共用同一套
              端点：插件自带的 @Controller 把 /captcha/get、/captcha/check 注册在根路径下，
              进程里只可能有一份，业务侧再各自引一遍只会带来「谁负责装配」的歧义。
-             配套的 RedisCaptchaCacheService / CaptchaVerifier 见 com.designer.admin.framework.captcha。 -->
+             配套的 RedisCaptchaCacheServiceImpl / CaptchaVerifier 见 com.designer.admin.framework.captcha。 -->
         <dependency>
             <groupId>org.noear</groupId>
             <artifactId>captcha-solon-plugin</artifactId>
@@ -112,6 +117,12 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <!-- 接口文档注解：framework 作为公共依赖，保证各业务模块可直接使用 @Api 等注解 -->
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
         </dependency>
     </dependencies>
 </project>

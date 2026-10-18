@@ -4,7 +4,9 @@ import com.designer.admin.common.core.ResultCode;
 import lombok.Getter;
 
 /**
- * 业务异常：由全局异常处理统一捕获并转换为 R.fail
+ * 业务异常：由全局异常处理统一捕获并转换为 Result.fail
+ *
+ * @author 雨夜终端
  */
 @Getter
 public class BizException extends RuntimeException {

@@ -7,6 +7,8 @@ import java.util.HexFormat;
 
 /**
  * 哈希工具（SHA-256 十六进制）。
+ *
+ * @author 雨夜终端
  */
 public final class HashUtil {
 

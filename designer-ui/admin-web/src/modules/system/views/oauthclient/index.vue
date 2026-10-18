@@ -226,7 +226,7 @@
         <h4>3. Scope 说明</h4>
         <ul>
           <li>每条开放接口对应一个 Scope（标识 + 路径模式）。</li>
-          <li>路径模式支持 Ant 通配：<n-text code>*</n-text> 单层、<n-text code>**</n-text> 多层。</li>
+          <li>路径模式支持通配：<n-text code>*</n-text> 单层、<n-text code>**</n-text> 多层、<n-text code>{var}</n-text> 路径变量。（不支持 <n-text code>?</n-text> 单字符通配）</li>
           <li>多条同时命中时，取路径模式更长（更具体）的一条做权限校验。</li>
         </ul>
 

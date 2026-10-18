@@ -17,8 +17,9 @@ CREATE TABLE `blog_category` (
     `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
     `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_blog_category_slug` (`slug`)
+    UNIQUE KEY `uk_blog_category_slug` (`slug`, (IF(`deleted` = 0, 0, NULL)))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '博客分类';
 
 DROP TABLE IF EXISTS `blog_tag`;
@@ -31,9 +32,10 @@ CREATE TABLE `blog_tag` (
     `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
     `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_blog_tag_slug` (`slug`),
-    UNIQUE KEY `uk_blog_tag_name` (`name`)
+    UNIQUE KEY `uk_blog_tag_slug` (`slug`, (IF(`deleted` = 0, 0, NULL))),
+    UNIQUE KEY `uk_blog_tag_name` (`name`, (IF(`deleted` = 0, 0, NULL)))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '博客标签';
 
 DROP TABLE IF EXISTS `blog_post`;
@@ -61,7 +63,7 @@ CREATE TABLE `blog_post` (
     `update_time`    DATETIME      DEFAULT NULL            COMMENT '更新时间',
     `deleted`        TINYINT       NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_blog_post_slug` (`slug`),
+    UNIQUE KEY `uk_blog_post_slug` (`slug`, (IF(`deleted` = 0, 0, NULL))),
     KEY `idx_blog_post_category` (`category_id`),
     KEY `idx_blog_post_status` (`status`, `published_at`),
     KEY `idx_blog_post_author` (`author_id`)
@@ -88,6 +90,7 @@ CREATE TABLE `blog_link` (
     `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
     `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
     KEY `idx_blog_link_status_sort` (`status`, `sort`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '博客链接（社交/外链）';
@@ -112,6 +115,7 @@ CREATE TABLE `blog_setting` (
     `create_time`     DATETIME     DEFAULT NULL            COMMENT '创建时间',
     `update_by`       VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time`     DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`         TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '博客站点设置（单行）';
 
@@ -133,6 +137,7 @@ CREATE TABLE `blog_comment` (
     `create_time`   DATETIME      DEFAULT NULL            COMMENT '创建时间',
     `update_by`     VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time`   DATETIME      DEFAULT NULL            COMMENT '更新时间',
+    `deleted`       TINYINT       NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
     KEY `idx_blog_comment_post` (`post_id`, `status`),
     KEY `idx_blog_comment_parent` (`parent_id`),
@@ -161,6 +166,7 @@ CREATE TABLE `blog_visit_log` (
     `create_time`  DATETIME     DEFAULT NULL            COMMENT '创建时间',
     `update_by`    VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time`  DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`      TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
     KEY `idx_blog_visit_date` (`visit_date`),
     KEY `idx_blog_visit_visitor` (`visit_date`, `visitor_key`),

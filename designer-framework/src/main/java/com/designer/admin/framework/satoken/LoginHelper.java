@@ -4,6 +4,8 @@ import cn.dev33.satoken.stp.StpUtil;
 
 /**
  * 登录用户读取辅助
+ *
+ * @author 雨夜终端
  */
 public final class LoginHelper {
 

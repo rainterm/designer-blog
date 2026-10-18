@@ -9,12 +9,14 @@ import java.util.List;
  * <p>关键点：**站内跳转不算「来源」**。博客页面之间的互相跳转（含带域名与不带域名的写法）
  * 都会带上当前站点自身作为 Referer，若照单全收，「来源 Top」会被自家域名霸榜，
  * 外链与搜索引擎流量反而被淹没。因此与站点自身域名一致时归为直接访问。</p>
+ *
+ * @author 雨夜终端
  */
 public final class RefererUtil {
 
-    public static final String DIRECT = "direct";
-    public static final String SEARCH = "search";
-    public static final String EXTERNAL = "external";
+    private static final String DIRECT = "direct";
+    private static final String SEARCH = "search";
+    private static final String EXTERNAL = "external";
 
     /** 与 blog_visit_log.referer_host 列宽一致 */
     private static final int HOST_MAX_LENGTH = 128;

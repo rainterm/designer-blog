@@ -1,6 +1,6 @@
 /**
- * 密码策略，与后端 PasswordPolicy 是同一份规则的镜像
- * （designer-common/src/main/java/com/designer/admin/common/constant/PasswordPolicy.java）。
+ * 密码策略，与后端 PasswordValidator 是同一份规则的镜像
+ * （designer-module-system/system-service/src/main/java/com/designer/admin/system/util/PasswordValidator.java）。
  * 改规则或改措辞时两边一起改，否则会出现「前端放行、后端打回」的两套口径。
  *
  * 两条规则性质不同，落地范围也不同：
@@ -13,10 +13,10 @@
 export const PASSWORD_MIN_LENGTH = 6
 export const PASSWORD_MAX_LENGTH = 50
 
-/** 长度不合规的提示，措辞与后端 PasswordPolicy.LENGTH_MESSAGE 一致 */
+/** 长度不合规的提示，措辞与后端 PasswordValidator.LENGTH_MESSAGE 一致 */
 export const PASSWORD_LENGTH_MESSAGE = `密码长度需在 ${PASSWORD_MIN_LENGTH}~${PASSWORD_MAX_LENGTH} 个字符之间`
 
-/** 复杂度不合规的提示，措辞与后端 PasswordPolicy.COMPLEXITY_MESSAGE 一致 */
+/** 复杂度不合规的提示，措辞与后端 PasswordValidator.COMPLEXITY_MESSAGE 一致 */
 export const PASSWORD_COMPLEXITY_MESSAGE = '密码需同时包含大写字母、小写字母、数字和特殊符号'
 
 /** 输入框下方常驻的规则说明（只讲长度，用于登录这类不校验复杂度的场景） */
@@ -26,7 +26,7 @@ export const PASSWORD_LENGTH_HINT = `${PASSWORD_MIN_LENGTH}~${PASSWORD_MAX_LENGT
 export const PASSWORD_HINT = `${PASSWORD_LENGTH_HINT}，需包含大写字母、小写字母、数字和特殊符号`
 
 /**
- * 复杂度正则，与后端 PasswordPolicy.STRENGTH_REGEXP 等价：
+ * 复杂度正则，与后端 PasswordValidator.STRENGTH_REGEXP 等价：
  * 要求同时包含大写字母、小写字母、数字、特殊符号四类字符。
  *
  * 「特殊符号」取的是 ASCII 可见标点（码点 0x21–0x2F、0x3A–0x40、0x5B–0x60、0x7B–0x7E 四段，

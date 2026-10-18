@@ -27,7 +27,7 @@ CREATE TABLE `sys_user` (
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
     `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_sys_user_username` (`username`),
+    UNIQUE KEY `uk_sys_user_username` (`username`, (IF(`deleted` = 0, 0, NULL))),
     KEY `idx_sys_user_dept` (`dept_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统用户';
 
@@ -64,7 +64,7 @@ CREATE TABLE `sys_post` (
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
     `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_sys_post_code` (`post_code`)
+    UNIQUE KEY `uk_sys_post_code` (`post_code`, (IF(`deleted` = 0, 0, NULL)))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '岗位（全局字典，部门通过用户关联）';
 
 CREATE TABLE `sys_user_post` (
@@ -85,8 +85,9 @@ CREATE TABLE `sys_config` (
     `create_time`  DATETIME      DEFAULT NULL            COMMENT '创建时间',
     `update_by`    VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time`  DATETIME      DEFAULT NULL            COMMENT '更新时间',
+    `deleted`      TINYINT       NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_sys_config_key` (`config_key`)
+    UNIQUE KEY `uk_sys_config_key` (`config_key`, (IF(`deleted` = 0, 0, NULL)))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '参数配置';
 
 DROP TABLE IF EXISTS `sys_setting`;
@@ -102,6 +103,7 @@ CREATE TABLE `sys_setting` (
     `create_time`           DATETIME     DEFAULT NULL            COMMENT '创建时间',
     `update_by`             VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time`           DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`               TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统设置（单行：系统名称/副标题/Logo/默认偏好）';
 
@@ -121,7 +123,7 @@ CREATE TABLE `sys_role` (
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
     `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_sys_role_key` (`role_key`)
+    UNIQUE KEY `uk_sys_role_key` (`role_key`, (IF(`deleted` = 0, 0, NULL)))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统角色';
 
 DROP TABLE IF EXISTS `sys_menu`;
@@ -141,6 +143,7 @@ CREATE TABLE `sys_menu` (
     `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
     `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
     KEY `idx_sys_menu_parent` (`parent_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '系统菜单';
@@ -170,8 +173,9 @@ CREATE TABLE `sys_dict_type` (
     `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
     `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_sys_dict_type` (`dict_type`)
+    UNIQUE KEY `uk_sys_dict_type` (`dict_type`, (IF(`deleted` = 0, 0, NULL)))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '字典类型';
 
 DROP TABLE IF EXISTS `sys_dict_data`;
@@ -188,6 +192,7 @@ CREATE TABLE `sys_dict_data` (
     `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
     `update_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
+    `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
     KEY `idx_sys_dict_data_type` (`dict_type`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '字典数据';
@@ -327,6 +332,7 @@ CREATE TABLE `sys_notice` (
     `create_time`  DATETIME      DEFAULT NULL            COMMENT '创建时间',
     `update_by`    VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time`  DATETIME      DEFAULT NULL            COMMENT '更新时间',
+    `deleted`      TINYINT       NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
     KEY `idx_sys_notice_status` (`status`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '站内消息（inbox 通道）';
@@ -356,6 +362,7 @@ CREATE TABLE `sys_job` (
     `create_time`     DATETIME      DEFAULT NULL            COMMENT '创建时间',
     `update_by`       VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '更新人',
     `update_time`     DATETIME      DEFAULT NULL            COMMENT '更新时间',
+    `deleted`         TINYINT       NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
     KEY `idx_sys_job_status` (`status`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '定时任务';
@@ -394,8 +401,8 @@ CREATE TABLE `sys_sso_client` (
     `update_time` DATETIME     DEFAULT NULL            COMMENT '更新时间',
     `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_sys_sso_client_key` (`client_key`),
-    UNIQUE KEY `uk_sys_sso_client_origin` (`origin`)
+    UNIQUE KEY `uk_sys_sso_client_key` (`client_key`, (IF(`deleted` = 0, 0, NULL))),
+    UNIQUE KEY `uk_sys_sso_client_origin` (`origin`, (IF(`deleted` = 0, 0, NULL)))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'SSO 客户端（跨应用单点登录白名单）';
 
 DROP TABLE IF EXISTS `sys_oauth_client_scope`;
@@ -405,7 +412,7 @@ CREATE TABLE `sys_oauth_scope` (
     `id`           BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'Scope ID',
     `scope_code`   VARCHAR(100) NOT NULL                COMMENT 'Scope 标识，如 open.ping',
     `scope_name`   VARCHAR(100) NOT NULL                COMMENT '显示名称',
-    `path_pattern` VARCHAR(255) NOT NULL                COMMENT 'Ant 路径，如 /open-api/system/ping',
+    `path_pattern` VARCHAR(255) NOT NULL                COMMENT '路径模式（* 单层 / ** 多层 / {var} 变量），如 /open-api/system/ping',
     `sort`         INT          NOT NULL DEFAULT 0      COMMENT '显示顺序',
     `status`       TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
     `remark`       VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '备注',
@@ -415,7 +422,7 @@ CREATE TABLE `sys_oauth_scope` (
     `update_time`  DATETIME     DEFAULT NULL            COMMENT '更新时间',
     `deleted`      TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_sys_oauth_scope_code` (`scope_code`)
+    UNIQUE KEY `uk_sys_oauth_scope_code` (`scope_code`, (IF(`deleted` = 0, 0, NULL)))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'OAuth2 开放接口 Scope 目录';
 
 CREATE TABLE `sys_oauth_client` (
@@ -432,7 +439,7 @@ CREATE TABLE `sys_oauth_client` (
     `update_time`       DATETIME     DEFAULT NULL            COMMENT '更新时间',
     `deleted`           TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删除 1已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_sys_oauth_client_id` (`client_id`)
+    UNIQUE KEY `uk_sys_oauth_client_id` (`client_id`, (IF(`deleted` = 0, 0, NULL)))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'OAuth2 客户端（Client Credentials）';
 
 CREATE TABLE `sys_oauth_client_scope` (

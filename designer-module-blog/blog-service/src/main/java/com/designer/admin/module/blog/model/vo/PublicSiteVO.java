@@ -7,6 +7,8 @@ import java.util.List;
 
 /**
  * 前台站点设置（公开接口返回）
+ *
+ * @author 雨夜终端
  */
 @Data
 public class PublicSiteVO implements Serializable {

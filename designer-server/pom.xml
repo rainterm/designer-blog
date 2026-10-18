@@ -39,6 +39,11 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- 接口文档：OpenAPI2 + Knife4j UI（访问 /doc.html） -->
+        <dependency>
+            <groupId>org.noear</groupId>
+            <artifactId>solon-openapi2-knife4j</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

@@ -1,8 +1,10 @@
 package com.designer.admin.module.blog.controller.admin;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.designer.admin.common.core.PageResult;
-import com.designer.admin.common.core.R;
+import com.designer.admin.common.core.Result;
 import com.designer.admin.framework.log.BusinessType;
 import com.designer.admin.framework.log.OperLog;
 import com.designer.admin.module.blog.model.dto.TagQueryDTO;
@@ -20,13 +22,17 @@ import org.noear.solon.annotation.Put;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * 标签后台接口。
+ *
+ * @author 雨夜终端
+ */
 @Valid
 @Controller
 @Mapping("/admin-api/blog/tag")
+@Api(tags = "博客标签")
 public class BlogTagController {
 
     @Inject
@@ -35,59 +41,54 @@ public class BlogTagController {
     @Get
     @Mapping("/page")
     @SaCheckPermission("blog:tag:list")
-    public R<PageResult<BlogTag>> page(TagQueryDTO query) {
-        return R.ok(PageResult.of(tagService.page(query)));
+    @ApiOperation(value = "分页查询标签")
+    public Result<PageResult<BlogTag>> page(TagQueryDTO query) {
+        return Result.ok(PageResult.of(tagService.listPage(query)));
     }
 
     @Get
     @Mapping("/list")
     @SaCheckPermission("blog:tag:list")
-    public R<List<BlogTag>> list() {
-        return R.ok(tagService.listEnabled());
+    @ApiOperation(value = "查询标签列表")
+    public Result<List<BlogTag>> list() {
+        return Result.ok(tagService.listEnabled());
     }
 
     @Get
     @Mapping("/{id}")
     @SaCheckPermission("blog:tag:query")
-    public R<BlogTag> detail(Long id) {
-        return R.ok(tagService.getById(id));
+    @ApiOperation(value = "获取标签详情")
+    public Result<BlogTag> detail(Long id) {
+        return Result.ok(tagService.getById(id));
     }
 
     @Post
     @Mapping("/add")
     @OperLog(title = "博客标签", businessType = BusinessType.INSERT)
     @SaCheckPermission("blog:tag:add")
-    public R<Void> add(@Body @Validated TagSaveDTO dto) {
-        tagService.save(dto);
-        return R.ok();
+    @ApiOperation(value = "新增标签")
+    public Result<Void> add(@Body @Validated TagSaveDTO dto) {
+        tagService.add(dto);
+        return Result.ok();
     }
 
     @Put
     @Mapping("/update")
     @OperLog(title = "博客标签", businessType = BusinessType.UPDATE)
     @SaCheckPermission("blog:tag:edit")
-    public R<Void> update(@Body @Validated TagSaveDTO dto) {
+    @ApiOperation(value = "修改标签")
+    public Result<Void> update(@Body @Validated TagSaveDTO dto) {
         tagService.update(dto);
-        return R.ok();
+        return Result.ok();
     }
 
     @Delete
     @Mapping("/remove")
     @OperLog(title = "博客标签", businessType = BusinessType.DELETE)
     @SaCheckPermission("blog:tag:remove")
-    public R<Void> remove(String ids) {
-        tagService.remove(parseIds(ids));
-        return R.ok();
-    }
-
-    private List<Long> parseIds(String ids) {
-        if (ids == null || ids.isBlank()) {
-            return List.of();
-        }
-        return Arrays.stream(ids.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .map(Long::valueOf)
-                .collect(Collectors.toList());
+    @ApiOperation(value = "删除标签")
+    public Result<Void> remove(List<Long> ids) {
+        tagService.remove(ids);
+        return Result.ok();
     }
 }

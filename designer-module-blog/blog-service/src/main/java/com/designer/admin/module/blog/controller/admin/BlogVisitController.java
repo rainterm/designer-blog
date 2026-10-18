@@ -1,7 +1,9 @@
 package com.designer.admin.module.blog.controller.admin;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.designer.admin.common.core.R;
+import com.designer.admin.common.core.Result;
 import com.designer.admin.module.blog.model.vo.VisitOverviewVO;
 import com.designer.admin.module.blog.service.BlogVisitService;
 import org.noear.solon.annotation.Controller;
@@ -11,23 +13,22 @@ import org.noear.solon.annotation.Mapping;
 
 /**
  * 博客访问统计（后台）
+ *
+ * @author 雨夜终端
  */
 @Controller
 @Mapping("/admin-api/blog/visit")
+@Api(tags = "访问统计")
 public class BlogVisitController {
 
     @Inject
     private BlogVisitService visitService;
 
-    /**
-     * 统计概览：概览数字 + 趋势 / 分类 / 来源 / 设备 / 地域。
-     *
-     * @param days 统计最近多少天（含今天），默认 30，最大 365
-     */
     @Get
     @Mapping("/overview")
     @SaCheckPermission("blog:visit:query")
-    public R<VisitOverviewVO> overview(Integer days) {
-        return R.ok(visitService.overview(days));
+    @ApiOperation(value = "获取访问统计概览")
+    public Result<VisitOverviewVO> getOverview(Integer days) {
+        return Result.ok(visitService.getOverview(days));
     }
 }

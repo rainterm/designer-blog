@@ -5,6 +5,8 @@ import org.quartz.JobExecutionContext;
 
 /**
  * 禁止并发执行的 Quartz Job
+ *
+ * @author 雨夜终端
  */
 @DisallowConcurrentExecution
 public class QuartzDisallowConcurrentExecution extends AbstractQuartzJob {

@@ -1,7 +1,5 @@
 package com.designer.admin.module.blog.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.designer.admin.common.core.BaseEntity;
 import lombok.Data;
@@ -17,14 +15,13 @@ import java.time.LocalDate;
  * <p>除 {@code path} 由前端上报外，其余字段一律**服务端从请求推导**：
  * IP / UA 取自请求头，设备与来源由它们解析，文章与分类按 slug 反查数据库。
  * 前端只能说明「访问了哪个路径」，不能伪造自己的 IP、来源或归属分类。</p>
+ *
+ * @author 雨夜终端
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("blog_visit_log")
 public class BlogVisitLog extends BaseEntity {
-
-    @TableId(type = IdType.AUTO)
-    private Long id;
 
     /** 访问日期：冗余列，按天聚合直接走索引，不必从 create_time 现算 */
     private LocalDate visitDate;
@@ -41,6 +38,7 @@ public class BlogVisitLog extends BaseEntity {
     /** 文章分类ID（仅详情页，用于分类访问分布） */
     private Long categoryId;
 
+    /** 客户端 IP */
     private String ip;
 
     /** IP 归属地（省级） */

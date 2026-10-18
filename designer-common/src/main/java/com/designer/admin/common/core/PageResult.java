@@ -9,6 +9,8 @@ import java.util.List;
 
 /**
  * 统一分页返回结构
+ *
+ * @author 雨夜终端
  */
 @Data
 public class PageResult<T> implements Serializable {

@@ -2,6 +2,8 @@ package com.designer.admin.common.annotation;
 
 /**
  * 敏感字段脱敏策略
+ *
+ * @author 雨夜终端
  */
 public enum SensitiveType {
 

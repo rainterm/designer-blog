@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
  * 这样即便数据库泄露，也无法反推出密钥去删除别人的评论。</p>
  *
  * <p>⚠️ 这个密钥等同于管理自己评论的凭证，客户端清空浏览器数据后即失效（匿名评论的固有取舍）。</p>
+ *
+ * @author 雨夜终端
  */
 public final class CommenterKeyUtil {
 

@@ -16,9 +16,14 @@ import java.util.stream.Collectors;
 
 /**
  * 文件存储门面：从 {@link StorageConfigSource} 读取配置，委托给对应 {@link FileStorageProvider}。
+ *
+ * @author 雨夜终端
  */
 @Component
 public class FileStorageService {
+
+    /** 判断 MB 数值是否整数的容差 */
+    private static final double INTEGRAL_TOLERANCE = 0.001;
 
     @Inject
     private FileStorageProviderRegistry providerRegistry;
@@ -132,7 +137,7 @@ public class FileStorageService {
 
     private static String formatMaxSizeMb(long bytes) {
         double mb = bytes / (1024.0 * 1024.0);
-        if (Math.abs(mb - Math.rint(mb)) < 0.001) {
+        if (Math.abs(mb - Math.rint(mb)) < INTEGRAL_TOLERANCE) {
             return ((long) Math.rint(mb)) + " MB";
         }
         return String.format(Locale.ROOT, "%.2f MB", mb);

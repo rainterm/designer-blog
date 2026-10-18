@@ -1,29 +1,33 @@
 package com.designer.admin.system.controller.open;
 
-import com.designer.admin.common.core.R;
-import com.designer.admin.framework.satoken.StpOAuthUtil;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import com.designer.admin.common.core.Result;
+import com.designer.admin.framework.satoken.StpOauthUtil;
+import com.designer.admin.system.model.vo.open.OpenApiPingVO;
 import org.noear.solon.annotation.Controller;
 import org.noear.solon.annotation.Get;
 import org.noear.solon.annotation.Mapping;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 /**
  * 开放接口示例：需 OAuth2 token + Scope open.ping
+ *
+ * @author 雨夜终端
  */
 @Controller
 @Mapping("/open-api/system")
+@Api(tags = "开放接口")
 public class OpenApiPingController {
 
     @Get
     @Mapping("/ping")
-    public R<Map<String, Object>> ping() {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("ok", true);
-        data.put("clientId", StpOAuthUtil.getClientId());
-        data.put("scopes", StpOAuthUtil.getScopes());
-        data.put("serverTime", System.currentTimeMillis());
-        return R.ok(data);
+    @ApiOperation(value = "开放接口连通性测试")
+    public Result<OpenApiPingVO> ping() {
+        return Result.ok(OpenApiPingVO.builder()
+                .ok(true)
+                .clientId(StpOauthUtil.getClientId())
+                .scopes(StpOauthUtil.getScopes())
+                .serverTime(System.currentTimeMillis())
+                .build());
     }
 }

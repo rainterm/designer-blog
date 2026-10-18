@@ -7,8 +7,13 @@ import lombok.Getter;
  *
  * <p>路由规则与 blog-web 的 {@code router/index.js} 一一对应，
  * 两边改动时要同步，否则统计会把页面记成 {@code other}。</p>
+ *
+ * @author 雨夜终端
  */
 public final class VisitPathUtil {
+
+    /** 站点根路径 / 路径分隔符 */
+    private static final String PATH_SEPARATOR = "/";
 
     /** 与 blog_visit_log.path 列宽一致 */
     private static final int PATH_MAX_LENGTH = 255;
@@ -16,7 +21,11 @@ public final class VisitPathUtil {
     private VisitPathUtil() {
     }
 
-    /** 页面类型：与 blog-web 路由一一对应 */
+    /**
+     * 页面类型：与 blog-web 路由一一对应
+     *
+     * @author 雨夜终端
+     */
     public enum PageType {
         /** 首页即文章列表（blog-web 的 `''` 路由） */
         HOME("home"),
@@ -33,7 +42,11 @@ public final class VisitPathUtil {
         }
     }
 
-    /** 归类结果 */
+    /**
+     * 归类结果
+     *
+     * @author 雨夜终端
+     */
     public record Parsed(PageType type, String path, String slug) {
     }
 
@@ -54,7 +67,7 @@ public final class VisitPathUtil {
         if (isApiPath(path)) {
             return new Parsed(PageType.OTHER, "", "");
         }
-        if (path.equals("/")) {
+        if (PATH_SEPARATOR.equals(path)) {
             return new Parsed(PageType.HOME, path, "");
         }
         String[] prefixes = {"/post/", "/tag/", "/category/"};
@@ -89,11 +102,11 @@ public final class VisitPathUtil {
         if (path.isEmpty()) {
             return "";
         }
-        if (path.charAt(0) != '/') {
-            path = "/" + path;
+        if (path.charAt(0) != PATH_SEPARATOR.charAt(0)) {
+            path = PATH_SEPARATOR + path;
         }
         // 去掉尾部斜杠，让 /tag/java/ 与 /tag/java 视为同一页（否则去重会各算一次）
-        if (path.length() > 1 && path.endsWith("/")) {
+        if (path.length() > 1 && path.endsWith(PATH_SEPARATOR)) {
             path = path.substring(0, path.length() - 1);
         }
         return path.length() > PATH_MAX_LENGTH ? path.substring(0, PATH_MAX_LENGTH) : path;

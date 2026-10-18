@@ -11,6 +11,8 @@ import java.util.Map;
  *
  * <p>节点类型需具备方法：{@code getId(): Long}、{@code getParentId(): Long}、
  * {@code setChildren(List)} / {@code getChildren(): List}。
+ *
+ * @author 雨夜终端
  */
 public final class TreeUtils {
 

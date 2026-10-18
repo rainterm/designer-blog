@@ -5,6 +5,8 @@ import org.noear.solon.Solon;
 
 /**
  * Designer Admin 服务启动类
+ *
+ * @author 雨夜终端
  */
 public class DesignerApp {
 
@@ -19,6 +21,7 @@ public class DesignerApp {
                   Admin API : http://localhost:8080/admin-api
                   App API   : http://localhost:8080/app-api
                   Health    : http://localhost:8080/admin-api/system/health
+                  API Docs  : http://localhost:8080/doc.html
                 ------------------------------------------------------
                 """);
     }

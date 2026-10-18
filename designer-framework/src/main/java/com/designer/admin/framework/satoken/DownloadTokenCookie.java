@@ -17,6 +17,8 @@ import org.noear.solon.core.handle.Cookie;
  * <p>Cookie 为 HttpOnly：前端拿不到它，token 仍以 localStorage 为准，两者互不干扰。
  * 未显式声明 SameSite，主流浏览器按 Lax 处理 —— 跨站图片/表单不会带上它，
  * 只有本站请求和顶层跳转会带上。</p>
+ *
+ * @author 雨夜终端
  */
 public final class DownloadTokenCookie {
 

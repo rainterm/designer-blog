@@ -1,8 +1,7 @@
 package com.designer.admin.framework.client;
 
+import lombok.extern.slf4j.Slf4j;
 import org.lionsoul.ip2region.xdb.Searcher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -20,10 +19,11 @@ import java.util.Map;
  * 数据文件缺失或损坏时不会导致启动失败，退化为统一返回「未知」。</p>
  *
  * <p>线程安全：使用「全量载入内存」的 {@link Searcher}，其内部只读 buffer，可被多线程并发查询。</p>
+ *
+ * @author 雨夜终端
  */
+@Slf4j
 public class IpRegionResolver {
-
-    private static final Logger log = LoggerFactory.getLogger(IpRegionResolver.class);
 
     /** 类路径下的默认数据文件位置 */
     public static final String CLASSPATH_LOCATION = "ip2region.xdb";
@@ -33,20 +33,38 @@ public class IpRegionResolver {
     /** 内网 / 保留地址 */
     public static final String INTRANET = "内网";
 
-    /** 内网与保留网段：无需查库，直接判定（也避免依赖数据文件的内部表现） */
+    /** 数据文件对内网地址返回的标记 */
+    private static final String INTRANET_LABEL = "内网IP";
+
+    /** 字段占位符：ip2region 用「0」表示空字段 */
+    private static final String EMPTY_FIELD = "0";
+
+    /** 省级名称最短可归一长度（如「广东省」） */
+    private static final int MIN_PROVINCE_LENGTH = 2;
+
+    /** 省 / 直辖市的行政区后缀 */
+    private static final String PROVINCE_SUFFIX = "省";
+    private static final String CITY_SUFFIX = "市";
+
+    /**
+     * 内网与保留网段：无需查库，直接判定（也避免依赖数据文件的内部表现）。
+     *
+     * <p>依次为：私有网段、回环、链路本地、运营商级 NAT（CGNAT）、保留、组播，
+     * 以及 IPv6 回环 / 唯一本地地址 / 链路本地地址。</p>
+     */
     private static final List<IpRange> PRIVATE_RANGES = List.of(
-            "10.0.0.0/8",           // 私有
-            "172.16.0.0/12",        // 私有
-            "192.168.0.0/16",       // 私有
-            "127.0.0.0/8",          // 回环
-            "169.254.0.0/16",       // 链路本地
-            "100.64.0.0/10",        // 运营商级 NAT（CGNAT）
-            "0.0.0.0/8",            // 保留
-            "224.0.0.0/4",          // 组播
-            "240.0.0.0/4",          // 保留
-            "::1/128",              // IPv6 回环
-            "fc00::/7",             // IPv6 唯一本地地址
-            "fe80::/10"             // IPv6 链路本地
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+            "127.0.0.0/8",
+            "169.254.0.0/16",
+            "100.64.0.0/10",
+            "0.0.0.0/8",
+            "224.0.0.0/4",
+            "240.0.0.0/4",
+            "::1/128",
+            "fc00::/7",
+            "fe80::/10"
     ).stream().map(IpRange::parse).filter(java.util.Objects::nonNull).toList();
 
     /** 省级行政区的后缀，用于把「广东省」归一为「广东」 */
@@ -138,7 +156,7 @@ public class IpRegionResolver {
         if (province != null) {
             String normalized = normalizeProvince(province);
             // 数据文件对内网地址也返回「内网IP」标记
-            if (INTRANET.equals(normalized) || "内网IP".equals(province)) {
+            if (INTRANET.equals(normalized) || INTRANET_LABEL.equals(province)) {
                 return INTRANET;
             }
             return normalized;
@@ -156,7 +174,7 @@ public class IpRegionResolver {
             return null;
         }
         String value = fields[index].trim();
-        if (value.isEmpty() || "0".equals(value)) {
+        if (value.isEmpty() || EMPTY_FIELD.equals(value)) {
             return null;
         }
         return value;
@@ -169,8 +187,8 @@ public class IpRegionResolver {
             return alias;
         }
         // 直辖市 / 普通省份：去掉结尾的「省」或「市」
-        if (province.length() > 2) {
-            if (province.endsWith("省") || province.endsWith("市")) {
+        if (province.length() > MIN_PROVINCE_LENGTH) {
+            if (province.endsWith(PROVINCE_SUFFIX) || province.endsWith(CITY_SUFFIX)) {
                 return province.substring(0, province.length() - 1);
             }
         }

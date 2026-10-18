@@ -4,7 +4,6 @@ import lombok.Data;
 import org.noear.snack4.annotation.ONodeAttr;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -16,22 +15,28 @@ import java.util.List;
  *
  * <p>{@code children} 刻意声明为 {@code AdminCommentVO} 而不是父类型，
  * 避免序列化时按父类型剔除子节点额外的 {@code status} 字段。</p>
+ *
+ * @author 雨夜终端
  */
 @Data
 public class AdminCommentVO {
 
+    /** 评论ID */
     private Long id;
 
-    /** 0 为顶级 */
+    /** 父评论ID，0 为顶级 */
     private Long parentId;
 
+    /** 评论人昵称 */
     private String nickname;
 
     /** 作者类型：0 访客，1 博主。展示层的「博主」标识只看它，不看昵称文本 */
     private Integer authorType;
 
+    /** 评论内容 */
     private String content;
 
+    /** 评论人 IP（仅后台可见） */
     private String ip;
 
     /** IP 归属地（省级，如「广东」） */
@@ -49,8 +54,10 @@ public class AdminCommentVO {
      */
     private String replyToNickname;
 
+    /** 评论时间 */
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    private List<AdminCommentVO> children = new ArrayList<>();
+    /** 子回复列表（第 2 层，不再向下嵌套） */
+    private List<AdminCommentVO> children;
 }

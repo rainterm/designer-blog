@@ -48,6 +48,8 @@ import java.lang.annotation.Target;
  * 同一个 bean 内部的 {@code this.xxx()} 自调用会绕过代理。因此**标注在 Controller 方法上**
  * 是最省心的用法 —— 方法体里调用的 service 一定在代理之外。
  * 反过来把它挂在 service 的私有/自调方法上是无效的（Solon 不报错，只是静默不生效）。</p>
+ *
+ * @author 雨夜终端
  */
 @Documented
 @Target({ElementType.METHOD, ElementType.TYPE})

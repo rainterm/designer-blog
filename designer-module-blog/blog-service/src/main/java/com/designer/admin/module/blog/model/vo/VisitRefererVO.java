@@ -8,6 +8,8 @@ import java.io.Serializable;
  * 来源域名聚合项（同时用作 Mapper 的查询结果载体）。
  *
  * <p>{@code host} 为空串表示直接访问 / 站内跳转，由前端展示成「(直接访问)」。</p>
+ *
+ * @author 雨夜终端
  */
 @Data
 public class VisitRefererVO implements Serializable {
@@ -19,5 +21,5 @@ public class VisitRefererVO implements Serializable {
     private String type;
 
     /** 访问次数 */
-    private long value;
+    private Long value;
 }

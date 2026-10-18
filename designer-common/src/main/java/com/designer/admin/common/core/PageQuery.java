@@ -1,18 +1,21 @@
 package com.designer.admin.common.core;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 /**
  * 分页查询参数基类，业务查询 DTO 继承它即可获得分页能力
+ *
+ * @author 雨夜终端
  */
 @Data
 public class PageQuery {
 
-    /** 页码，从 1 开始 */
+    @ApiModelProperty(value = "页码，从 1 开始", example = "1")
     private long pageNum = 1;
 
-    /** 每页条数 */
+    @ApiModelProperty(value = "每页条数，最大 500", example = "10")
     private long pageSize = 10;
 
     public long getPageNum() {

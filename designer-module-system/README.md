@@ -10,6 +10,21 @@ designer-module-system/
 └── system-service/   # ApiImpl、Service、Controller、Mapper、model、扩展实现、Job
 ```
 
+`system-service` 采用**分层优先**的包结构：先按 `controller` / `service` / `mapper` / `model`
+分层，层内再按业务域（`auth`、`rbac`、`dict`、`config`、`file`、`job`、`log`、`message`、`monitor`）分子包：
+
+```
+com/designer/admin/system/
+├── controller/admin/<域>/        # 后台接口；app / open 为前台与开放接口，平铺不拆域
+├── service/<域>/                 # 服务接口
+├── service/<域>/impl/            # 服务实现（@Component / @Db 注入落在这里）
+├── mapper/<域>/                  # Mapper 接口（扫描规则见 app.yml 的 mybatis.db1.mappers）
+├── model/entity/<域>/            # 实体
+├── model/dto/<域>/               # 入参
+├── model/vo/<域>/                # 出参
+├── api/ · config/ · spi/ · job/ · constant/   # 跨层实现、过滤器、扩展点、定时任务、常量
+```
+
 其他业务模块需要用户/部门等能力时，依赖 `system-api`，并按需在 api 包声明 `XxxApi`；不要依赖 `*-service`。
 
 ## 登录与人机验证
@@ -25,7 +40,7 @@ designer-module-system/
 
 | 关注点 | 由谁负责 |
 | --- | --- |
-| 该账号这次要不要验（全局开关 + 连续失败 ≥ `sys.account.captchaFailThreshold`） | `LoginAttemptService#needCaptcha` |
+| 该账号这次要不要验（全局开关 + 连续失败 ≥ `sys.account.captchaFailThreshold`） | `LoginAttemptService#isCaptchaRequired` |
 | 连续失败计数、达 `sys.account.lockMaxRetry` 后锁定 | `LoginAttemptService` |
 | 凭据是否有效（解密、核对、一次性消费） | framework 的 `CaptchaVerifier#assertVerified` |
 | 单个 **IP** 的登录尝试频次（10 次/分钟、100 次/24 小时） | `AuthController#login` 上的 `@RateLimit` |
@@ -37,7 +52,7 @@ designer-module-system/
 `ClientIpUtil`，与落库 IP、评论限流是同一个值。滑块凭据端点 `/captcha/**`
 标注不到（第三方 controller），频控由 AJ-Captcha 内置 `req-*` 与 nginx 的 `admin_captcha` 桶承担。
 
-⚠️ 顺序不能反：`AuthService#login` 先问 `needCaptcha`，需要验才去调 `assertVerified`。
+⚠️ 顺序不能反：`AuthService#login` 先问 `isCaptchaRequired`，需要验才去调 `assertVerified`。
 凭据是**一次性**的，对不需要验证的账号调一次校验只会把它白白消费掉。
 
 前端侧：`/admin-api/system/auth/captcha?username=` 只返回 `{ enabled }`（不再下发图片），
@@ -46,13 +61,13 @@ designer-module-system/
 
 ## 密码策略
 
-规则（下限 6、上限 50，**且需同时包含大写字母、小写字母、数字、特殊符号**）集中在 `designer-common` 的
-`com.designer.admin.common.constant.PasswordPolicy`，各入口引的是同一份：
+规则（下限 6、上限 50，**且需同时包含大写字母、小写字母、数字、特殊符号**）集中在 system-service 的
+`com.designer.admin.system.util.PasswordValidatorUtil`，各入口引的是同一份：
 
 | 入口 | 校验位置 | 长度 | 复杂度 |
 | --- | --- | --- | --- |
 | 登录 | `LoginDTO#password` | ✅ | ❌ 刻意不验 |
-| 新增 / 修改用户 | `UserSaveDTO#password`、`SysUserService#save/#update` | ✅ | ✅ |
+| 新增 / 修改用户 | `UserSaveDTO#password`、`SysUserService#add/#update` | ✅ | ✅ |
 | 重置密码 | `ResetPwdDTO#password`、`SysUserService#resetPassword` | ✅ | ✅ |
 | 个人改密 | `ProfileController#changePassword`、`SysUserService#changePassword` | ✅ | ✅ |
 
@@ -64,7 +79,7 @@ designer-module-system/
 
 「特殊符号」取的是 ASCII 可见标点（码点 0x21–0x2F、0x3A–0x40、0x5B–0x60、0x7B–0x7E 四段，
 即 POSIX 的 `[:punct:]`），**有意排除空白与中文等非 ASCII 字符** —— 否则一个汉字或一个空格
-就能凑满「特殊符号」，规则形同虚设。正则在 `PasswordPolicy.STRENGTH_REGEXP`，前端镜像在
+就能凑满「特殊符号」，规则形同虚设。正则在 `PasswordValidator.STRENGTH_REGEXP`，前端镜像在
 `designer-ui/admin-web/src/constants/password.js`，改一边必须同步另一边。
 
 两条只在 service 层能做的校验（需要读库拿哈希）：

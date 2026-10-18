@@ -1,7 +1,5 @@
 package com.designer.admin.module.blog.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.designer.admin.common.core.BaseEntity;
 import lombok.Data;
@@ -9,14 +7,13 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 博客站点设置（单行，固定 id=1）
+ *
+ * @author 雨夜终端
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("blog_setting")
 public class BlogSetting extends BaseEntity {
-
-    @TableId(type = IdType.AUTO)
-    private Long id;
 
     /** 站点名称 */
     private String siteName;
@@ -68,7 +65,7 @@ public class BlogSetting extends BaseEntity {
      * 保留昵称名单（逗号分隔），后台可配。
      *
      * <p>访客昵称**包含**其中任一词即被拒绝。默认值给的是 {@code 博主,站长,管理员,admin}
-     * （见 {@code NicknameUtil.DEFAULT_RESERVED_TEXT}），可随意增删改；清空即表示不拦截这些词。</p>
+     * （见 {@code BlogSettingConsts.DEFAULT_RESERVED_NICKNAMES_TEXT}），可随意增删改；清空即表示不拦截这些词。</p>
      */
     private String reservedNicknames;
 }

@@ -1,9 +1,6 @@
 package com.designer.admin.module.blog.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.designer.admin.common.core.BaseEntity;
 import lombok.Data;
@@ -15,29 +12,36 @@ import java.util.List;
 
 /**
  * 博客文章
+ *
+ * @author 雨夜终端
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("blog_post")
 public class BlogPost extends BaseEntity {
 
-    @TableId(type = IdType.AUTO)
-    private Long id;
-
+    /** 文章标题 */
     private String title;
 
+    /** 文章别名，用于前台 URL（唯一） */
     private String slug;
 
+    /** 摘要，列表页展示 */
     private String summary;
 
+    /** 正文（Markdown 原文，渲染在前端完成） */
     private String content;
 
+    /** 封面图地址 */
     private String coverUrl;
 
+    /** 所属分类ID */
     private Long categoryId;
 
+    /** 作者用户ID */
     private Long authorId;
 
+    /** 作者昵称（冗余列，避免列表页逐条查用户表） */
     private String authorName;
 
     /** 0草稿 1已发布 */
@@ -49,20 +53,21 @@ public class BlogPost extends BaseEntity {
     /** 1允许评论 0否 */
     private Integer allowComment;
 
+    /** 阅读数（由浏览埋点定时批量回写） */
     private Integer viewCount;
 
+    /** SEO 标题，留空时前台回退为文章标题 */
     private String seoTitle;
 
+    /** SEO 关键词，逗号分隔 */
     private String seoKeywords;
 
+    /** SEO 描述，留空时前台回退为摘要 */
     private String seoDescription;
 
+    /** 发布时间，草稿为空 */
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime publishedAt;
-
-    @TableLogic
-    @ONodeAttr(ignore = true)
-    private Integer deleted;
 
     /** 分类名称（非库字段） */
     @TableField(exist = false)

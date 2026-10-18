@@ -12,6 +12,8 @@ import org.noear.solon.core.handle.Context;
  *
  * <p>放在 {@code framework} 而不是各业务模块：限流键与落库 IP 必须是同一个值，
  * 两处各解析一遍最难排查（同一次请求在评论表和访问日志里记成不同 IP）。</p>
+ *
+ * @author 雨夜终端
  */
 public final class ClientIpUtil {
 

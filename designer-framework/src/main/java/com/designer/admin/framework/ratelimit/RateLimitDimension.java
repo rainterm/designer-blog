@@ -5,6 +5,8 @@ package com.designer.admin.framework.ratelimit;
  *
  * <p>取值都保证能取到一个稳定的字符串（{@link RateLimitInterceptor} 负责解析），
  * 所以调用方无需关心 Redis 键怎么拼。</p>
+ *
+ * @author 雨夜终端
  */
 public enum RateLimitDimension {
 

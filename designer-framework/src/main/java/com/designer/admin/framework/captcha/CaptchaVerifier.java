@@ -32,9 +32,11 @@ import org.noear.solon.annotation.Inject;
  * 凭据是一次性的，站点关停 / 无需验证码的请求先拒掉，免得白白消费掉一张
  * （消费了用户就得重新拖一次滑块）。</p>
  *
- * <p><b>与 {@code com.designer.admin.system.service.LoginAttemptService} 的分工</b>：
+ * <p><b>与 {@code com.designer.admin.system.service.auth.LoginAttemptService} 的分工</b>：
  * 这个类只管「凭据是否有效」，不关心谁在调、要不要调；
  * 「什么时候该要求验证码」（如登录失败达阈值）属于业务策略，留在各自模块里。</p>
+ *
+ * @author 雨夜终端
  */
 @Component
 public class CaptchaVerifier {

@@ -8,8 +8,13 @@ import org.noear.snack4.codec.ObjectEncoder;
 
 /**
  * {@link Sensitive} 字段序列化脱敏。
+ *
+ * @author 雨夜终端
  */
 public class SensitiveEncoder implements ObjectEncoder<Object> {
+
+    /** 手机号最短可脱敏长度：至少能保留前 3 位与后 4 位 */
+    private static final int MIN_MASKABLE_PHONE_LENGTH = 7;
 
     @Override
     public ONode encode(EncodeContext ctx, Object value, ONode target) {
@@ -33,7 +38,7 @@ public class SensitiveEncoder implements ObjectEncoder<Object> {
             return phone;
         }
         String s = phone.trim();
-        if (s.length() < 7) {
+        if (s.length() < MIN_MASKABLE_PHONE_LENGTH) {
             return fallback;
         }
         return s.substring(0, 3) + "****" + s.substring(s.length() - 4);

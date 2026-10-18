@@ -10,11 +10,43 @@ package com.designer.admin.framework.client;
  * 用 {@link java.net.InetAddress#getByName} 直接解析会让对方通过构造主机名引发
  * DNS 查询（阻塞线程 + 内网探测）。IPv4 手工解析；IPv6 必然含冒号，
  * 而主机名不允许含冒号，因此含冒号时用 getByName 也不会走 DNS。</p>
+ *
+ * @author 雨夜终端
  */
 public final class IpRange {
 
     /** IPv6 字面量允许的字符（冒号 + 十六进制 + IPv4-mapped 里的点） */
     private static final String IPV6_CHARS = "[0-9a-fA-F:.]+";
+
+    /** IPv6 方括号字面量的左括号 */
+    private static final char BRACKET_START = '[';
+
+    /** IPv6 方括号字面量的右括号 */
+    private static final char BRACKET_END = ']';
+
+    /** IPv6 段分隔符 */
+    private static final char IPV6_SEPARATOR = ':';
+
+    /** 点分十进制分隔符 */
+    private static final String IPV4_SEPARATOR = "\\.";
+
+    /** IPv4 地址字节数 */
+    private static final int IPV4_BYTE_LENGTH = 4;
+
+    /** IPv6 地址字节数 */
+    private static final int IPV6_BYTE_LENGTH = 16;
+
+    /** IPv4-mapped IPv6 中前缀零字节的数量 */
+    private static final int IPV4_MAPPED_ZERO_PREFIX = 10;
+
+    /** IPv4-mapped IPv6 中 IPv4 部分的起始偏移 */
+    private static final int IPV4_MAPPED_OFFSET = 12;
+
+    /** IPv4 段最大位数 */
+    private static final int IPV4_SEGMENT_MAX_DIGITS = 3;
+
+    /** IPv4 段最大值 */
+    private static final int IPV4_SEGMENT_MAX_VALUE = 255;
 
     private final byte[] network;
     private final int prefixLength;
@@ -107,10 +139,10 @@ public final class IpRange {
             return null;
         }
         // remoteIp 可能是带方括号的 IPv6： [::1]
-        if (s.startsWith("[") && s.endsWith("]")) {
+        if (s.charAt(0) == BRACKET_START && s.charAt(s.length() - 1) == BRACKET_END) {
             s = s.substring(1, s.length() - 1);
         }
-        if (s.indexOf(':') >= 0) {
+        if (s.indexOf(IPV6_SEPARATOR) >= 0) {
             return parseIpv6(s);
         }
         return parseIpv4(s);
@@ -118,20 +150,22 @@ public final class IpRange {
 
     /** IPv6：含冒号即不可能是主机名，故 getByName 不会发起 DNS 查询 */
     private static byte[] parseIpv6(String s) {
-        if (!s.matches(IPV6_CHARS) || s.indexOf(':') < 0) {
+        if (!s.matches(IPV6_CHARS) || s.indexOf(IPV6_SEPARATOR) < 0) {
             return null;
         }
         try {
             byte[] bytes = java.net.InetAddress.getByName(s).getAddress();
             // Java 会把 ::ffff:1.2.3.4 这类映射地址直接归一成 Inet4Address（4 字节）
-            if (bytes.length == 4) {
+            if (bytes.length == IPV4_BYTE_LENGTH) {
                 return bytes;
             }
-            if (bytes.length != 16) {
+            if (bytes.length != IPV6_BYTE_LENGTH) {
                 return null;
             }
             // 兜底：仍以 16 字节形式出现的映射地址，还原为 IPv4 后再比较
-            return isIpv4Mapped(bytes) ? java.util.Arrays.copyOfRange(bytes, 12, 16) : bytes;
+            return isIpv4Mapped(bytes)
+                    ? java.util.Arrays.copyOfRange(bytes, IPV4_MAPPED_OFFSET, IPV6_BYTE_LENGTH)
+                    : bytes;
         } catch (java.net.UnknownHostException e) {
             return null;
         }
@@ -139,15 +173,15 @@ public final class IpRange {
 
     /** IPv4：手工解析，完全不做名称解析 */
     private static byte[] parseIpv4(String s) {
-        String[] parts = s.split("\\.", -1);
-        if (parts.length != 4) {
+        String[] parts = s.split(IPV4_SEPARATOR, -1);
+        if (parts.length != IPV4_BYTE_LENGTH) {
             return null;
         }
-        byte[] out = new byte[4];
-        for (int i = 0; i < 4; i++) {
+        byte[] out = new byte[IPV4_BYTE_LENGTH];
+        for (int i = 0; i < IPV4_BYTE_LENGTH; i++) {
             String part = parts[i];
             // 拒绝空段、前导零以外的非数字、超 3 位
-            if (part.isEmpty() || part.length() > 3) {
+            if (part.isEmpty() || part.length() > IPV4_SEGMENT_MAX_DIGITS) {
                 return null;
             }
             for (int j = 0; j < part.length(); j++) {
@@ -157,7 +191,7 @@ public final class IpRange {
                 }
             }
             int value = Integer.parseInt(part);
-            if (value > 255) {
+            if (value > IPV4_SEGMENT_MAX_VALUE) {
                 return null;
             }
             out[i] = (byte) value;
@@ -167,7 +201,7 @@ public final class IpRange {
 
     /** 判断是否为 IPv4-mapped IPv6：前 10 字节为 0，第 11、12 字节为 0xFF */
     private static boolean isIpv4Mapped(byte[] b) {
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < IPV4_MAPPED_ZERO_PREFIX; i++) {
             if (b[i] != 0) {
                 return false;
             }

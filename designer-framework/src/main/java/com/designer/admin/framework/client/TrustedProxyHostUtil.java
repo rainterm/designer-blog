@@ -1,9 +1,8 @@
 package com.designer.admin.framework.client;
 
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.util.HostUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,10 +26,11 @@ import java.util.List;
  *
  * <p>⚠️ 可信网段不要配得过宽：如果真实客户端本身来自某个可信网段（例如办公网 10.x），
  * 该网段内的地址就能互相伪装。按需收窄到只包含自己的代理。</p>
+ *
+ * @author 雨夜终端
  */
+@Slf4j
 public class TrustedProxyHostUtil extends HostUtil {
-
-    private static final Logger log = LoggerFactory.getLogger(TrustedProxyHostUtil.class);
 
     private final List<IpRange> trustedProxies;
 

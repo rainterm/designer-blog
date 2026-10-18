@@ -6,6 +6,8 @@ import org.noear.solon.annotation.Inject;
 
 /**
  * 文件存储全局默认项（来自 app.yml {@code designer.storage.*}）
+ *
+ * @author 雨夜终端
  */
 @Data
 @Configuration

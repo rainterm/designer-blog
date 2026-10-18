@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
  *
  * <p>order 必须早于 {@code SaTokenInterceptor(-100)}：拦截器读的是请求头，
  * 桥接晚一步就等于没做。</p>
+ *
+ * @author 雨夜终端
  */
 @Component(index = -150)
 public class DownloadTokenCookieFilter implements Filter {

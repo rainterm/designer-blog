@@ -3,7 +3,7 @@ package com.designer.admin.framework.config;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.solon.integration.SaTokenInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
-import com.designer.admin.common.core.R;
+import com.designer.admin.common.core.Result;
 import com.designer.admin.common.core.ResultCode;
 import org.noear.solon.annotation.Bean;
 import org.noear.solon.annotation.Configuration;
@@ -16,6 +16,8 @@ import org.noear.solon.annotation.Configuration;
  *   <li>{@code /open-api/**} 由 {@code OpenApiScopeFilter} 做 OAuth2 登录 + Scope 校验</li>
  *   <li>{@code /oauth2/**} 令牌端点放行</li>
  * </ul>
+ *
+ * @author 雨夜终端
  */
 @Configuration
 public class SaTokenConfig {
@@ -31,7 +33,7 @@ public class SaTokenConfig {
                 .setError(e -> {
                     int code = (e instanceof cn.dev33.satoken.exception.NotLoginException)
                             ? ResultCode.UNAUTHORIZED : ResultCode.FORBIDDEN;
-                    return R.fail(code, code == ResultCode.UNAUTHORIZED ? "登录状态已过期，请重新登录" : "无权限访问");
+                    return Result.fail(code, code == ResultCode.UNAUTHORIZED ? "登录状态已过期，请重新登录" : "无权限访问");
                 });
     }
 }

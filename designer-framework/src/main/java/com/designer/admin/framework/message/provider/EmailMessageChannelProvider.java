@@ -1,5 +1,7 @@
 package com.designer.admin.framework.message.provider;
 
+import com.designer.admin.framework.constant.MessageChannelConsts;
+
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.message.MessageChannelProvider;
 import com.designer.admin.framework.message.MessageFieldMeta;
@@ -21,15 +23,36 @@ import java.util.Properties;
 
 /**
  * 邮件通道（SMTP）
+ *
+ * @author 雨夜终端
  */
 @Component
 public class EmailMessageChannelProvider implements MessageChannelProvider {
 
-    public static final String TYPE = "email";
+    /** SMTP 服务器地址 */
+    private static final String KEY_HOST = "host";
+
+    /** SMTP 登录用户名 */
+    private static final String KEY_USERNAME = "username";
+
+    /** SMTP 登录密码 */
+    private static final String KEY_PASSWORD = "password";
+
+    /** 发件人地址 */
+    private static final String KEY_FROM = "from";
+
+    /** 是否开启 STARTTLS */
+    private static final String KEY_STARTTLS = "starttls";
+
+    /** 是否开启 SSL */
+    private static final String KEY_SSL = "ssl";
+
+    /** TCP 端口上限 */
+    private static final int MAX_PORT = 65535;
 
     @Override
     public String type() {
-        return TYPE;
+        return MessageChannelConsts.TYPE_EMAIL;
     }
 
     @Override
@@ -63,11 +86,12 @@ public class EmailMessageChannelProvider implements MessageChannelProvider {
 
     @Override
     public void validateConfig(Map<String, Object> props) {
-        if (blank(props, "host") || blank(props, "username") || blank(props, "password") || blank(props, "from")) {
+        if (blank(props, KEY_HOST) || blank(props, KEY_USERNAME)
+                || blank(props, KEY_PASSWORD) || blank(props, KEY_FROM)) {
             throw new BizException("邮件需配置 host / username / password / from");
         }
         int port = parsePort(props.get("port"));
-        if (port <= 0 || port > 65535) {
+        if (port <= 0 || port > MAX_PORT) {
             throw new BizException("SMTP 端口不合法");
         }
     }
@@ -84,11 +108,11 @@ public class EmailMessageChannelProvider implements MessageChannelProvider {
             props.put("mail.smtp.port", String.valueOf(config.propInt("port", 587)));
             boolean auth = config.propBool("auth", true);
             props.put("mail.smtp.auth", String.valueOf(auth));
-            if (config.propBool("starttls", true)) {
+            if (config.propBool(KEY_STARTTLS, true)) {
                 props.put("mail.smtp.starttls.enable", "true");
                 props.put("mail.smtp.starttls.required", "true");
             }
-            if (config.propBool("ssl", false)) {
+            if (config.propBool(KEY_SSL, false)) {
                 props.put("mail.smtp.ssl.enable", "true");
                 props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
                 props.put("mail.smtp.socketFactory.port", String.valueOf(config.propInt("port", 465)));

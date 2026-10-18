@@ -2,6 +2,8 @@ package com.designer.admin.framework.log;
 
 /**
  * 业务类型常量
+ *
+ * @author 雨夜终端
  */
 public interface BusinessType {
     String OTHER = "OTHER";

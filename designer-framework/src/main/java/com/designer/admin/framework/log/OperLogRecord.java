@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 /**
  * 操作日志写入模型（framework 侧，与 sys_oper_log 字段对齐，不依赖 system entity）。
+ *
+ * @author 雨夜终端
  */
 @Data
 public class OperLogRecord {

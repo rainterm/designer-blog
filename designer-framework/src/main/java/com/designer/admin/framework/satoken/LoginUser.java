@@ -11,6 +11,8 @@ import java.util.List;
  *
  * <p>必须实现 {@link SaJsonType}：Sa-Token 1.46 的 snack4 JSON 模板对 Redis 中的
  * 多态对象按类型白名单反序列化，仅放行实现了该标记接口的类。
+ *
+ * @author 雨夜终端
  */
 @Data
 public class LoginUser implements SaJsonType, Serializable {

@@ -4,16 +4,23 @@ import lombok.Data;
 import org.noear.snack4.annotation.ONodeAttr;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 公开评论 VO（支持楼中楼）
+ *
+ * @author 雨夜终端
  */
 @Data
 public class PublicCommentVO {
+
+    /** 评论ID */
     private Long id;
+
+    /** 父评论ID，0 为顶级 */
     private Long parentId;
+
+    /** 评论人昵称 */
     private String nickname;
 
     /**
@@ -21,6 +28,7 @@ public class PublicCommentVO {
      */
     private Integer authorType;
 
+    /** 评论内容 */
     private String content;
 
     /** IP 归属地（省级，如「广东」） */
@@ -35,8 +43,10 @@ public class PublicCommentVO {
      */
     private String replyToNickname;
 
+    /** 评论时间 */
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    private List<PublicCommentVO> children = new ArrayList<>();
+    /** 子回复列表（第 2 层，不再向下嵌套） */
+    private List<PublicCommentVO> children;
 }

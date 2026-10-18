@@ -66,7 +66,7 @@ export function fetchMyComments(postId, commenterKey, options) {
 
 /** 删除自己的评论 */
 export function deleteMyComment(id, commenterKey, options) {
-  return apiFetch(`/app-api/blog/public/comments/mine/${id}`, {
+  return apiFetch(`/app-api/blog/public/comments/${id}/mine`, {
     method: 'DELETE',
     headers: { 'X-Commenter-Key': commenterKey },
     ...options

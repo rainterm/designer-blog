@@ -7,20 +7,25 @@ import java.time.LocalDateTime;
 
 /**
  * 「我的评论」VO：评论人查看自己提交的评论（含未通过审核的）
+ *
+ * @author 雨夜终端
  */
 @Data
 public class MyCommentVO {
 
+    /** 评论ID */
     private Long id;
 
     /** 所回复的评论 ID，0 为顶级 */
     private Long parentId;
 
+    /** 评论内容 */
     private String content;
 
     /** 0待审 1通过 2拒绝 */
     private Integer status;
 
+    /** 提交时间 */
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 }

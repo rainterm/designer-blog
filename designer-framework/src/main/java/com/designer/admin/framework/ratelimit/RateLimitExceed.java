@@ -2,11 +2,13 @@ package com.designer.admin.framework.ratelimit;
 
 /**
  * 超限后的行为。
+ *
+ * @author 雨夜终端
  */
 public enum RateLimitExceed {
 
     /**
-     * 抛出 {@link RateLimitException}（由全局异常处理转成 {@code code=429} 的 R 结构）。
+     * 抛出 {@link RateLimitException}（由全局异常处理转成 {@code code=429} 的 Result 结构）。
      *
      * <p>默认值：适合用户直接触发的接口，调用方能拿到明确原因。</p>
      */

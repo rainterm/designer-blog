@@ -1,6 +1,9 @@
 package com.designer.admin.module.blog.service;
 
+import com.designer.admin.module.blog.constant.BlogRedisKeyConsts;
+import com.designer.admin.module.blog.constant.BlogViewConsts;
 import com.designer.admin.module.blog.mapper.BlogPostMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.redisx.RedisClient;
 import org.noear.redisx.plus.RedisLock;
@@ -8,19 +11,17 @@ import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Destroy;
 import org.noear.solon.annotation.Init;
 import org.noear.solon.annotation.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
  * 阅读数定时回写：把 {@link BlogViewCounter} 里攒的增量合并进 {@code blog_post.view_count}。
  *
  * <p>阅读数的写回全靠它：N 次阅读先各自 {@code HINCRBY} 到 Redis，
- * 每隔 {@value #FLUSH_INTERVAL_SECONDS} 秒这里把它们按文章合并成一条
+ * 每隔 {@value com.designer.admin.module.blog.constant.BlogViewConsts#FLUSH_INTERVAL_SECONDS} 秒这里把它们按文章合并成一条
  * {@code UPDATE ... view_count + delta}，于是写次数从「每次阅读一次」降到「每篇文章每轮一次」。</p>
  *
  * <p>间隔的取舍：太短就退化成逐次写，太长则后台看到的数字滞后。
@@ -28,20 +29,12 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>用 {@code @Init} + 单线程调度而不是数据驱动的 {@code sys_job} 表：这是计数链路的一部分，
  * 漏配一条任务记录就会导致阅读数永远停在 Redis 里不落库，不该依赖人工在后台启用。</p>
+ *
+ * @author 雨夜终端
  */
 @Component
+@Slf4j
 public class BlogViewFlushJob {
-
-    private static final Logger log = LoggerFactory.getLogger(BlogViewFlushJob.class);
-
-    /** 回写间隔（秒） */
-    private static final int FLUSH_INTERVAL_SECONDS = 30;
-
-    /** 回写锁键：多实例部署时只让一个实例落库 */
-    private static final String FLUSH_LOCK_KEY = "blog:post:view:flush:lock";
-
-    /** 锁租期（秒）：远大于一轮回写耗时，实例崩溃后也能自动释放 */
-    private static final int LOCK_LEASE_SECONDS = 60;
 
     @Inject
     private BlogViewCounter viewCounter;
@@ -54,13 +47,15 @@ public class BlogViewFlushJob {
 
     @Init
     public void start() {
-        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, r -> {
             Thread t = new Thread(r, "blog-view-flush");
             t.setDaemon(true);
             return t;
         });
+        executor.setRemoveOnCancelPolicy(true);
+        scheduler = executor;
         scheduler.scheduleWithFixedDelay(this::flushQuietly,
-                FLUSH_INTERVAL_SECONDS, FLUSH_INTERVAL_SECONDS, TimeUnit.SECONDS);
+                BlogViewConsts.FLUSH_INTERVAL_SECONDS, BlogViewConsts.FLUSH_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     @Destroy
@@ -79,8 +74,8 @@ public class BlogViewFlushJob {
      * @return 成功落库的文章篇数
      */
     public int flush() {
-        RedisLock lock = redisClient.getLock(FLUSH_LOCK_KEY);
-        if (!lock.tryLock(LOCK_LEASE_SECONDS)) {
+        RedisLock lock = redisClient.getLock(BlogRedisKeyConsts.POST_VIEW_FLUSH_LOCK);
+        if (!lock.tryLock(BlogViewConsts.LOCK_LEASE_SECONDS)) {
             return 0;
         }
         try {

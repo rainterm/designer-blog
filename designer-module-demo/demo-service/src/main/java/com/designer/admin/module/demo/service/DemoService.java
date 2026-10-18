@@ -1,20 +1,18 @@
 package com.designer.admin.module.demo.service;
 
-import org.noear.solon.annotation.Component;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
+import com.designer.admin.module.demo.api.model.DemoPingVO;
 
 /**
  * Demo 模块内部服务（不对外暴露；跨模块请依赖 {@link com.designer.admin.module.demo.api.DemoApi}）。
+ *
+ * @author 雨夜终端
  */
-@Component
-public class DemoService {
+public interface DemoService {
 
-    public Map<String, Object> ping() {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("ok", true);
-        data.put("module", "demo");
-        return data;
-    }
+    /**
+     * 模块自检。
+     *
+     * @return 包含 ok 与模块名的结果
+     */
+    DemoPingVO ping();
 }

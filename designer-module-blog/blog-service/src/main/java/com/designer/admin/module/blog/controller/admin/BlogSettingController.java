@@ -1,7 +1,9 @@
 package com.designer.admin.module.blog.controller.admin;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.designer.admin.common.core.R;
+import com.designer.admin.common.core.Result;
 import com.designer.admin.framework.log.BusinessType;
 import com.designer.admin.framework.log.OperLog;
 import com.designer.admin.module.blog.model.dto.SettingSaveDTO;
@@ -18,10 +20,13 @@ import org.noear.solon.validation.annotation.Validated;
 
 /**
  * 博客站点设置（单行）
+ *
+ * @author 雨夜终端
  */
 @Valid
 @Controller
 @Mapping("/admin-api/blog/setting")
+@Api(tags = "博客设置")
 public class BlogSettingController {
 
     @Inject
@@ -30,16 +35,18 @@ public class BlogSettingController {
     @Get
     @Mapping("")
     @SaCheckPermission("blog:setting:query")
-    public R<BlogSetting> detail() {
-        return R.ok(settingService.get());
+    @ApiOperation(value = "获取博客设置")
+    public Result<BlogSetting> getDetail() {
+        return Result.ok(settingService.getSetting());
     }
 
     @Put
     @Mapping("")
     @OperLog(title = "站点设置", businessType = BusinessType.UPDATE)
     @SaCheckPermission("blog:setting:edit")
-    public R<Void> update(@Body @Validated SettingSaveDTO dto) {
+    @ApiOperation(value = "修改博客设置")
+    public Result<Void> update(@Body @Validated SettingSaveDTO dto) {
         settingService.update(dto);
-        return R.ok();
+        return Result.ok();
     }
 }

@@ -8,6 +8,8 @@ package com.designer.admin.module.blog.util;
  *
  * <p>爬虫单列为 {@code BOT} 而不是并入 {@code OTHER}：个人站点的流量里机器人占比往往不低，
  * 明确标出来才好判断「访问量涨了」到底是真人还是抓取。</p>
+ *
+ * @author 雨夜终端
  */
 public final class UserAgentUtil {
 
@@ -20,36 +22,60 @@ public final class UserAgentUtil {
     /** 与 blog_visit_log.ua 列宽一致 */
     private static final int UA_MAX_LENGTH = 255;
 
+    /** 平板关键字（小写） */
+    private static final String[] TABLET_KEYS = {"ipad", "tablet", "kindle", "silk"};
+    /** 手机关键字（小写） */
+    private static final String[] MOBILE_KEYS = {
+            "mobi", "iphone", "ipod", "android", "windows phone", "blackberry", "opera mini"};
+    /** 桌面关键字（小写） */
+    private static final String[] PC_KEYS = {"windows", "macintosh", "linux", "x11", "cros"};
+    /** 爬虫关键字（小写） */
+    private static final String[] BOT_KEYS = {
+            "bot", "spider", "crawler", "spdy", "slurp", "curl",
+            "wget", "python-requests", "headless", "lighthouse"};
+    /** Android 标识 */
+    private static final String UA_ANDROID = "android";
+    /** 移动端标识 */
+    private static final String UA_MOBILE = "mobile";
+
     private UserAgentUtil() {
     }
 
-    /** 归类设备类型；缺失或无法识别时返回 {@code OTHER} */
+    /**
+     * 归类设备类型；缺失或无法识别时返回 {@code OTHER}。
+     *
+     * @param ua 原始 User-Agent
+     * @return 设备类型
+     */
     public static String device(String ua) {
         if (ua == null || ua.isBlank()) {
             return OTHER;
         }
         String s = ua.toLowerCase();
 
-        if (isBot(s)) {
+        if (containsAny(s, BOT_KEYS)) {
             return BOT;
         }
         // 平板优先于手机：iPad / Android 平板 UA 里也可能出现 mobile 关键字
-        if (s.contains("ipad") || s.contains("tablet") || s.contains("kindle") || s.contains("silk")
-                || (s.contains("android") && !s.contains("mobile"))) {
+        boolean androidTablet = s.contains(UA_ANDROID) && !s.contains(UA_MOBILE);
+        if (containsAny(s, TABLET_KEYS) || androidTablet) {
             return TABLET;
         }
-        if (s.contains("mobi") || s.contains("iphone") || s.contains("ipod") || s.contains("android")
-                || s.contains("windows phone") || s.contains("blackberry") || s.contains("opera mini")) {
+        if (containsAny(s, MOBILE_KEYS)) {
             return MOBILE;
         }
-        if (s.contains("windows") || s.contains("macintosh") || s.contains("linux")
-                || s.contains("x11") || s.contains("cros")) {
+        if (containsAny(s, PC_KEYS)) {
             return PC;
         }
         return OTHER;
     }
 
-    /** 截断到与库列一致的长度 */
+    /**
+     * 截断到与库列一致的长度。
+     *
+     * @param ua 原始 User-Agent
+     * @return 截断后的 User-Agent
+     */
     public static String truncate(String ua) {
         if (ua == null) {
             return "";
@@ -58,10 +84,19 @@ public final class UserAgentUtil {
         return value.length() > UA_MAX_LENGTH ? value.substring(0, UA_MAX_LENGTH) : value;
     }
 
-    private static boolean isBot(String lowerUa) {
-        return lowerUa.contains("bot") || lowerUa.contains("spider") || lowerUa.contains("crawler")
-                || lowerUa.contains("spdy") || lowerUa.contains("slurp") || lowerUa.contains("curl")
-                || lowerUa.contains("wget") || lowerUa.contains("python-requests")
-                || lowerUa.contains("headless") || lowerUa.contains("lighthouse");
+    /**
+     * 判断文本是否包含任意一个关键字。
+     *
+     * @param text 待匹配文本
+     * @param keys 关键字数组
+     * @return 命中任意关键字时返回 {@code true}
+     */
+    private static boolean containsAny(String text, String[] keys) {
+        for (String key : keys) {
+            if (text.contains(key)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

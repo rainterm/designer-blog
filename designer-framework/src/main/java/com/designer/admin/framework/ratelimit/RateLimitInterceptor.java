@@ -3,13 +3,13 @@ package com.designer.admin.framework.ratelimit;
 import cn.dev33.satoken.stp.StpUtil;
 import com.designer.admin.framework.client.ClientIpUtil;
 import com.designer.admin.framework.redis.RedisCounter;
+import com.designer.admin.framework.redis.RedisKeyConsts;
 import com.designer.admin.framework.satoken.LoginHelper;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
 import org.noear.solon.core.aspect.Invocation;
 import org.noear.solon.core.aspect.MethodInterceptor;
 import org.noear.solon.core.handle.Context;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link RateLimit} 的执行者：把注解上的规则逐条落到 Redis 计数上。
@@ -20,20 +20,16 @@ import org.slf4j.LoggerFactory;
  * <p><b>可用性优先</b>：限流是「保护」不是「正确性」，所以两处刻意 fail-open
  * 并打日志 —— Redis 未装配时跳过限流、按请求头取值取不到时跳过该条规则。
  * 让 Redis 抖动或一个配错的注解把业务接口变成 500 是本末倒置。</p>
+ *
+ * @author 雨夜终端
  */
+@Slf4j
 public class RateLimitInterceptor implements MethodInterceptor {
 
-    private static final Logger log = LoggerFactory.getLogger(RateLimitInterceptor.class);
-
-    /**
-     * 限流键前缀。
-     *
-     * <p>与业务自己的计数键分开命名空间：限流键由框架统一回收（固定窗口到期即消失），
-     * 而业务键的生命周期由业务决定，混在一起会让「谁该过期」变得难以判断。</p>
-     */
-    private static final String KEY_PREFIX = "rate:";
-
     private static final String DEFAULT_MESSAGE = "操作过于频繁，请稍后再试";
+
+    /** 提示语中的剩余秒数占位符 */
+    private static final String REMAIN_SECONDS_PLACEHOLDER = "{}";
 
     @Override
     public Object doIntercept(Invocation inv) throws Throwable {
@@ -84,7 +80,8 @@ public class RateLimitInterceptor implements MethodInterceptor {
      * 代价是改阈值等于换新桶（旧计数自然作废），这对限流来说反而更符合预期。</p>
      */
     private String buildKey(RateLimit anno, RateLimit.Rule rule, String subject) {
-        return KEY_PREFIX + anno.name() + ":" + subject + ":" + rule.count() + "x" + rule.window();
+        return RedisKeyConsts.RATE_LIMIT_PREFIX + anno.name() + RedisKeyConsts.SEPARATOR + subject
+                + RedisKeyConsts.SEPARATOR + rule.count() + "x" + rule.window();
     }
 
     /**
@@ -94,12 +91,12 @@ public class RateLimitInterceptor implements MethodInterceptor {
      */
     private String subject(RateLimit anno, Context ctx) {
         return switch (anno.dimension()) {
-            case IP -> "ip:" + ClientIpUtil.normalize(ctx);
-            case GLOBAL -> "all";
+            case IP -> RedisKeyConsts.RATE_SUBJECT_IP_PREFIX + ClientIpUtil.normalize(ctx);
+            case GLOBAL -> RedisKeyConsts.RATE_SUBJECT_GLOBAL;
             case USER -> StpUtil.isLogin()
                     // 未登录退化为按 IP，避免所有匿名访客共享一个「匿名」桶
-                    ? "user:" + LoginHelper.getUserId()
-                    : "ip:" + ClientIpUtil.normalize(ctx);
+                    ? RedisKeyConsts.RATE_SUBJECT_USER_PREFIX + LoginHelper.getUserId()
+                    : RedisKeyConsts.RATE_SUBJECT_IP_PREFIX + ClientIpUtil.normalize(ctx);
             case HEADER -> headerSubject(anno, ctx);
         };
     }
@@ -111,7 +108,9 @@ public class RateLimitInterceptor implements MethodInterceptor {
             return null;
         }
         String value = ctx == null ? null : ctx.header(headerName);
-        return (value == null || value.isBlank()) ? null : "hdr:" + value.trim();
+        return (value == null || value.isBlank())
+                ? null
+                : RedisKeyConsts.RATE_SUBJECT_HEADER_PREFIX + value.trim();
     }
 
     /** 超限：按注解配置抛异常或静默跳过 */
@@ -132,8 +131,8 @@ public class RateLimitInterceptor implements MethodInterceptor {
         if (raw == null || raw.isBlank()) {
             return DEFAULT_MESSAGE;
         }
-        if (raw.contains("{}")) {
-            return raw.replace("{}", String.valueOf(Math.max(remainSeconds, 1)));
+        if (raw.contains(REMAIN_SECONDS_PLACEHOLDER)) {
+            return raw.replace(REMAIN_SECONDS_PLACEHOLDER, String.valueOf(Math.max(remainSeconds, 1)));
         }
         return raw;
     }

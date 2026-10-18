@@ -9,6 +9,8 @@ import java.util.Map;
 
 /**
  * 发送消息的统一载荷（各通道按需取字段）
+ *
+ * @author 雨夜终端
  */
 @Data
 @Builder

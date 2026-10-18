@@ -5,6 +5,8 @@ import lombok.Data;
 
 /**
  * 文件落盘/上传成功后的元信息
+ *
+ * @author 雨夜终端
  */
 @Data
 @Builder

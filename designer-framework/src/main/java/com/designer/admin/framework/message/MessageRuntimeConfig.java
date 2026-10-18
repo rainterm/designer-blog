@@ -8,6 +8,8 @@ import java.util.Map;
 
 /**
  * 消息通道运行时配置（来自 sys_message_config）
+ *
+ * @author 雨夜终端
  */
 @Data
 @Builder

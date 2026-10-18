@@ -8,6 +8,8 @@ import java.lang.annotation.Target;
 
 /**
  * 敏感字段：JSON 序列化时按 {@link #type()} 脱敏，反序列化不受影响。
+ *
+ * @author 雨夜终端
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)

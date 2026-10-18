@@ -1,10 +1,10 @@
 package com.designer.admin.module.blog.service;
 
+import com.designer.admin.module.blog.constant.BlogRedisKeyConsts;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.redisx.RedisClient;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,14 +32,12 @@ import java.util.stream.Collectors;
  * <p><b>为什么扣减用 {@code HINCRBY -delta} 而不是清零</b>：回写期间随时可能有新阅读进来。
  * 扣减只会减掉「本次已经落库的那部分」，期间新到的增量原样留到下一轮；
  * 若用 DEL/置零，这部分增量会被一起抹掉，表现为阅读数凭空少一截。</p>
+ *
+ * @author 雨夜终端
  */
 @Component
+@Slf4j
 public class BlogViewCounter {
-
-    private static final Logger log = LoggerFactory.getLogger(BlogViewCounter.class);
-
-    /** 待回写增量：field = postId，value = 尚未落库的阅读次数 */
-    private static final String PENDING_KEY = "blog:post:view:pending";
 
     @Inject
     private RedisClient redisClient;
@@ -49,7 +47,7 @@ public class BlogViewCounter {
         if (postId == null) {
             return;
         }
-        redisClient.open0(s -> s.jedis().hincrBy(PENDING_KEY, String.valueOf(postId), 1));
+        redisClient.open0(s -> s.jedis().hincrBy(BlogRedisKeyConsts.POST_VIEW_PENDING, String.valueOf(postId), 1));
     }
 
     /**
@@ -83,7 +81,7 @@ public class BlogViewCounter {
         String[] fields = ids.stream().map(String::valueOf).toArray(String[]::new);
         List<String> values;
         try {
-            values = redisClient.open1(s -> s.jedis().hmget(PENDING_KEY, fields));
+            values = redisClient.open1(s -> s.jedis().hmget(BlogRedisKeyConsts.POST_VIEW_PENDING, fields));
         } catch (Exception e) {
             // 降级为「没有未回写增量」：阅读数会显示成上一次回写的旧值，
             // 但不能因为 Redis 抖动就让文章列表 / 详情打不开。
@@ -91,7 +89,7 @@ public class BlogViewCounter {
             log.warn("[blog-view] 读取未回写增量失败，本次按 0 处理：{}", e.getMessage());
             return Collections.emptyMap();
         }
-        Map<Long, Long> pending = new HashMap<>();
+        Map<Long, Long> pending = HashMap.newHashMap(ids.size());
         for (int i = 0; i < ids.size(); i++) {
             String value = (values == null || i >= values.size()) ? null : values.get(i);
             long delta = parse(value);
@@ -108,8 +106,8 @@ public class BlogViewCounter {
      * @return postId -> 增量；无待回写项时为空 Map
      */
     public Map<Long, Long> takeAll() {
-        Map<String, String> raw = redisClient.open1(s -> s.jedis().hgetAll(PENDING_KEY));
-        Map<Long, Long> pending = new HashMap<>();
+        Map<String, String> raw = redisClient.open1(s -> s.jedis().hgetAll(BlogRedisKeyConsts.POST_VIEW_PENDING));
+        Map<Long, Long> pending = HashMap.newHashMap(raw.size());
         for (Map.Entry<String, String> entry : raw.entrySet()) {
             long delta = parse(entry.getValue());
             if (delta <= 0) {
@@ -129,7 +127,7 @@ public class BlogViewCounter {
         if (postId == null || delta <= 0) {
             return;
         }
-        redisClient.open0(s -> s.jedis().hincrBy(PENDING_KEY, String.valueOf(postId), -delta));
+        redisClient.open0(s -> s.jedis().hincrBy(BlogRedisKeyConsts.POST_VIEW_PENDING, String.valueOf(postId), -delta));
     }
 
     private long parse(String value) {

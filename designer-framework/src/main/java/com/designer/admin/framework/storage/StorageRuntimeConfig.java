@@ -8,6 +8,8 @@ import java.util.Map;
 
 /**
  * 一次存储操作所用的运行时配置（来自数据库 sys_storage_config）
+ *
+ * @author 雨夜终端
  */
 @Data
 @Builder

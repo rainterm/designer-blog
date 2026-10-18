@@ -10,6 +10,8 @@ import org.noear.solon.annotation.Inject;
  * Sa-Token 会话持久化到 Redis（redisx 客户端）
  *
  * <p>配置节 sa-token-dao-redis 会被映射进 SaTokenDaoForRedisx 的 Properties 构造。
+ *
+ * @author 雨夜终端
  */
 @Configuration
 public class SaTokenDaoConfig {

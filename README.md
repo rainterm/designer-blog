@@ -105,7 +105,7 @@
 | 定时任务 | Quartz | 2.5.0 |
 | 导入导出 | EasyExcel | 4.0.3 |
 | IP 归属地 | ip2region（离线 xdb） | 随包 |
-| 数据库 | MySQL | 8 |
+| 数据库 | MySQL | 8.0.13+ |
 | 缓存/会话 | Redis | 7 |
 | 前台 / 后台框架 | Vue 3（前台 Nuxt 4 SSR） | 3.5 |
 | UI 组件库 | Naive UI | 2.45 |
@@ -157,7 +157,7 @@ designer-blog/
 | Maven | 3.9+ | 后端构建 |
 | Node.js | 18+（推荐 22） | 前端构建 |
 | pnpm | 10.x | 前端包管理（`packageManager: pnpm@10.33.0`） |
-| MySQL | 8 | 数据库 |
+| MySQL | **8.0.13+** | 数据库（唯一索引用函数索引实现「仅约束未删除行」，8.0.13 起才支持） |
 | Redis | 7 | Sa-Token 会话、验证码与限流计数（**必需**） |
 
 > 一键检查 / 安装以上环境：`cd deploy && ./install-env.sh --check`（去掉 `--check` 即安装）。
@@ -190,6 +190,10 @@ java -jar designer-server/target/designer-server.jar
 ```
 
 默认监听 `http://localhost:8080`，健康检查 `GET /admin-api/system/health`。
+
+接口文档由 `solon-openapi2-knife4j` 提供，启动后访问 `http://localhost:8080/doc.html`：
+左侧按「管理端 / 前台 / 开放接口」分组，Controller 需标注 `@Api`、方法需标注 `@ApiOperation` 才会出现在文档中。
+生产环境可用 `KNIFE4J_ENABLE=false` 关闭文档，或用 `KNIFE4J_PRODUCTION=true` 关闭 UI 静态资源。
 
 ### 4. 启动前端
 

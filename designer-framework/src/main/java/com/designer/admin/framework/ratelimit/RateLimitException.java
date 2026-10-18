@@ -18,6 +18,8 @@ import com.designer.admin.common.exception.BizException;
  * ——{@code GlobalExceptionFilter} 把异常统一渲染成 HTTP 200 + 业务码，
  * 所以这里只体现在响应体的 {@code code} 上。按 HTTP 状态码判断的调用方
  * 只能看到 nginx 那一层，按业务码判断的（本项目前端）两层都能覆盖。</p>
+ *
+ * @author 雨夜终端
  */
 public class RateLimitException extends BizException {
 

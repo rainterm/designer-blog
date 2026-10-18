@@ -1,41 +1,36 @@
 package com.designer.admin.framework.notice;
 
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Init;
+import org.noear.solon.core.util.RunUtil;
 import org.noear.solon.web.sse.SseEmitter;
 import org.noear.solon.web.sse.SseEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 站内消息 SSE 连接中心（单机内存；多实例可再接 Redis Pub/Sub）
+ *
+ * @author 雨夜终端
  */
 @Component
+@Slf4j
 public class NoticeSseHub {
-
-    private static final Logger log = LoggerFactory.getLogger(NoticeSseHub.class);
 
     /** userId -> emitters（同用户多标签页） */
     private final Map<Long, CopyOnWriteArraySet<SseEmitter>> sessions = new ConcurrentHashMap<>();
 
-    private ScheduledExecutorService heartbeat;
+    /** SSE 心跳间隔（毫秒）：需小于前端重连阈值 */
+    private static final long HEARTBEAT_INTERVAL_MILLIS = 25_000L;
 
     @Init
     public void init() {
-        heartbeat = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "notice-sse-heartbeat");
-            t.setDaemon(true);
-            return t;
-        });
-        heartbeat.scheduleAtFixedRate(this::pingAll, 25, 25, TimeUnit.SECONDS);
+        // 复用 Solon 的全局调度线程池：随 SolonApp 一起关闭，不需要自己管生命周期
+        RunUtil.scheduleAtFixedRate(this::pingAll, HEARTBEAT_INTERVAL_MILLIS, HEARTBEAT_INTERVAL_MILLIS);
     }
 
     /** 建立订阅：不超时，由心跳 + 前端重连保活 */
@@ -91,15 +86,20 @@ public class NoticeSseHub {
     }
 
     private void pingAll() {
-        SseEvent ping = new SseEvent().name("ping").data(String.valueOf(System.currentTimeMillis()));
-        for (Map.Entry<Long, CopyOnWriteArraySet<SseEmitter>> e : sessions.entrySet()) {
-            for (SseEmitter emitter : e.getValue()) {
-                try {
-                    emitter.send(ping);
-                } catch (Exception ex) {
-                    remove(e.getKey(), emitter);
+        // 定时任务里抛出的异常会取消后续调度，这里整体兜一层
+        try {
+            SseEvent ping = new SseEvent().name("ping").data(String.valueOf(System.currentTimeMillis()));
+            for (Map.Entry<Long, CopyOnWriteArraySet<SseEmitter>> e : sessions.entrySet()) {
+                for (SseEmitter emitter : e.getValue()) {
+                    try {
+                        emitter.send(ping);
+                    } catch (Exception ex) {
+                        remove(e.getKey(), emitter);
+                    }
                 }
             }
+        } catch (Exception ex) {
+            log.warn("SSE 心跳推送失败", ex);
         }
     }
 

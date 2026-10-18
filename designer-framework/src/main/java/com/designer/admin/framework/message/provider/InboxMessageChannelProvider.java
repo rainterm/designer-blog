@@ -1,5 +1,7 @@
 package com.designer.admin.framework.message.provider;
 
+import com.designer.admin.framework.constant.MessageChannelConsts;
+
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.message.InboxSink;
 import com.designer.admin.framework.message.MessageChannelProvider;
@@ -16,18 +18,18 @@ import java.util.stream.Collectors;
 
 /**
  * 站内通知通道：写入消息中心，由顶部铃铛投递给登录用户。
+ *
+ * @author 雨夜终端
  */
 @Component
 public class InboxMessageChannelProvider implements MessageChannelProvider {
-
-    public static final String TYPE = "inbox";
 
     @Inject
     private InboxSink inboxSink;
 
     @Override
     public String type() {
-        return TYPE;
+        return MessageChannelConsts.TYPE_INBOX;
     }
 
     @Override

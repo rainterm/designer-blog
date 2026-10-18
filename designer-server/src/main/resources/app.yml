@@ -11,6 +11,30 @@ server:
 solon.app:
   name: designer-server
 
+# ============================ 线程模型 ============================
+# 开启后 Solon 的并行/调度执行器使用虚拟线程（JDK 21+）：
+# 日志落库、消息发送等 I/O 旁路任务（RunUtil.asyncAndTry）不再占用平台线程。
+solon.threads.virtual.enabled: true
+
+# ============================ 配置密钥加密（可选）============================
+# 「存储配置」里的 accessKey / secretKey 与「消息通道」里的 SMTP 密码，落库前会用该主密钥
+# AES 加密成 ENC(...) 形态（实现见 framework 的 ConfigSecretUtil）。
+#   · 不配置 → 保持明文，历史数据照常读取（升级无需刷库）；
+#   · 配置后 → 只影响新写入的配置，旧明文仍能读；
+#   · 换密钥 → 已存密文解不开，读取时会打 error 日志并回退原值，务必沿用同一密钥。
+# AES 只接受 16 / 24 / 32 字节的密钥；请用环境变量注入，不要提交到仓库。
+solon.vault:
+  password: "${VAULT_PASSWORD:}"
+
+# ============================ 接口文档（Knife4j）============================
+# 访问 http://localhost:8080/doc.html；生产环境可用 KNIFE4J_ENABLE=false 关闭
+knife4j:
+  enable: "${KNIFE4J_ENABLE:true}"
+  production: "${KNIFE4J_PRODUCTION:false}"
+  setting:
+    language: "zh-CN"
+    swaggerModelName: "数据模型"
+
 # ============================ 日志 ============================
 # 使用 Solon 内置的 Logback 集成（solon-logging-logback）：
 # 项目未提供 logback.xml / logback-solon.xml，因此由下列配置自动生成 appender。
@@ -58,7 +82,10 @@ solon.dataSources:
 # ============================ MyBatis-Plus ============================
 mybatis.db1:
   mappers:
-    - "com.designer.admin.**.mapper.*"
+    # 系统模块：mapper 按业务域拆分子包（mapper/rbac、mapper/auth ...）
+    - "com.designer.admin.system.mapper.**.*"
+    # 其他模块：mapper 接口直接位于 mapper 包下
+    - "com.designer.admin.module.**.mapper.*"
   configuration:
     mapUnderscoreToCamelCase: true
     # 开发期排查 SQL 时可打开：
@@ -130,7 +157,7 @@ sa-token:
 aj:
   captcha:
     type: blockPuzzle
-    # 必须与 RedisCaptchaCacheService#type() 的返回值一致，否则查不到该实现
+    # 必须与 RedisCaptchaCacheServiceImpl#type() 的返回值一致，否则查不到该实现
     cache-type: redis
     # 画在底图上的水印
     water-mark: "Designer Blog"

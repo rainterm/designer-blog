@@ -10,6 +10,8 @@ import java.util.List;
 /**
  * Sa-Token 权限数据源：为 @SaCheckPermission / @SaCheckRole 提供权限与角色清单。
  * 超级管理员直接返回通配符 * ，跳过细粒度校验。
+ *
+ * @author 雨夜终端
  */
 @Component
 public class StpInterfaceImpl implements StpInterface {

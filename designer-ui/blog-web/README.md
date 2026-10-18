@@ -131,7 +131,7 @@ scripts/                 # 构建期同步 tokens.css 与 favicon.svg（见「�
 | `POST /app-api/blog/public/comments` | 提交评论，需带 `captchaVerification`（+ `commenterKey`） |
 | `GET /app-api/blog/public/posts/{id}/comments` | 分页拉取已通过评论（`pageNum`/`pageSize`），按顶级评论分页 |
 | `GET /app-api/blog/public/posts/{id}/comments/mine` | 我的待审评论（需请求头 `X-Commenter-Key`） |
-| `DELETE /app-api/blog/public/comments/mine/{id}` | 删除自己的评论（需请求头 `X-Commenter-Key`） |
+| `DELETE /app-api/blog/public/comments/{id}/mine` | 删除自己的评论（需请求头 `X-Commenter-Key`） |
 
 - **评论列表也走 SSR**：评论是正文之外最实在的可索引文本，只在客户端拉等于把这块内容整个让给 JS 渲染。
 - **滑块组件来自共享模块**：`SliderCaptcha.vue` / 协议工具 / 请求封装都在

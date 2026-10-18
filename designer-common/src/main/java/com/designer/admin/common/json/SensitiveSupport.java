@@ -25,6 +25,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>
  * 必须在任意 snack4 反序列化/序列化之前完成注册（见 {@link com.designer.admin.DesignerApp}），
  * 否则 Eggg 会缓存不含脱敏信息的 ClassEggg。
+ *
+ * @author 雨夜终端
  */
 public final class SensitiveSupport {
 
@@ -46,7 +48,7 @@ public final class SensitiveSupport {
     }
 
     private static ONodeAttrHolder toAttrHolder(ClassEggg ce, AnnotatedEggg ae, Sensitive anno) {
-        return new ONodeAttrHolder(asONodeAttr(anno), resolveName(ae), ae);
+        return new ONodeAttrHolder(asNodeAttr(anno), resolveName(ae), ae);
     }
 
     private static String resolveName(AnnotatedEggg s) {
@@ -63,7 +65,7 @@ public final class SensitiveSupport {
     }
 
     /** 构造供 {@link ONodeAttrHolder} 使用的 {@link ONodeAttr} 代理 */
-    private static ONodeAttr asONodeAttr(Sensitive sensitive) {
+    private static ONodeAttr asNodeAttr(Sensitive sensitive) {
         return (ONodeAttr) Proxy.newProxyInstance(
                 ONodeAttr.class.getClassLoader(),
                 new Class<?>[]{ONodeAttr.class},

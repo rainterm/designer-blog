@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 /**
  * 定时任务调度日志模型（framework 侧）。
+ *
+ * @author 雨夜终端
  */
 @Data
 public class JobLogRecord {

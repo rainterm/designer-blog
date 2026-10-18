@@ -1,6 +1,7 @@
 package com.designer.admin.framework.job;
 
 import com.designer.admin.common.exception.BizException;
+import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Destroy;
 import org.noear.solon.annotation.Init;
@@ -15,16 +16,15 @@ import org.quartz.SchedulerException;
 import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
 import org.quartz.impl.StdSchedulerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Quartz 调度器封装：创建 / 更新 / 删除 / 暂停 / 恢复 / 立即执行
+ *
+ * @author 雨夜终端
  */
 @Component
+@Slf4j
 public class ScheduleManager {
-
-    private static final Logger log = LoggerFactory.getLogger(ScheduleManager.class);
 
     private Scheduler scheduler;
 
@@ -57,7 +57,7 @@ public class ScheduleManager {
             JobDetail jobDetail = JobBuilder.newJob(jobClass)
                     .withIdentity(jobKey)
                     .build();
-            jobDetail.getJobDataMap().put(ScheduleConstants.TASK_PROPERTIES, job);
+            jobDetail.getJobDataMap().put(ScheduleConsts.TASK_PROPERTIES, job);
 
             CronScheduleBuilder scheduleBuilder = CronScheduleBuilder.cronSchedule(job.getCronExpression());
             scheduleBuilder = handleMisfire(scheduleBuilder, job.getMisfirePolicy());
@@ -68,7 +68,7 @@ public class ScheduleManager {
                     .build();
 
             scheduler.scheduleJob(jobDetail, trigger);
-            if (job.getStatus() != null && job.getStatus() == ScheduleConstants.STATUS_PAUSE) {
+            if (job.getStatus() != null && job.getStatus() == ScheduleConsts.STATUS_PAUSE) {
                 pauseJob(job);
             }
         } catch (SchedulerException e) {
@@ -115,7 +115,7 @@ public class ScheduleManager {
     public void runJobOnce(JobModel job) {
         try {
             JobDataMap dataMap = new JobDataMap();
-            dataMap.put(ScheduleConstants.TASK_PROPERTIES, job);
+            dataMap.put(ScheduleConsts.TASK_PROPERTIES, job);
             JobKey key = jobKey(job);
             if (!scheduler.checkExists(key)) {
                 createJob(job);
@@ -131,24 +131,24 @@ public class ScheduleManager {
             return builder;
         }
         return switch (policy) {
-            case ScheduleConstants.MISFIRE_IGNORE_MISFIRES -> builder.withMisfireHandlingInstructionIgnoreMisfires();
-            case ScheduleConstants.MISFIRE_DO_NOTHING -> builder.withMisfireHandlingInstructionDoNothing();
+            case ScheduleConsts.MISFIRE_IGNORE_MISFIRES -> builder.withMisfireHandlingInstructionIgnoreMisfires();
+            case ScheduleConsts.MISFIRE_DO_NOTHING -> builder.withMisfireHandlingInstructionDoNothing();
             default -> builder.withMisfireHandlingInstructionFireAndProceed();
         };
     }
 
     private Class<? extends org.quartz.Job> resolveJobClass(JobModel job) {
-        if (job.getConcurrent() != null && job.getConcurrent() == ScheduleConstants.CONCURRENT_DISALLOW) {
+        if (job.getConcurrent() != null && job.getConcurrent() == ScheduleConsts.CONCURRENT_DISALLOW) {
             return QuartzDisallowConcurrentExecution.class;
         }
         return QuartzJobExecution.class;
     }
 
     public static JobKey jobKey(JobModel job) {
-        return JobKey.jobKey(ScheduleConstants.TASK_CLASS_NAME + job.getId(), job.getJobGroup());
+        return JobKey.jobKey(ScheduleConsts.TASK_CLASS_NAME + job.getId(), job.getJobGroup());
     }
 
     public static TriggerKey triggerKey(JobModel job) {
-        return TriggerKey.triggerKey(ScheduleConstants.TASK_CLASS_NAME + job.getId(), job.getJobGroup());
+        return TriggerKey.triggerKey(ScheduleConsts.TASK_CLASS_NAME + job.getId(), job.getJobGroup());
     }
 }

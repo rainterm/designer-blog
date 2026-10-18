@@ -7,6 +7,8 @@ import org.noear.solon.annotation.Configuration;
 
 /**
  * 业务侧 Redis 客户端（与 Sa-Token 共用 sa-token-dao-redis 配置）
+ *
+ * @author 雨夜终端
  */
 @Configuration
 public class RedisClientConfig {

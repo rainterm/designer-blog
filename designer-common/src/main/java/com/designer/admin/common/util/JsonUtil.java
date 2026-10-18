@@ -9,6 +9,8 @@ import java.util.Map;
 
 /**
  * JSON 序列化统一入口（基于 snack4，Solon 4.x 默认 JSON 引擎）
+ *
+ * @author 雨夜终端
  */
 public final class JsonUtil {
 
