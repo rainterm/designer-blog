@@ -14,14 +14,7 @@
     <PageTable :pager="pager" :columns="columns" :row-key="(row) => row.tokenId">
       <template #toolbar-right>
         <n-space>
-          <n-button
-            v-perm="'system:online:forceLogout'"
-            type="error"
-            :disabled="!checkedRowKeys.length"
-            @click="handleBatchForce"
-          >
-            批量强退
-          </n-button>
+          <n-button v-perm="'system:online:forceLogout'" type="error" :disabled="!checkedRowKeys.length" @click="handleBatchForce"> 批量强退 </n-button>
         </n-space>
       </template>
     </PageTable>
@@ -29,7 +22,7 @@
 </template>
 
 <script setup>
-import { computed, h } from 'vue'
+import { computed } from 'vue'
 import { useMessage } from 'naive-ui'
 import { ExitOutline } from '@vicons/ionicons5'
 import { hActionConfirm } from '@/utils/actionBtn'

@@ -32,6 +32,8 @@ export function nicknameKey(raw) {
   return String(raw ?? '')
     .normalize('NFKC')
     .replace(/[\u200B-\u200D\u200E\u200F\u2060\uFEFF\u00AD]/g, '')
+    // 这里就是要匹配 C0/C1 控制字符：昵称里的不可见字符必须剥掉才算同一个名字
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001F\u007F]/g, '')
     .replace(/\s+/g, '')
     .toLowerCase()

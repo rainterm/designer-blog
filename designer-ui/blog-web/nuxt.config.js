@@ -24,14 +24,30 @@ const sharedCaptchaDir = fileURLToPath(new URL('../shared/captcha', import.meta.
  * 否则「SSR 取数」和「浏览器取数」可能指向两个不同的后端，
  * 症状是页面能打开但评论/验证码静默失败，很难查。</p>
  */
-const apiInternalBase = (process.env.NUXT_API_INTERNAL_BASE || 'http://localhost:8080').replace(
-  /\/+$/,
-  ''
-)
+const apiInternalBase = (process.env.NUXT_API_INTERNAL_BASE || 'http://localhost:8080').replace(/\/+$/, '')
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-14',
   devtools: { enabled: false },
+
+  /**
+   * @nuxt/eslint：按 Nuxt 的自动导入生成 `eslint.config.mjs` 的可导入版本
+   * （见 `.nuxt/eslint.config.mjs`，由 `nuxt prepare` 产出）。
+   * 少了它，`no-undef` 会把 `ref` / `useFetch` / `definePageMeta` 全部报成未定义。
+   */
+  modules: ['@nuxt/eslint'],
+
+  eslint: {
+    config: {
+      /**
+       * 关闭 @nuxt/eslint 自带的风格规则集。
+       *
+       * <p>本项目不接格式化工具，缩进与换行由编写者决定；风格规则集会把
+       * 格式变成 lint 错误，那就等于用 ESLint 再造一个格式化器。</p>
+       */
+      stylistic: false
+    }
+  },
 
   runtimeConfig: {
     /**
@@ -97,24 +113,14 @@ export default defineNuxtConfig({
        * 注意：crypto-js 只引 AES + UTF8 + ECB + PKCS7 四个子模块，不进整包
        * （见 shared/captcha/sliderCaptcha.js）。
        */
-      include: [
-        'crypto-js/aes.js',
-        'crypto-js/enc-utf8.js',
-        'crypto-js/mode-ecb.js',
-        'crypto-js/pad-pkcs7.js',
-        'naive-ui',
-        'md-editor-v3'
-      ]
+      include: ['crypto-js/aes.js', 'crypto-js/enc-utf8.js', 'crypto-js/mode-ecb.js', 'crypto-js/pad-pkcs7.js', 'naive-ui', 'md-editor-v3']
     }
   },
 
   app: {
     head: {
       htmlAttrs: { lang: 'zh-CN' },
-      meta: [
-        { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1.0' }
-      ],
+      meta: [{ charset: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1.0' }],
       link: [
         // favicon 不写死在这里：它要跟随站点 Logo，由 app.vue / error.vue 的
         // useHead（见 composables/useFavicon.js）统一渲染。两处都写会让 head 里

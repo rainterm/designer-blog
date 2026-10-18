@@ -37,15 +37,11 @@ export const PASSWORD_HINT = `${PASSWORD_LENGTH_HINT}，需包含大写字母、
  * JS 的 `test()` 本身是「存在子串即通过」，不加锚点会在个别输入上（如含换行）
  * 与后端判断不一致。末尾 `.+` 不匹配换行，含换行的密码同样会被拒。
  */
-export const PASSWORD_STRENGTH_REGEXP = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!-/:-@\[-`{-~]).+$/
+export const PASSWORD_STRENGTH_REGEXP = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!-/:-@[-`{-~]).+$/
 
 /** 密码长度是否合规 */
 export function isValidPasswordLength(value) {
-  return (
-    typeof value === 'string' &&
-    value.length >= PASSWORD_MIN_LENGTH &&
-    value.length <= PASSWORD_MAX_LENGTH
-  )
+  return typeof value === 'string' && value.length >= PASSWORD_MIN_LENGTH && value.length <= PASSWORD_MAX_LENGTH
 }
 
 /** 是否同时包含大写字母、小写字母、数字、特殊符号 */
@@ -70,11 +66,7 @@ export function isValidPassword(value) {
  * @param {boolean} [options.complexity] 是否校验复杂度（登录页传 false）
  * @returns {Array} naive-ui 表单规则
  */
-export function buildPasswordRules({
-  required = false,
-  requiredMessage = '请输入密码',
-  complexity = true
-} = {}) {
+export function buildPasswordRules({ required = false, requiredMessage = '请输入密码', complexity = true } = {}) {
   const rules = []
   if (required) {
     rules.push({ required: true, message: requiredMessage, trigger: ['input', 'blur'] })

@@ -39,9 +39,7 @@ export default defineComponent({
     function measure() {
       if (!shouldAutoHeight() || !tableEl) return
 
-      const header =
-        tableEl.querySelector('.n-data-table-base-table-header') ||
-        tableEl.querySelector('.n-data-table-thead')
+      const header = tableEl.querySelector('.n-data-table-base-table-header') || tableEl.querySelector('.n-data-table-thead')
       const headerH = header ? header.getBoundingClientRect().height : 40
       const hasScrollX = attrs.scrollX != null || attrs['scroll-x'] != null
       const hScroll = hasScrollX ? 12 : 0
@@ -120,11 +118,14 @@ export default defineComponent({
 
     watch(
       () => [attrs.data, attrs.loading, attrs.columns],
-      () =>
+      () => {
+        // 用语句块而不是直接返回 nextTick 的 Promise：
+        // watch 回调的返回值会被当作清理函数处理，返回 Promise 语义上无意义。
         nextTick(() => {
           measure()
           requestAnimationFrame(measure)
         })
+      }
     )
 
     return () => {

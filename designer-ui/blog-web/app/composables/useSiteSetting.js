@@ -1,4 +1,3 @@
-import { fetchSiteSetting } from '@/api/blog'
 import { brand } from '@/config/site'
 import { colors } from '@/config/theme'
 
