@@ -72,7 +72,7 @@ public class RedisCounter {
      * @param ttlSeconds 窗口长度（秒）；从窗口内第一次请求开始计
      */
     public long incrWithTtl(String key, int ttlSeconds) {
-        Object result = redisClient.open1(s ->
+        Object result = redisClient.openAndGet(s ->
                 s.jedis().eval(INCR_WITH_TTL_LUA, 1, key, String.valueOf(ttlSeconds)));
         if (result instanceof Number n) {
             return n.longValue();
@@ -86,6 +86,6 @@ public class RedisCounter {
      * @return 剩余秒数；键不存在返回 {@code -2}、键存在但无过期时间返回 {@code -1}（同 Redis TTL 语义）
      */
     public long ttlSeconds(String key) {
-        return redisClient.open1(s -> s.jedis().ttl(key));
+        return redisClient.openAndGet(s -> s.jedis().ttl(key));
     }
 }

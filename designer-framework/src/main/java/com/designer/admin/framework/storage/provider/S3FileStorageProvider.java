@@ -1,8 +1,8 @@
 package com.designer.admin.framework.storage.provider;
 
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.spi.ConfigFieldMeta;
 import com.designer.admin.framework.storage.FileStorageProvider;
-import com.designer.admin.framework.storage.StorageFieldMeta;
 import com.designer.admin.framework.storage.StorageProperties;
 import com.designer.admin.framework.storage.StorageRuntimeConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -66,22 +66,22 @@ public class S3FileStorageProvider implements FileStorageProvider {
     }
 
     @Override
-    public List<StorageFieldMeta> configFields() {
+    public List<ConfigFieldMeta> configFields() {
         return List.of(
-                StorageFieldMeta.builder().name("endpoint").label("Endpoint").inputType("text").required(false)
+                ConfigFieldMeta.builder().name("endpoint").label("Endpoint").inputType("text").required(false)
                         .placeholder("http://127.0.0.1:9000").help("MinIO/自建网关填写；AWS 官方可留空").build(),
-                StorageFieldMeta.builder().name("region").label("Region").inputType("text").required(false)
+                ConfigFieldMeta.builder().name("region").label("Region").inputType("text").required(false)
                         .placeholder("cn-hangzhou")
                         .help("MinIO 可留空；阿里云/腾讯云/华为云/AWS 填写桶所在地域").build(),
-                StorageFieldMeta.builder().name("accessKey").label("Access Key").inputType("text").required(true)
+                ConfigFieldMeta.builder().name("accessKey").label("Access Key").inputType("text").required(true)
                         .placeholder("Access Key").build(),
-                StorageFieldMeta.builder().name("secretKey").label("Secret Key").inputType("password").required(true)
+                ConfigFieldMeta.builder().name("secretKey").label("Secret Key").inputType("password").required(true)
                         .placeholder("Secret Key").build(),
-                StorageFieldMeta.builder().name("bucket").label("Bucket").inputType("text").required(true)
+                ConfigFieldMeta.builder().name("bucket").label("Bucket").inputType("text").required(true)
                         .placeholder("bucket-name").build(),
-                StorageFieldMeta.builder().name("pathStyleAccess").label("Path-Style").inputType("switch").required(false)
+                ConfigFieldMeta.builder().name("pathStyleAccess").label("Path-Style").inputType("switch").required(false)
                         .defaultValue("true").help("MinIO 建议开启").build(),
-                StorageFieldMeta.builder().name("publicUrl").label("公网/CDN 前缀").inputType("text").required(false)
+                ConfigFieldMeta.builder().name("publicUrl").label("公网/CDN 前缀").inputType("text").required(false)
                         .placeholder("https://cdn.example.com/bucket")
                         .help("配置后直接返回外链；留空则走代理下载前缀").build()
         );

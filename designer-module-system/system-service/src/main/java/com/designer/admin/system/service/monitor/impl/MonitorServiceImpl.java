@@ -57,11 +57,9 @@ public class MonitorServiceImpl implements MonitorService {
         double systemCpu = -1;
         double processCpu = -1;
         if (os instanceof com.sun.management.OperatingSystemMXBean sun) {
+            // JDK 14 起统一用 getCpuLoad()，不可用时同样返回负值，无需再退回已过时的 getSystemCpuLoad()
             systemCpu = sun.getCpuLoad();
             processCpu = sun.getProcessCpuLoad();
-            if (systemCpu < 0) {
-                systemCpu = sun.getSystemCpuLoad();
-            }
         }
         return CpuInfoVO.builder()
                 .name(os.getName())

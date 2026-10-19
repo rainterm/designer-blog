@@ -1,6 +1,5 @@
 package com.designer.admin.system.service.rbac;
 
-import cn.dev33.satoken.secure.BCrypt;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.system.model.dto.auth.ProfileUpdateDTO;

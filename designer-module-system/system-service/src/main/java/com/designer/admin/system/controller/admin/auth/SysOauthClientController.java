@@ -57,7 +57,7 @@ public class SysOauthClientController {
 
     @Post
     @Mapping("/add")
-    @OperLog(title = "OAuth客户端", businessType = BusinessType.INSERT)
+    @OperLog(title = "OAuth2 客户端", businessType = BusinessType.INSERT)
     @SaCheckPermission("system:oauthclient:add")
     @ApiOperation(value = "新增 OAuth2 客户端")
     public Result<OauthClientCreatedVO> add(@Body @Validated OauthClientSaveDTO dto) {
@@ -66,7 +66,7 @@ public class SysOauthClientController {
 
     @Put
     @Mapping("/update")
-    @OperLog(title = "OAuth客户端", businessType = BusinessType.UPDATE)
+    @OperLog(title = "OAuth2 客户端", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:oauthclient:edit")
     @ApiOperation(value = "修改 OAuth2 客户端")
     public Result<Void> update(@Body @Validated OauthClientSaveDTO dto) {
@@ -76,7 +76,7 @@ public class SysOauthClientController {
 
     @Post
     @Mapping("/{id}/reset-secret")
-    @OperLog(title = "OAuth客户端", businessType = BusinessType.UPDATE)
+    @OperLog(title = "OAuth2 客户端", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:oauthclient:resetSecret")
     @ApiOperation(value = "重置 OAuth2 客户端密钥")
     public Result<OauthClientCreatedVO> resetSecret(Long id) {
@@ -85,7 +85,7 @@ public class SysOauthClientController {
 
     @Delete
     @Mapping("/remove")
-    @OperLog(title = "OAuth客户端", businessType = BusinessType.DELETE)
+    @OperLog(title = "OAuth2 客户端", businessType = BusinessType.DELETE)
     @SaCheckPermission("system:oauthclient:remove")
     @ApiOperation(value = "删除 OAuth2 客户端")
     public Result<Void> remove(List<Long> ids) {

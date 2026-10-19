@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
- * OAuth 客户端与 Scope 关联
+ * OAuth2 客户端与 Scope 关联
  *
  * @author 雨夜终端
  */
@@ -12,7 +12,7 @@ import lombok.Data;
 @TableName("sys_oauth_client_scope")
 public class SysOauthClientScope {
 
-    /** OAuth 客户端ID */
+    /** OAuth2 客户端ID */
     private Long clientId;
 
     /** 授权范围ID */

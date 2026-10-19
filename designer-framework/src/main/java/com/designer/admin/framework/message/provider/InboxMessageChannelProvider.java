@@ -1,13 +1,12 @@
 package com.designer.admin.framework.message.provider;
 
-import com.designer.admin.framework.constant.MessageChannelConsts;
-
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.message.InboxSink;
+import com.designer.admin.framework.message.MessageChannelConsts;
 import com.designer.admin.framework.message.MessageChannelProvider;
-import com.designer.admin.framework.message.MessageFieldMeta;
 import com.designer.admin.framework.message.MessagePayload;
 import com.designer.admin.framework.message.MessageRuntimeConfig;
+import com.designer.admin.framework.spi.ConfigFieldMeta;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 
@@ -38,7 +37,7 @@ public class InboxMessageChannelProvider implements MessageChannelProvider {
     }
 
     @Override
-    public List<MessageFieldMeta> configFields() {
+    public List<ConfigFieldMeta> configFields() {
         return Collections.emptyList();
     }
 

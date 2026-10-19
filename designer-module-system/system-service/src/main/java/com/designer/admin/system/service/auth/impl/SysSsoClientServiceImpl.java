@@ -3,7 +3,7 @@ package com.designer.admin.system.service.auth.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
-import com.designer.admin.framework.constant.HttpConsts;
+import com.designer.admin.common.constant.HttpConsts;
 import com.designer.admin.system.mapper.auth.SysSsoClientMapper;
 import com.designer.admin.system.model.dto.auth.SsoClientQueryDTO;
 import com.designer.admin.system.model.dto.auth.SsoClientSaveDTO;

@@ -66,6 +66,13 @@ export default defineConfig({
         changeOrigin: true,
         timeout: 0,
         proxyTimeout: 0
+      },
+      // 第三方开放接口（含令牌端点 /open-api/oauth2/token），与生产 nginx 路径一致
+      '/open-api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        timeout: 0,
+        proxyTimeout: 0
       }
     }
   },

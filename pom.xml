@@ -42,6 +42,7 @@
         <commons-logging.version>1.3.5</commons-logging.version>
         <ip2region.version>2.7.0</ip2region.version>
         <swagger.version>1.6.16</swagger.version>
+        <bcrypt.version>0.10.2</bcrypt.version>
     </properties>
 
     <dependencyManagement>
@@ -156,6 +157,12 @@
                 <groupId>org.lionsoul</groupId>
                 <artifactId>ip2region</artifactId>
                 <version>${ip2region.version}</version>
+            </dependency>
+            <!-- 密码哈希：Sa-Token 1.41 起不再维护加密模块，改用独立 BCrypt 实现 -->
+            <dependency>
+                <groupId>at.favre.lib</groupId>
+                <artifactId>bcrypt</artifactId>
+                <version>${bcrypt.version}</version>
             </dependency>
             <!-- OpenAPI2 / Knife4j 注解（@Api、@ApiOperation、@ApiModelProperty 等） -->
             <dependency>

@@ -60,7 +60,7 @@ INSERT INTO `sys_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `path`, `co
 (13, 1, '字典管理', 'C', '/system/dict',      'system/dict/index',    'system:dict:list',     'book',        6, 1, 1, 'system', NOW(), 'system', NOW()),
 (23, 1, '参数设置', 'C', '/system/config',    'system/config/index',  'system:config:list',   'options',     7, 1, 1, 'system', NOW(), 'system', NOW()),
 (26, 1, 'SSO客户端', 'C', '/system/ssoclient', 'system/ssoclient/index','system:ssoclient:list','link',       8, 1, 1, 'system', NOW(), 'system', NOW()),
-(28, 1, 'OAuth客户端', 'C', '/system/oauthclient', 'system/oauthclient/index','system:oauthclient:list','key', 9, 1, 1, 'system', NOW(), 'system', NOW()),
+(28, 1, 'OAuth2 客户端', 'C', '/system/oauthclient', 'system/oauthclient/index','system:oauthclient:list','key', 9, 1, 1, 'system', NOW(), 'system', NOW()),
 (27, 1, '系统设置', 'C', '/system/setting', 'system/setting/index', 'system:setting:query', 'color', 10, 1, 1, 'system', NOW(), 'system', NOW()),
 -- 系统监控
 (24, 2, '在线用户', 'C', '/system/online',    'system/online/index',  'system:online:list',   'pulse',       1, 1, 1, 'system', NOW(), 'system', NOW()),
@@ -137,10 +137,10 @@ INSERT INTO `sys_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `path`, `co
 (261, 26, 'SSO新增', 'F', '', '', 'system:ssoclient:add',    '',2, 1, 1, 'system', NOW(), 'system', NOW()),
 (262, 26, 'SSO修改', 'F', '', '', 'system:ssoclient:edit',   '',3, 1, 1, 'system', NOW(), 'system', NOW()),
 (263, 26, 'SSO删除', 'F', '', '', 'system:ssoclient:remove', '',4, 1, 1, 'system', NOW(), 'system', NOW()),
-(280, 28, 'OAuth查询', 'F', '', '', 'system:oauthclient:query',  '',1, 1, 1, 'system', NOW(), 'system', NOW()),
-(281, 28, 'OAuth新增', 'F', '', '', 'system:oauthclient:add',    '',2, 1, 1, 'system', NOW(), 'system', NOW()),
-(282, 28, 'OAuth修改', 'F', '', '', 'system:oauthclient:edit',   '',3, 1, 1, 'system', NOW(), 'system', NOW()),
-(283, 28, 'OAuth删除', 'F', '', '', 'system:oauthclient:remove', '',4, 1, 1, 'system', NOW(), 'system', NOW()),
+(280, 28, 'OAuth2 查询', 'F', '', '', 'system:oauthclient:query',  '',1, 1, 1, 'system', NOW(), 'system', NOW()),
+(281, 28, 'OAuth2 新增', 'F', '', '', 'system:oauthclient:add',    '',2, 1, 1, 'system', NOW(), 'system', NOW()),
+(282, 28, 'OAuth2 修改', 'F', '', '', 'system:oauthclient:edit',   '',3, 1, 1, 'system', NOW(), 'system', NOW()),
+(283, 28, 'OAuth2 删除', 'F', '', '', 'system:oauthclient:remove', '',4, 1, 1, 'system', NOW(), 'system', NOW()),
 (284, 28, '重置密钥', 'F', '', '', 'system:oauthclient:resetSecret', '',5, 1, 1, 'system', NOW(), 'system', NOW()),
 (290, 27, '设置查询', 'F', '', '', 'system:setting:query', '',1, 1, 1, 'system', NOW(), 'system', NOW()),
 (291, 27, '设置修改', 'F', '', '', 'system:setting:edit', '',2, 1, 1, 'system', NOW(), 'system', NOW());

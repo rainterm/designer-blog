@@ -1,10 +1,10 @@
 package com.designer.admin.system.service.rbac.impl;
 
-import com.designer.admin.common.constant.SystemConsts;
-import cn.dev33.satoken.secure.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.designer.admin.common.constant.SystemConsts;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.crypto.PasswordUtil;
 import com.designer.admin.system.constant.SysUserConsts;
 import com.designer.admin.system.mapper.rbac.SysDeptMapper;
 import com.designer.admin.system.mapper.rbac.SysPostMapper;
@@ -140,7 +140,7 @@ public class SysUserServiceImpl implements SysUserService {
         dto.setUsername(username);
         SysUser user = new SysUser();
         copyEditable(dto, user);
-        user.setPassword(BCrypt.hashpw(dto.getPassword()));
+        user.setPassword(PasswordUtil.encode(dto.getPassword()));
         if (user.getStatus() == null) {
             user.setStatus(SystemConsts.STATUS_ENABLE);
         }
@@ -167,7 +167,7 @@ public class SysUserServiceImpl implements SysUserService {
         copyEditable(dto, user);
         if (notBlank(dto.getPassword())) {
             assertPasswordPolicy(dto.getPassword());
-            user.setPassword(BCrypt.hashpw(dto.getPassword()));
+            user.setPassword(PasswordUtil.encode(dto.getPassword()));
         }
         userMapper.updateById(user);
         if (dto.getRoleIds() != null) {
@@ -227,12 +227,12 @@ public class SysUserServiceImpl implements SysUserService {
             throw new BizException("用户不存在");
         }
         assertPasswordPolicy(dto.getPassword());
-        if (BCrypt.checkpw(dto.getPassword(), target.getPassword())) {
+        if (PasswordUtil.matches(dto.getPassword(), target.getPassword())) {
             throw new BizException("新密码不能与该用户当前密码相同");
         }
         SysUser user = new SysUser();
         user.setId(dto.getUserId());
-        user.setPassword(BCrypt.hashpw(dto.getPassword()));
+        user.setPassword(PasswordUtil.encode(dto.getPassword()));
         userMapper.updateById(user);
     }
 
@@ -264,7 +264,7 @@ public class SysUserServiceImpl implements SysUserService {
         if (db == null) {
             throw new BizException("用户不存在");
         }
-        if (!BCrypt.checkpw(oldPwd, db.getPassword())) {
+        if (!PasswordUtil.matches(oldPwd, db.getPassword())) {
             throw new BizException("原密码不正确");
         }
         assertPasswordPolicy(newPwd);
@@ -273,7 +273,7 @@ public class SysUserServiceImpl implements SysUserService {
         }
         SysUser user = new SysUser();
         user.setId(userId);
-        user.setPassword(BCrypt.hashpw(newPwd));
+        user.setPassword(PasswordUtil.encode(newPwd));
         userMapper.updateById(user);
     }
 
@@ -352,7 +352,7 @@ public class SysUserServiceImpl implements SysUserService {
             if (pwdViolation != null) {
                 throw new BizException("第 " + line + " 行密码不符合要求：" + pwdViolation);
             }
-            user.setPassword(BCrypt.hashpw(pwd));
+            user.setPassword(PasswordUtil.encode(pwd));
             userMapper.insert(user);
             success++;
         }

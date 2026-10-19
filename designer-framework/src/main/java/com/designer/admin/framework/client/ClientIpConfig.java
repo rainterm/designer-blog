@@ -1,7 +1,5 @@
-package com.designer.admin.framework.config;
+package com.designer.admin.framework.client;
 
-import com.designer.admin.framework.client.IpRegionResolver;
-import com.designer.admin.framework.client.TrustedProxyHostUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.Solon;
 import org.noear.solon.annotation.Bean;

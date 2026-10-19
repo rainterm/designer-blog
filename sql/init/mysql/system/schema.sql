@@ -427,7 +427,7 @@ CREATE TABLE `sys_oauth_scope` (
 
 CREATE TABLE `sys_oauth_client` (
     `id`                BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `client_id`         VARCHAR(64)  NOT NULL                COMMENT 'OAuth client_id',
+    `client_id`         VARCHAR(64)  NOT NULL                COMMENT 'OAuth2 client_id',
     `client_secret`     VARCHAR(100) NOT NULL                COMMENT '客户端密钥（BCrypt）',
     `client_name`       VARCHAR(100) NOT NULL                COMMENT '客户端名称',
     `access_token_ttl`  INT          NOT NULL DEFAULT 7200   COMMENT 'access_token 有效期（秒）',

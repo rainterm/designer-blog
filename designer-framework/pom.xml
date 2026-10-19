@@ -45,6 +45,11 @@
             <groupId>org.noear</groupId>
             <artifactId>solon-web-sse</artifactId>
         </dependency>
+        <!-- 密码哈希（BCrypt）：Sa-Token 1.41 起不再维护加密模块 -->
+        <dependency>
+            <groupId>at.favre.lib</groupId>
+            <artifactId>bcrypt</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.noear</groupId>
             <artifactId>redisx</artifactId>

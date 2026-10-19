@@ -6,7 +6,7 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.designer.admin.common.core.PageQuery;
 import com.designer.admin.common.core.PageResult;
 import com.designer.admin.common.core.Result;
-import com.designer.admin.framework.notice.NoticeSseHub;
+import com.designer.admin.framework.message.NoticeSseHub;
 import com.designer.admin.framework.satoken.LoginHelper;
 import com.designer.admin.system.model.entity.message.SysNotice;
 import com.designer.admin.system.model.vo.message.NoticeReadCountVO;

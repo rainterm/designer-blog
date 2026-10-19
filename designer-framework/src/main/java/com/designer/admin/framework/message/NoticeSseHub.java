@@ -1,4 +1,4 @@
-package com.designer.admin.framework.notice;
+package com.designer.admin.framework.message;
 
 import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;

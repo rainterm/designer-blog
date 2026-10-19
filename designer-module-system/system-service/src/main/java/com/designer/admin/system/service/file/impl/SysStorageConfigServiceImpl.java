@@ -5,11 +5,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.common.util.JsonUtil;
-import com.designer.admin.framework.security.ConfigSecretUtil;
+import com.designer.admin.framework.crypto.ConfigSecretUtil;
+import com.designer.admin.framework.spi.ConfigFieldMeta;
 import com.designer.admin.framework.storage.FileStorageProvider;
 import com.designer.admin.framework.storage.FileStorageProviderRegistry;
 import com.designer.admin.framework.storage.StorageConfigSource;
-import com.designer.admin.framework.storage.StorageFieldMeta;
 import com.designer.admin.framework.storage.StorageProperties;
 import com.designer.admin.framework.storage.StorageRuntimeConfig;
 import com.designer.admin.framework.storage.provider.S3FileStorageProvider;
@@ -18,11 +18,11 @@ import com.designer.admin.system.mapper.file.SysStorageConfigMapper;
 import com.designer.admin.system.model.dto.file.StorageConfigQueryDTO;
 import com.designer.admin.system.model.dto.file.StorageConfigSaveDTO;
 import com.designer.admin.system.model.entity.file.SysStorageConfig;
-import com.designer.admin.system.model.vo.config.ConfigFieldVO;
 import com.designer.admin.system.model.vo.file.StorageConfigDetailVO;
 import com.designer.admin.system.model.vo.file.StorageOptionVO;
 import com.designer.admin.system.model.vo.file.StorageTypeVO;
 import com.designer.admin.system.service.file.SysStorageConfigService;
+import com.designer.admin.system.util.ConfigFieldConverter;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
@@ -108,7 +108,7 @@ public class SysStorageConfigServiceImpl implements SysStorageConfigService, Sto
             StorageTypeVO vo = new StorageTypeVO();
             vo.setType(p.type());
             vo.setLabel(p.label());
-            vo.setFields(p.configFields().stream().map(this::toConfigField).toList());
+            vo.setFields(p.configFields().stream().map(ConfigFieldConverter::toVO).toList());
             vo.setDefaultUrlPrefix(privateUrlPrefix);
             vo.setPublicUrlPrefix(publicUrlPrefix);
             return vo;
@@ -377,7 +377,7 @@ public class SysStorageConfigServiceImpl implements SysStorageConfigService, Sto
         }
         return providerRegistry.getRequired(storageType).configFields().stream()
                 .filter(f -> "password".equalsIgnoreCase(f.getInputType()))
-                .map(StorageFieldMeta::getName)
+                .map(ConfigFieldMeta::getName)
                 .collect(Collectors.toSet());
     }
 
@@ -402,7 +402,7 @@ public class SysStorageConfigServiceImpl implements SysStorageConfigService, Sto
 
     /** 按 Provider 字段元数据校验类型专属必填项 */
     private void validateRequiredFields(FileStorageProvider provider, Map<String, Object> props) {
-        for (StorageFieldMeta field : provider.configFields()) {
+        for (ConfigFieldMeta field : provider.configFields()) {
             if (!field.isRequired() || "switch".equalsIgnoreCase(field.getInputType())) {
                 continue;
             }
@@ -437,17 +437,6 @@ public class SysStorageConfigServiceImpl implements SysStorageConfigService, Sto
         }
     }
 
-    private ConfigFieldVO toConfigField(StorageFieldMeta field) {
-        return ConfigFieldVO.builder()
-                .name(field.getName())
-                .label(field.getLabel())
-                .inputType(field.getInputType())
-                .required(field.isRequired())
-                .placeholder(field.getPlaceholder())
-                .defaultValue(field.getDefaultValue())
-                .help(field.getHelp())
-                .build();
-    }
 
     private static boolean notBlank(String s) {
         return s != null && !s.isBlank();

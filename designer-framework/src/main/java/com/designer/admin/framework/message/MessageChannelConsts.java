@@ -1,4 +1,4 @@
-package com.designer.admin.framework.constant;
+package com.designer.admin.framework.message;
 
 /**
  * 消息渠道类型标识。

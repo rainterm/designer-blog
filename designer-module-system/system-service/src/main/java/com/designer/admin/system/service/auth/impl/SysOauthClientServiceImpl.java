@@ -1,10 +1,10 @@
 package com.designer.admin.system.service.auth.impl;
 
-import cn.dev33.satoken.secure.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.constant.SystemConsts;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.crypto.PasswordUtil;
 import com.designer.admin.system.constant.Oauth2Consts;
 import com.designer.admin.system.mapper.auth.SysOauthClientMapper;
 import com.designer.admin.system.mapper.auth.SysOauthClientScopeMapper;
@@ -58,7 +58,7 @@ public class SysOauthClientServiceImpl implements SysOauthClientService {
     public SysOauthClient getById(Long id) {
         SysOauthClient client = clientMapper.selectById(id);
         if (client == null) {
-            throw new BizException("OAuth 客户端不存在");
+            throw new BizException("OAuth2 客户端不存在");
         }
         fillScopes(client);
         return client;
@@ -87,7 +87,7 @@ public class SysOauthClientServiceImpl implements SysOauthClientService {
         assertClientIdUnique(clientId, null);
         String plainSecret = generateSecret();
         SysOauthClient entity = toEntity(dto, clientId);
-        entity.setClientSecret(BCrypt.hashpw(plainSecret));
+        entity.setClientSecret(PasswordUtil.encode(plainSecret));
         clientMapper.insert(entity);
         replaceScopes(entity.getId(), dto.getScopeIds());
         return toCreatedVo(entity, plainSecret);
@@ -101,7 +101,7 @@ public class SysOauthClientServiceImpl implements SysOauthClientService {
         }
         SysOauthClient existing = clientMapper.selectById(dto.getId());
         if (existing == null) {
-            throw new BizException("OAuth 客户端不存在");
+            throw new BizException("OAuth2 客户端不存在");
         }
         String clientId = normalizeClientId(dto.getClientId());
         assertClientIdUnique(clientId, dto.getId());
@@ -116,12 +116,12 @@ public class SysOauthClientServiceImpl implements SysOauthClientService {
     public OauthClientCreatedVO resetSecret(Long id) {
         SysOauthClient existing = clientMapper.selectById(id);
         if (existing == null) {
-            throw new BizException("OAuth 客户端不存在");
+            throw new BizException("OAuth2 客户端不存在");
         }
         String plainSecret = generateSecret();
         SysOauthClient patch = new SysOauthClient();
         patch.setId(id);
-        patch.setClientSecret(BCrypt.hashpw(plainSecret));
+        patch.setClientSecret(PasswordUtil.encode(plainSecret));
         clientMapper.updateById(patch);
         existing.setClientSecret(null);
         return toCreatedVo(existing, plainSecret);

@@ -1,6 +1,5 @@
-package com.designer.admin.framework.cache;
+package com.designer.admin.framework.redis;
 
-import com.designer.admin.framework.redis.RedisKeyConsts;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.redisx.RedisClient;
 import org.noear.solon.annotation.Component;
@@ -60,7 +59,7 @@ public class RedisCacheService implements CacheService {
     @SuppressWarnings("unchecked")
     public <T> T get(String key, Type type) {
         try {
-            String body = redisClient.open1(s -> s.key(cacheKey(key)).get());
+            String body = redisClient.openAndGet(s -> s.key(cacheKey(key)).get());
             if (body == null) {
                 return null;
             }

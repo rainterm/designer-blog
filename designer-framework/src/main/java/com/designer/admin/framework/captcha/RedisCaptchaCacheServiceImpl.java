@@ -4,6 +4,7 @@ import com.anji.captcha.service.CaptchaCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.noear.redisx.RedisClient;
 import org.noear.solon.Solon;
+import redis.clients.jedis.params.SetParams;
 
 /**
  * AJ-Captcha 的验证码存储，落到 Redis。
@@ -60,25 +61,26 @@ public class RedisCaptchaCacheServiceImpl implements CaptchaCacheService {
 
     @Override
     public void set(String key, String value, long expiresInSeconds) {
-        // 用 SETEX 而不是 redisx 的 expire(...).set(...)：语义显式，
+        // 用 SET + EX 而不是 redisx 的 expire(...).set(...)：语义显式，
         // 也不必依赖「expire 只记在本会话、由下一条写命令带出去」这个隐晦约定。
-        redisClient().open0(s -> s.jedis().setex(key, expiresInSeconds, value));
+        // Jedis 7.3 起 SETEX 已过时，官方建议改用 SET + SetParams.ex()。
+        redisClient().open(s -> s.jedis().set(key, value, SetParams.setParams().ex(expiresInSeconds)));
     }
 
     @Override
     public boolean exists(String key) {
-        Boolean exists = redisClient().open1(s -> s.jedis().exists(key));
+        Boolean exists = redisClient().openAndGet(s -> s.jedis().exists(key));
         return Boolean.TRUE.equals(exists);
     }
 
     @Override
     public void delete(String key) {
-        redisClient().open0(s -> s.jedis().del(key));
+        redisClient().open(s -> s.jedis().del(key));
     }
 
     @Override
     public String get(String key) {
-        return redisClient().open1(s -> s.jedis().get(key));
+        return redisClient().openAndGet(s -> s.jedis().get(key));
     }
 
     /** 需与 {@code aj.captcha.cache-type} 的取值一致，否则查不到本实现。 */
@@ -89,7 +91,7 @@ public class RedisCaptchaCacheServiceImpl implements CaptchaCacheService {
 
     @Override
     public Long increment(String key, long expiresInSeconds) {
-        Object result = redisClient().open1(s ->
+        Object result = redisClient().openAndGet(s ->
                 s.jedis().eval(INCR_LUA, 1, key, String.valueOf(expiresInSeconds)));
         if (result instanceof Number n) {
             return n.longValue();

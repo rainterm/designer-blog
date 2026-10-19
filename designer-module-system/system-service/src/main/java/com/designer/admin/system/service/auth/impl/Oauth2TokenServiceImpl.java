@@ -1,7 +1,7 @@
 package com.designer.admin.system.service.auth.impl;
 
-import cn.dev33.satoken.secure.BCrypt;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.crypto.PasswordUtil;
 import com.designer.admin.framework.satoken.StpOauthUtil;
 import com.designer.admin.system.constant.Oauth2Consts;
 import com.designer.admin.system.model.entity.auth.SysOauthClient;
@@ -36,7 +36,7 @@ public class Oauth2TokenServiceImpl implements Oauth2TokenService {
             throw new BizException(Oauth2Consts.ERROR_INVALID_CLIENT);
         }
         SysOauthClient client = clientService.getEnabledByClientId(clientId.trim());
-        if (client == null || !BCrypt.checkpw(clientSecret, client.getClientSecret())) {
+        if (client == null || !PasswordUtil.matches(clientSecret, client.getClientSecret())) {
             throw new BizException(Oauth2Consts.ERROR_INVALID_CLIENT);
         }
         List<String> allowed = clientService.listAuthorizedScopeCodes(client.getId());

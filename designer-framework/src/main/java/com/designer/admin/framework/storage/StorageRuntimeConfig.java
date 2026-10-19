@@ -1,5 +1,6 @@
 package com.designer.admin.framework.storage;
 
+import com.designer.admin.common.util.PropUtil;
 import lombok.Builder;
 import lombok.Data;
 
@@ -8,6 +9,9 @@ import java.util.Map;
 
 /**
  * 一次存储操作所用的运行时配置（来自数据库 sys_storage_config）
+ *
+ * <p>配置项来自库表 JSON，读取统一交给 {@link PropUtil}，
+ * 与消息通道的运行时配置共用同一套容错口径。</p>
  *
  * @author 雨夜终端
  */
@@ -28,42 +32,18 @@ public class StorageRuntimeConfig {
     private Map<String, Object> props = Collections.emptyMap();
 
     public String prop(String key) {
-        Object v = props == null ? null : props.get(key);
-        return v == null ? "" : String.valueOf(v);
+        return PropUtil.getString(props, key);
     }
 
     public String prop(String key, String defaultValue) {
-        String v = prop(key);
-        return v == null || v.isBlank() ? defaultValue : v;
+        return PropUtil.getString(props, key, defaultValue);
     }
 
     public boolean propBool(String key, boolean defaultValue) {
-        Object v = props == null ? null : props.get(key);
-        if (v == null) {
-            return defaultValue;
-        }
-        if (v instanceof Boolean b) {
-            return b;
-        }
-        String s = String.valueOf(v).trim();
-        if (s.isEmpty()) {
-            return defaultValue;
-        }
-        return "true".equalsIgnoreCase(s) || "1".equals(s);
+        return PropUtil.getBool(props, key, defaultValue);
     }
 
     public long propLong(String key, long defaultValue) {
-        Object v = props == null ? null : props.get(key);
-        if (v == null) {
-            return defaultValue;
-        }
-        if (v instanceof Number n) {
-            return n.longValue();
-        }
-        try {
-            return Long.parseLong(String.valueOf(v).trim());
-        } catch (Exception e) {
-            return defaultValue;
-        }
+        return PropUtil.getLong(props, key, defaultValue);
     }
 }

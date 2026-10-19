@@ -33,7 +33,7 @@
 
     <Dialog
       v-model:show="formVisible"
-      :title="isEdit ? '编辑 OAuth 客户端' : '新增 OAuth 客户端'"
+      :title="isEdit ? '编辑 OAuth2 客户端' : '新增 OAuth2 客户端'"
       size="lg"
       :loading="submitting"
       @confirm="handleSubmit"
@@ -184,16 +184,17 @@
       </template>
     </Dialog>
 
-    <Dialog v-model:show="guideVisible" title="OAuth 接口调用说明" size="lg" confirm-text="关闭" @confirm="guideVisible = false">
+    <Dialog v-model:show="guideVisible" title="OAuth2 接口调用说明" size="lg" confirm-text="关闭" @confirm="guideVisible = false">
       <div class="oauth-guide">
         <n-alert type="info" :bordered="false">
           采用 OAuth2 <n-text strong>Client Credentials</n-text>（客户端凭证）模式：用客户端编码 +
           secret 换取 access_token，再调用 <n-text code>/open-api/**</n-text> 开放接口。
+          后端端口不对外开放，令牌端点与开放接口统一经 nginx 的 <n-text code>/open-api</n-text> 前缀转发。
         </n-alert>
 
         <h4>1. 获取 access_token</h4>
         <p>
-          <n-text code>POST {{ apiOrigin }}/oauth2/token</n-text>
+          <n-text code>POST {{ apiOrigin }}/open-api/oauth2/token</n-text>
           ，Content-Type:
           <n-text code>application/x-www-form-urlencoded</n-text>
         </p>
@@ -231,7 +232,7 @@
         </ul>
 
         <n-alert type="warning" :bordered="false">
-          生产环境请将示例中的 <n-text code>{{ apiOrigin }}</n-text> 换成实际 API 网关或后端地址；密钥勿提交到代码仓库。
+          示例地址取自当前访问站点；生产环境请替换为实际对外域名或 API 网关地址
         </n-alert>
       </div>
       <template #footer>
@@ -269,7 +270,7 @@ const userStore = useUserStore()
 const { locked, busy, run } = useActionLock()
 
 const guideVisible = ref(false)
-/** 第三方直连后端地址（开发默认 8080；若配置了绝对 apiBase 则用其 origin） */
+/** 第三方调用入口：前端 nginx（开发态为 Vite dev server）；若配置了绝对 apiBase 则用其 origin */
 const apiOrigin = computed(() => {
   const base = String(apiBase || '').trim()
   if (base.startsWith('http://') || base.startsWith('https://')) {
@@ -279,11 +280,11 @@ const apiOrigin = computed(() => {
       // fall through
     }
   }
-  return 'http://localhost:8080'
+  return typeof window !== 'undefined' ? window.location.origin : ''
 })
 
 const tokenCurl = computed(
-  () => `curl -X POST '${apiOrigin.value}/oauth2/token' \\
+  () => `curl -X POST '${apiOrigin.value}/open-api/oauth2/token' \\
   -H 'Content-Type: application/x-www-form-urlencoded' \\
   -d 'grant_type=client_credentials' \\
   -d 'client_id=你的客户端编码' \\
@@ -324,7 +325,7 @@ const pager = usePagination((q) => pageOauthClients(q), {
 })
 const { query, loadData, checkedRowKeys } = pager
 const { handleBatchDelete } = useBatchDelete(pager, deleteOauthClients, {
-  confirm: (n) => `确定删除选中的 ${n} 个 OAuth 客户端吗？`
+  confirm: (n) => `确定删除选中的 ${n} 个 OAuth2 客户端吗？`
 })
 
 const scopePager = usePagination((q) => pageOauthScopes(q), {

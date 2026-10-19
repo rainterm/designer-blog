@@ -1,5 +1,6 @@
 package com.designer.admin.framework.storage;
 
+import com.designer.admin.framework.spi.ConfigFieldMeta;
 import org.noear.solon.core.handle.UploadedFile;
 
 import java.io.InputStream;
@@ -32,7 +33,7 @@ public interface FileStorageProvider {
      *
      * @return 配置字段元数据列表
      */
-    List<StorageFieldMeta> configFields();
+    List<ConfigFieldMeta> configFields();
 
     /**
      * 校验类型专属配置。

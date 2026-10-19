@@ -1,16 +1,21 @@
-package com.designer.admin.framework.storage;
+package com.designer.admin.framework.spi;
 
 import lombok.Builder;
 import lombok.Data;
 
 /**
- * 存储类型配置项元数据（供前端动态渲染表单，新增 Provider 时自动扩展）
+ * 动态表单字段元数据：消息通道与文件存储的 Provider 共用。
+ *
+ * <p>两类 Provider 的配置模型完全相同 —— 「类型标识 + JSON 配置 + 前端按元数据渲染表单」，
+ * 字段描述也一字不差（name / label / inputType / required / placeholder / defaultValue / help）。
+ * 此前 message、storage 各有一份同构类，加字段时必须记得改两处；
+ * 这里收敛成一个共享类型，两个功能包本身仍各自独立、互不依赖。</p>
  *
  * @author 雨夜终端
  */
 @Data
 @Builder
-public class StorageFieldMeta {
+public class ConfigFieldMeta {
 
     /** 字段名（写入 configJson 的 key） */
     private String name;

@@ -1,4 +1,4 @@
-package com.designer.admin.framework.config;
+package com.designer.admin.framework.mybatis;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;

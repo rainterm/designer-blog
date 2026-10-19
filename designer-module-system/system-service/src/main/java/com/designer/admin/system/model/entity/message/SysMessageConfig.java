@@ -27,7 +27,7 @@ public class SysMessageConfig extends BaseEntity {
     /** 状态：1启用 0停用 */
     private Integer status;
 
-    /** 通道参数（JSON，字段由各通道的 {@code MessageFieldMeta} 描述） */
+    /** 通道参数（JSON，字段由各通道的 {@code ConfigFieldMeta} 描述） */
     private String configJson;
 
     /** 备注 */

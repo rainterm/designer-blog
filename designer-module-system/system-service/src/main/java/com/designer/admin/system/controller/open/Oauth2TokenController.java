@@ -22,14 +22,15 @@ import java.util.Base64;
  * OAuth2 令牌端点（Client Credentials）。
  *
  * <p>该端点是面向第三方客户端的协议接口，请求与响应都必须使用 RFC 6749 规定的下划线键名。
- * 响应体使用 {@link Oauth2TokenVO} / {@link Oauth2ErrorVO} 承载，
+ * 唯一对外路径为 {@code /open-api/oauth2/token}：后端 8080 不对外开放，统一经 nginx 转发。</p>
+ * <p>响应体使用 {@link Oauth2TokenVO} / {@link Oauth2ErrorVO} 承载，
  * 由 {@code @ONodeAttr(name = ...)} 完成驼峰属性到协议键名的映射，键名统一取自 {@link Oauth2Consts}。
  * 成功与失败都直接返回 RFC6749 JSON，不包 Result 外壳。</p>
  *
  * @author 雨夜终端
  */
 @Controller
-@Mapping("/oauth2")
+@Mapping("/open-api/oauth2")
 @Api(tags = "OAuth2 令牌")
 public class Oauth2TokenController {
 
@@ -40,7 +41,8 @@ public class Oauth2TokenController {
     @Post
     @Mapping("/token")
     @ApiOperation(value = "获取 OAuth2 访问令牌",
-            notes = "Content-Type 为 application/x-www-form-urlencoded；"
+            notes = "对外统一经 nginx 的 /open-api 前缀访问（后端 8080 不对外开放）。"
+                    + "Content-Type 为 application/x-www-form-urlencoded；"
                     + "参数：grant_type=client_credentials、client_id、client_secret、scope（空格分隔）；"
                     + "client_id 与 client_secret 也可由 Authorization: Basic 请求头携带")
     public void token(Context ctx) {

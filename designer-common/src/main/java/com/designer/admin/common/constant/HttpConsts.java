@@ -1,4 +1,4 @@
-package com.designer.admin.framework.constant;
+package com.designer.admin.common.constant;
 
 /**
  * HTTP / URL 相关的通用字面量。

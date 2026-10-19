@@ -1,4 +1,4 @@
-package com.designer.admin.framework.config;
+package com.designer.admin.framework.satoken;
 
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.solon.integration.SaTokenInterceptor;
@@ -13,8 +13,8 @@ import org.noear.solon.annotation.Configuration;
  * <ul>
  *   <li>{@code /admin-api/**} 默认需后台用户登录</li>
  *   <li>{@code /app-api/**} 面向前台，默认免登录（由业务控制）</li>
- *   <li>{@code /open-api/**} 由 {@code OpenApiScopeFilter} 做 OAuth2 登录 + Scope 校验</li>
- *   <li>{@code /oauth2/**} 令牌端点放行</li>
+ *   <li>{@code /open-api/**} 由 {@code OpenApiScopeFilter} 做 OAuth2 登录 + Scope 校验
+ *       （其中 {@code /open-api/oauth2/**} 为令牌端点，免校验）</li>
  * </ul>
  *
  * @author 雨夜终端
@@ -27,7 +27,6 @@ public class SaTokenConfig {
         return new SaTokenInterceptor()
                 .addInclude("/admin-api/**")
                 .addInclude("/app-api/**")
-                .addExclude("/oauth2/**")
                 .addExclude("/open-api/**")
                 .setAuth(req -> SaRouter.match("/admin-api/**", r -> StpUtil.checkLogin()))
                 .setError(e -> {

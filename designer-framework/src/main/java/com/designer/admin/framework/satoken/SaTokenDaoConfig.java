@@ -1,4 +1,4 @@
-package com.designer.admin.framework.config;
+package com.designer.admin.framework.satoken;
 
 import cn.dev33.satoken.dao.SaTokenDao;
 import cn.dev33.satoken.dao.SaTokenDaoForRedisx;

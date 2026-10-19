@@ -8,7 +8,7 @@ import com.designer.admin.common.core.PageQuery;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.common.util.JsonUtil;
 import com.designer.admin.framework.message.InboxSink;
-import com.designer.admin.framework.notice.NoticeSseHub;
+import com.designer.admin.framework.message.NoticeSseHub;
 import com.designer.admin.framework.satoken.LoginHelper;
 import com.designer.admin.system.constant.SysNoticeConsts;
 import com.designer.admin.system.mapper.message.SysNoticeMapper;

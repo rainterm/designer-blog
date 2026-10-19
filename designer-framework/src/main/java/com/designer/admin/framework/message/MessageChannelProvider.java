@@ -1,5 +1,7 @@
 package com.designer.admin.framework.message;
 
+import com.designer.admin.framework.spi.ConfigFieldMeta;
+
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +31,7 @@ public interface MessageChannelProvider {
      *
      * @return 配置字段元数据列表
      */
-    List<MessageFieldMeta> configFields();
+    List<ConfigFieldMeta> configFields();
 
     /**
      * 校验通道配置。

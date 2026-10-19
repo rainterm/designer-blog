@@ -60,7 +60,7 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
             return 0;
         }
         String failKey = SystemRedisKeyConsts.LOGIN_FAIL_PREFIX + username.trim();
-        String val = redisClient.open1(s -> s.key(failKey).get());
+        String val = redisClient.openAndGet(s -> s.key(failKey).get());
         if (val == null || val.isBlank()) {
             return 0;
         }
@@ -80,9 +80,9 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
             return;
         }
         String lockKey = SystemRedisKeyConsts.LOGIN_LOCK_PREFIX + username.trim();
-        Boolean locked = redisClient.open1(s -> s.key(lockKey).exists());
+        Boolean locked = redisClient.openAndGet(s -> s.key(lockKey).exists());
         if (Boolean.TRUE.equals(locked)) {
-            long ttl = redisClient.open1(s -> s.key(lockKey).ttl());
+            long ttl = redisClient.openAndGet(s -> s.key(lockKey).ttl());
             long minutes = Math.max(1, (ttl + 59) / 60);
             throw new BizException("账号已锁定，请 " + minutes + " 分钟后再试");
         }
@@ -107,7 +107,7 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
         String failKey = SystemRedisKeyConsts.LOGIN_FAIL_PREFIX + user;
         long count = redisCounter.incrWithTtl(failKey, failTtl);
         if (lockEnabled && count >= maxRetry) {
-            redisClient.open0(s -> {
+            redisClient.open(s -> {
                 s.key(SystemRedisKeyConsts.LOGIN_LOCK_PREFIX + user).expire(lockMinutes * 60).set("1");
                 s.key(failKey).delete();
             });
@@ -122,7 +122,7 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
             return;
         }
         String user = username.trim();
-        redisClient.open0(s -> {
+        redisClient.open(s -> {
             s.key(SystemRedisKeyConsts.LOGIN_FAIL_PREFIX + user).delete();
             s.key(SystemRedisKeyConsts.LOGIN_LOCK_PREFIX + user).delete();
         });

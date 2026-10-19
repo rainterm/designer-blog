@@ -1,4 +1,4 @@
-package com.designer.admin.framework.config;
+package com.designer.admin.framework.exception;
 
 import com.designer.admin.common.core.Result;
 import com.designer.admin.common.core.ResultCode;

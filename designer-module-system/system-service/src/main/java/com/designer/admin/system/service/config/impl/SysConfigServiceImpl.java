@@ -54,7 +54,7 @@ public class SysConfigServiceImpl implements SysConfigService {
             return null;
         }
         String cacheKey = SystemRedisKeyConsts.CONFIG_CACHE_PREFIX + configKey;
-        String cached = redisClient.open1(s -> s.key(cacheKey).get());
+        String cached = redisClient.openAndGet(s -> s.key(cacheKey).get());
         if (cached != null) {
             return cached;
         }
@@ -63,7 +63,7 @@ public class SysConfigServiceImpl implements SysConfigService {
                 .last("limit 1"));
         String value = cfg == null ? null : cfg.getConfigValue();
         if (value != null) {
-            redisClient.open0(s -> s.key(cacheKey).expire(SysConfigConsts.CACHE_SECONDS).set(value));
+            redisClient.open(s -> s.key(cacheKey).expire(SysConfigConsts.CACHE_SECONDS).set(value));
         }
         return value;
     }
@@ -173,7 +173,7 @@ public class SysConfigServiceImpl implements SysConfigService {
         if (!notBlank(configKey)) {
             return;
         }
-        redisClient.open0(s -> s.key(SystemRedisKeyConsts.CONFIG_CACHE_PREFIX + configKey).delete());
+        redisClient.open(s -> s.key(SystemRedisKeyConsts.CONFIG_CACHE_PREFIX + configKey).delete());
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.designer.admin.framework.config;
+package com.designer.admin.framework.redis;
 
 import org.noear.redisx.RedisClient;
 import org.noear.solon.Solon;

@@ -60,7 +60,7 @@ public class OnlineUserServiceImpl implements OnlineUserService {
                 + StpUtil.getLoginType() + SystemRedisKeyConsts.SA_TOKEN_SESSION_SUFFIX;
         Set<String> sessionKeys;
         try {
-            sessionKeys = redisClient.open1(s -> s.keys(sessionPrefix + "*"));
+            sessionKeys = redisClient.openAndGet(s -> s.keys(sessionPrefix + "*"));
         } catch (Exception e) {
             throw new BizException("读取在线会话失败: " + e.getMessage());
         }

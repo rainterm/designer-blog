@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.constant.SystemConsts;
 import com.designer.admin.common.exception.BizException;
-import com.designer.admin.framework.constant.HttpConsts;
+import com.designer.admin.common.constant.HttpConsts;
 import com.designer.admin.system.mapper.auth.SysOauthClientScopeMapper;
 import com.designer.admin.system.mapper.auth.SysOauthScopeMapper;
 import com.designer.admin.system.model.dto.auth.OauthScopeQueryDTO;

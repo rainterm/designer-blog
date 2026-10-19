@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.designer.admin.common.constant.SystemConsts;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.common.util.TreeUtils;
-import com.designer.admin.framework.constant.HttpConsts;
+import com.designer.admin.common.constant.HttpConsts;
 import com.designer.admin.system.constant.SysMenuConsts;
 import com.designer.admin.system.mapper.rbac.SysMenuMapper;
 import com.designer.admin.system.mapper.rbac.SysRoleMenuMapper;

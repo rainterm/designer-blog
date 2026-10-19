@@ -5,25 +5,25 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.common.util.JsonUtil;
+import com.designer.admin.framework.crypto.ConfigSecretUtil;
+import com.designer.admin.framework.message.MessageChannelConsts;
 import com.designer.admin.framework.message.MessageChannelProvider;
 import com.designer.admin.framework.message.MessageChannelRegistry;
-import com.designer.admin.framework.constant.MessageChannelConsts;
 import com.designer.admin.framework.message.MessageConfigSource;
-import com.designer.admin.framework.message.MessageFieldMeta;
 import com.designer.admin.framework.message.MessagePayload;
 import com.designer.admin.framework.message.MessageRuntimeConfig;
 import com.designer.admin.framework.message.MessageService;
-import com.designer.admin.framework.security.ConfigSecretUtil;
+import com.designer.admin.framework.spi.ConfigFieldMeta;
 import com.designer.admin.system.constant.SysMessageConsts;
 import com.designer.admin.system.mapper.message.SysMessageConfigMapper;
 import com.designer.admin.system.model.dto.message.MessageConfigQueryDTO;
 import com.designer.admin.system.model.dto.message.MessageConfigSaveDTO;
 import com.designer.admin.system.model.dto.message.MessageSendDTO;
 import com.designer.admin.system.model.entity.message.SysMessageConfig;
-import com.designer.admin.system.model.vo.config.ConfigFieldVO;
 import com.designer.admin.system.model.vo.message.MessageChannelTypeVO;
 import com.designer.admin.system.model.vo.message.MessageConfigDetailVO;
 import com.designer.admin.system.service.message.SysMessageConfigService;
+import com.designer.admin.system.util.ConfigFieldConverter;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
@@ -105,7 +105,7 @@ public class SysMessageConfigServiceImpl implements SysMessageConfigService, Mes
                     MessageChannelTypeVO vo = new MessageChannelTypeVO();
                     vo.setType(p.type());
                     vo.setLabel(p.label());
-                    vo.setFields(p.configFields().stream().map(this::toConfigField).toList());
+                    vo.setFields(p.configFields().stream().map(ConfigFieldConverter::toVO).toList());
                     return vo;
                 }).toList();
     }
@@ -337,7 +337,7 @@ public class SysMessageConfigServiceImpl implements SysMessageConfigService, Mes
         }
         return channelRegistry.getRequired(channelType).configFields().stream()
                 .filter(f -> "password".equalsIgnoreCase(f.getInputType()))
-                .map(MessageFieldMeta::getName)
+                .map(ConfigFieldMeta::getName)
                 .collect(Collectors.toSet());
     }
 
@@ -366,17 +366,6 @@ public class SysMessageConfigServiceImpl implements SysMessageConfigService, Mes
                 .eq(SysMessageConfig::getStatus, 1));
     }
 
-    private ConfigFieldVO toConfigField(MessageFieldMeta field) {
-        return ConfigFieldVO.builder()
-                .name(field.getName())
-                .label(field.getLabel())
-                .inputType(field.getInputType())
-                .required(field.isRequired())
-                .placeholder(field.getPlaceholder())
-                .defaultValue(field.getDefaultValue())
-                .help(field.getHelp())
-                .build();
-    }
 
     private static boolean notBlank(String s) {
         return s != null && !s.isBlank();

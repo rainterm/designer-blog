@@ -1,8 +1,8 @@
 package com.designer.admin.framework.storage.provider;
 
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.spi.ConfigFieldMeta;
 import com.designer.admin.framework.storage.FileStorageProvider;
-import com.designer.admin.framework.storage.StorageFieldMeta;
 import com.designer.admin.framework.storage.StorageProperties;
 import com.designer.admin.framework.storage.StorageRuntimeConfig;
 import org.noear.solon.annotation.Component;
@@ -45,10 +45,10 @@ public class LocalFileStorageProvider implements FileStorageProvider {
     }
 
     @Override
-    public List<StorageFieldMeta> configFields() {
+    public List<ConfigFieldMeta> configFields() {
         String localDefault = storageProperties.resolvedLocalDefaultPath();
         return List.of(
-                StorageFieldMeta.builder()
+                ConfigFieldMeta.builder()
                         .name("localPath")
                         .label("本地目录")
                         .inputType("text")

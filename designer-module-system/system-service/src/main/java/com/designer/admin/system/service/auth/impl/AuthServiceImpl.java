@@ -1,12 +1,12 @@
 package com.designer.admin.system.service.auth.impl;
 
-import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.stp.parameter.SaLoginParameter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.designer.admin.common.constant.SystemConsts;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.captcha.CaptchaVerifier;
+import com.designer.admin.framework.crypto.PasswordUtil;
 import com.designer.admin.framework.satoken.LoginHelper;
 import com.designer.admin.framework.satoken.LoginUser;
 import com.designer.admin.system.constant.OnlineUserConsts;
@@ -75,7 +75,7 @@ public class AuthServiceImpl implements AuthService {
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username));
 
-        if (user == null || !BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
+        if (user == null || !PasswordUtil.matches(dto.getPassword(), user.getPassword())) {
             recordLoginLog(username, ip, userAgent, 0, "账号或密码错误");
             try {
                 loginAttemptService.saveLoginFail(username);

@@ -26,7 +26,7 @@ import org.noear.solon.validation.annotation.Validated;
 import java.util.List;
 
 /**
- * 开放接口 Scope：挂在 OAuth 客户端弹框内管理，无独立菜单。
+ * 开放接口 Scope：挂在 OAuth2 客户端弹框内管理，无独立菜单。
  *
  * @author 雨夜终端
  */
@@ -65,7 +65,7 @@ public class SysOauthScopeController {
 
     @Post
     @Mapping("/add")
-    @OperLog(title = "OAuth开放接口", businessType = BusinessType.INSERT)
+    @OperLog(title = "OAuth2 开放接口", businessType = BusinessType.INSERT)
     @SaCheckPermission(value = {"system:oauthclient:add", "system:oauthclient:edit"}, mode = SaMode.OR)
     @ApiOperation(value = "新增授权范围")
     public Result<SysOauthScope> add(@Body @Validated OauthScopeSaveDTO dto) {
@@ -74,7 +74,7 @@ public class SysOauthScopeController {
 
     @Put
     @Mapping("/update")
-    @OperLog(title = "OAuth开放接口", businessType = BusinessType.UPDATE)
+    @OperLog(title = "OAuth2 开放接口", businessType = BusinessType.UPDATE)
     @SaCheckPermission("system:oauthclient:edit")
     @ApiOperation(value = "修改授权范围")
     public Result<Void> update(@Body @Validated OauthScopeSaveDTO dto) {
@@ -84,7 +84,7 @@ public class SysOauthScopeController {
 
     @Delete
     @Mapping("/remove")
-    @OperLog(title = "OAuth开放接口", businessType = BusinessType.DELETE)
+    @OperLog(title = "OAuth2 开放接口", businessType = BusinessType.DELETE)
     @SaCheckPermission("system:oauthclient:edit")
     @ApiOperation(value = "删除授权范围")
     public Result<Void> remove(List<Long> ids) {

@@ -1,12 +1,11 @@
 package com.designer.admin.framework.message.provider;
 
-import com.designer.admin.framework.constant.MessageChannelConsts;
-
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.message.MessageChannelConsts;
 import com.designer.admin.framework.message.MessageChannelProvider;
-import com.designer.admin.framework.message.MessageFieldMeta;
 import com.designer.admin.framework.message.MessagePayload;
 import com.designer.admin.framework.message.MessageRuntimeConfig;
+import com.designer.admin.framework.spi.ConfigFieldMeta;
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
 import jakarta.mail.PasswordAuthentication;
@@ -61,25 +60,25 @@ public class EmailMessageChannelProvider implements MessageChannelProvider {
     }
 
     @Override
-    public List<MessageFieldMeta> configFields() {
+    public List<ConfigFieldMeta> configFields() {
         return List.of(
-                MessageFieldMeta.builder().name("host").label("SMTP Host").inputType("text").required(true)
+                ConfigFieldMeta.builder().name("host").label("SMTP Host").inputType("text").required(true)
                         .placeholder("smtp.example.com").build(),
-                MessageFieldMeta.builder().name("port").label("端口").inputType("number").required(true)
+                ConfigFieldMeta.builder().name("port").label("端口").inputType("number").required(true)
                         .defaultValue("587").placeholder("587").help("常用：587(STARTTLS) / 465(SSL) / 25").build(),
-                MessageFieldMeta.builder().name("username").label("用户名").inputType("text").required(true)
+                ConfigFieldMeta.builder().name("username").label("用户名").inputType("text").required(true)
                         .placeholder("账号或完整邮箱").build(),
-                MessageFieldMeta.builder().name("password").label("密码/授权码").inputType("password").required(true)
+                ConfigFieldMeta.builder().name("password").label("密码/授权码").inputType("password").required(true)
                         .placeholder("SMTP 密码或授权码").build(),
-                MessageFieldMeta.builder().name("from").label("发件人邮箱").inputType("text").required(true)
+                ConfigFieldMeta.builder().name("from").label("发件人邮箱").inputType("text").required(true)
                         .placeholder("noreply@example.com").build(),
-                MessageFieldMeta.builder().name("fromName").label("发件人名称").inputType("text").required(false)
+                ConfigFieldMeta.builder().name("fromName").label("发件人名称").inputType("text").required(false)
                         .placeholder("系统通知").defaultValue("系统通知").build(),
-                MessageFieldMeta.builder().name("auth").label("启用认证").inputType("switch").required(false)
+                ConfigFieldMeta.builder().name("auth").label("启用认证").inputType("switch").required(false)
                         .defaultValue("true").build(),
-                MessageFieldMeta.builder().name("starttls").label("STARTTLS").inputType("switch").required(false)
+                ConfigFieldMeta.builder().name("starttls").label("STARTTLS").inputType("switch").required(false)
                         .defaultValue("true").help("端口 587 通常开启").build(),
-                MessageFieldMeta.builder().name("ssl").label("SSL").inputType("switch").required(false)
+                ConfigFieldMeta.builder().name("ssl").label("SSL").inputType("switch").required(false)
                         .defaultValue("false").help("端口 465 通常开启").build()
         );
     }

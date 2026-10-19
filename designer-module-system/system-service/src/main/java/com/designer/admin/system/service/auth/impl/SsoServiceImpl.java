@@ -49,7 +49,7 @@ public class SsoServiceImpl implements SsoService {
         int ttl = Math.max(SsoConsts.MIN_TICKET_TTL_SECONDS,
                 Solon.cfg().getInt(SsoConsts.KEY_TICKET_TTL, SsoConsts.DEFAULT_TICKET_TTL_SECONDS));
         String ticket = UUID.randomUUID().toString().replace("-", "");
-        redisClient.open0(s -> s.key(SystemRedisKeyConsts.SSO_TICKET_PREFIX + ticket).expire(ttl).set(token));
+        redisClient.open(s -> s.key(SystemRedisKeyConsts.SSO_TICKET_PREFIX + ticket).expire(ttl).set(token));
         SsoTicketVO vo = new SsoTicketVO();
         vo.setTicket(ticket);
         vo.setExpiresIn((long) ttl);
@@ -62,7 +62,7 @@ public class SsoServiceImpl implements SsoService {
             throw new BizException("缺少登录票据");
         }
         String key = SystemRedisKeyConsts.SSO_TICKET_PREFIX + ticket.trim();
-        String token = redisClient.open1(s -> {
+        String token = redisClient.openAndGet(s -> {
             String val = s.key(key).get();
             if (val != null && !val.isBlank()) {
                 s.key(key).delete();
