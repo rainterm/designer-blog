@@ -3,6 +3,7 @@ package com.designer.admin.system.controller.admin.message;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.stp.StpUtil;
 import com.designer.admin.common.core.PageQuery;
 import com.designer.admin.common.core.PageResult;
 import com.designer.admin.common.core.Result;
@@ -71,6 +72,7 @@ public class SysNoticeController {
     @SaCheckLogin
     @ApiOperation(value = "订阅通知 SSE 事件流")
     public SseEmitter sse() {
-        return noticeSseHub.open(LoginHelper.getUserId());
+        // token 由 SseQueryTokenFilter 从 ?Authorization= 提升到请求头；心跳时用它复核登录态
+        return noticeSseHub.open(LoginHelper.getUserId(), StpUtil.getTokenValue());
     }
 }

@@ -12,7 +12,7 @@ public interface InboxSink {
      *
      * @param title     标题
      * @param content   内容
-     * @param receivers 接收人用户 ID 逗号分隔；空串表示全体
+     * @param receivers 接收人：空串或 {@code *} 表示全体；否则逗号分隔的用户 ID 或登录账号
      * @return 通知 ID
      */
     Long publish(String title, String content, String receivers);
@@ -22,7 +22,7 @@ public interface InboxSink {
      *
      * @param title     标题
      * @param content   内容
-     * @param receivers 接收人用户 ID 逗号分隔；空串表示全体
+     * @param receivers 接收人：空串或 {@code *} 表示全体；否则逗号分隔的用户 ID 或登录账号
      * @param link      前端路由 path，如 /system/user；空则不跳转
      * @return 通知 ID
      */

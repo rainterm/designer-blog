@@ -212,14 +212,17 @@ sa-token:
   # 每次登录都新建 token
   is-share: false
   token-style: "uuid"
-  # 纯 Header 模式，不读 cookie；SSE 需从 query 读 token（EventSource 无法自定义 Header）
-  # 唯一的例外是私有下载：登录时下发 designer_download_token（Path 限定为
-  # /admin-api/system/file/download/、HttpOnly），由 DownloadTokenCookieFilter 在进入
-  # Sa-Token 之前把它提升成请求头。这里仍保持 false —— 全局读 cookie 会让整个
-  # /admin-api/** 接受 Cookie 鉴权，等于把所有后台接口暴露在 CSRF 之下。
+  # 纯 Header 模式：不读 cookie，也不从请求参数/表单读 token。
+  # 两个例外都在进入 Sa-Token 之前被提升成请求头，鉴权逻辑仍然只有一套：
+  # - 私有下载：designer_download_token Cookie → DownloadTokenCookieFilter（Path 限定为
+  #   /admin-api/system/file/download/、HttpOnly）；
+  # - 通知 SSE：?Authorization= → SseQueryTokenFilter（只匹配 /admin-api/system/notice/sse）。
+  # Sa-Token 的 is-read-body 同时覆盖 query 参数与表单：开着它，任何 /admin-api/** 都能用
+  # ?Authorization= 登录，token 会随 URL 进入访问日志、Referer 与浏览器历史；
+  # 全局读 cookie 则会让 /admin-api/** 接受 Cookie 鉴权（CSRF）。两者都必须保持 false。
   is-read-cookie: false
   is-read-header: true
-  is-read-param: true
+  is-read-body: false
   is-log: false
 
 # ============================ 图形验证码（AJ-Captcha）============================
@@ -276,3 +279,18 @@ designer:
   sso:
     # 一次性登录票据有效期（秒）
     ticket-ttl: 60
+  sse:
+    # 站内消息 SSE 的广播主题。
+    # 每个实例都订阅它、发送方只 publish 一次，因此多副本部署时消息能到达
+    # 浏览器实际连接的那台节点（实现见 framework 的 NoticeSseHub）。
+    #
+    # 注意：Redis Pub/Sub 的频道不区分 database index —— 共用一个 Redis 的
+    # 多套环境（dev / staging / prod）必须用不同主题名，否则会互相串消息。
+    topic: "designer:sse:notice"
+  mq:
+    # 消息总线实现（framework 的 MessageBus SPI）：
+    #   redis  Redis Pub/Sub，跨实例；默认，适合多副本部署
+    #   local  仅进程内内存投递；只用于单机部署 / 本地调试，多实例会静默丢消息
+    # 新增实现：在 framework/mq 下实现 MessageBus（type() 返回唯一标识）并标注 @Component，
+    # 无需改这里的选择逻辑；配置写错时启动会直接失败并列出可用实现。
+    type: "redis"

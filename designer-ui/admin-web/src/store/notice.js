@@ -27,6 +27,7 @@ export const useNoticeStore = defineStore('notice', () => {
   let eventSource = null
   let reconnectTimer = null
   let visibilityHandler = null
+  let sseErrorCount = 0
   let drawerOpenGetter = () => false
 
   function setDrawerOpenGetter(fn) {
@@ -146,10 +147,12 @@ export const useNoticeStore = defineStore('notice', () => {
       return
     }
     disconnectSse()
+    sseErrorCount = 0
     const url = `/admin-api/system/notice/sse?Authorization=${encodeURIComponent(token)}`
     eventSource = new EventSource(url)
 
     eventSource.addEventListener('notice', (e) => {
+      sseErrorCount = 0
       handleNoticeEvent(e.data)
     })
 
@@ -159,14 +162,34 @@ export const useNoticeStore = defineStore('notice', () => {
 
     eventSource.addEventListener('connected', () => {
       // 订阅成功后校正未读数
+      sseErrorCount = 0
       loadUnread()
     })
 
     eventSource.onerror = () => {
+      sseErrorCount += 1
       // 浏览器会自动重连；若已 CLOSED 则稍后手动重连
       if (eventSource && eventSource.readyState === EventSource.CLOSED) {
         disconnectSse()
         scheduleReconnect()
+        return
+      }
+      // 服务端会因登出 / 被踢 / token 过期主动断开，浏览器随后每 3 秒重试一次。
+      // 连续失败时用普通请求确认会话：401 由 axios 拦截器清理 token 并跳登录，
+      // 同时停掉 EventSource，避免无休止重试。
+      if (sseErrorCount === 2) {
+        verifySession()
+      }
+    }
+  }
+
+  async function verifySession() {
+    try {
+      await getNoticeUnreadCount()
+      sseErrorCount = 0
+    } catch {
+      if (!getToken()) {
+        disconnectSse()
       }
     }
   }

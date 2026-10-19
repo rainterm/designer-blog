@@ -13,12 +13,14 @@ import com.designer.admin.framework.satoken.LoginHelper;
 import com.designer.admin.system.constant.SysNoticeConsts;
 import com.designer.admin.system.mapper.message.SysNoticeMapper;
 import com.designer.admin.system.mapper.message.SysNoticeReadMapper;
+import com.designer.admin.system.mapper.message.SysNoticeReceiverMapper;
 import com.designer.admin.system.mapper.rbac.SysUserMapper;
 import com.designer.admin.system.model.entity.message.SysNotice;
 import com.designer.admin.system.model.entity.message.SysNoticeRead;
 import com.designer.admin.system.model.entity.rbac.SysUser;
 import com.designer.admin.system.model.vo.message.NoticePushVO;
 import com.designer.admin.system.service.message.SysNoticeService;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
@@ -26,8 +28,10 @@ import org.noear.solon.data.annotation.Transaction;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,15 +39,22 @@ import java.util.stream.Collectors;
 /**
  * 站内消息：通道 inbox 投递落库 + 顶部消息中心 + SSE 推送；实现 framework {@link InboxSink}。
  *
+ * <p><b>可见性</b>：不再用 {@code receivers} 逗号串做过滤 —— 那样每次查收件箱都要全表加载后内存筛选。
+ * 全体消息记在 {@code sys_notice.receiver_all}，定向消息落 {@code sys_notice_receiver}，
+ * 分页与未读数都由数据库按 {@code (user_id, notice_id)} 索引完成。</p>
+ *
  * @author 雨夜终端
  */
 @Component
+@Slf4j
 public class SysNoticeServiceImpl implements SysNoticeService, InboxSink {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Db
     private SysNoticeMapper noticeMapper;
+    @Db
+    private SysNoticeReceiverMapper noticeReceiverMapper;
     @Db
     private SysNoticeReadMapper noticeReadMapper;
     @Db
@@ -65,11 +76,19 @@ public class SysNoticeServiceImpl implements SysNoticeService, InboxSink {
     @Override
     @Transaction
     public Long publishInbox(String title, String content, String receivers, String link) {
+        String rawReceivers = receivers == null ? "" : receivers.trim();
+        boolean all = rawReceivers.isEmpty() || SysNoticeConsts.RECEIVERS_ALL.equals(rawReceivers);
+        List<Long> receiverIds = all
+                ? List.of()
+                : resolveReceiverUserIds(splitReceivers(rawReceivers));
+
         SysNotice notice = new SysNotice();
         notice.setTitle(title);
         notice.setContent(content == null ? "" : content);
         notice.setStatus(SystemConsts.STATUS_ENABLE);
-        notice.setReceivers(receivers == null ? "" : receivers.trim());
+        notice.setReceiverAll(all ? 1 : 0);
+        // 原文保留，便于后台排查「这条消息当时发给了谁」；查询不依赖它
+        notice.setReceivers(rawReceivers);
         if (link != null && !link.isBlank()) {
             notice.setRemark(SysNoticeConsts.LINK_PREFIX + link.trim());
             notice.setLink(link.trim());
@@ -78,7 +97,14 @@ public class SysNoticeServiceImpl implements SysNoticeService, InboxSink {
         }
         notice.setCreateTime(LocalDateTime.now());
         noticeMapper.insert(notice);
-        pushNewNotice(notice);
+
+        if (!receiverIds.isEmpty()) {
+            noticeReceiverMapper.insertBatch(notice.getId(), receiverIds);
+        } else if (!all) {
+            log.warn("站内消息没有匹配到有效接收人，仅落库不推送 noticeId={} receivers={}", notice.getId(), rawReceivers);
+        }
+
+        pushNewNotice(notice, all, receiverIds);
         return notice.getId();
     }
 
@@ -90,88 +116,63 @@ public class SysNoticeServiceImpl implements SysNoticeService, InboxSink {
 
     @Override
     public IPage<SysNotice> listInboxPage(PageQuery query) {
-        String username = LoginHelper.getUsername();
         Long userId = LoginHelper.getUserId();
-        List<SysNotice> all = visiblePublished(username, userId);
-        long total = all.size();
-        long from = Math.max(0, (query.getPageNum() - 1) * query.getPageSize());
-        long to = Math.min(total, from + query.getPageSize());
-        List<SysNotice> slice = from >= total ? List.of() : all.subList((int) from, (int) to);
-        Set<Long> readIds = readNoticeIds(userId, slice.stream().map(SysNotice::getId).toList());
-        for (SysNotice n : slice) {
+        Page<SysNotice> page = query.toPage();
+        IPage<SysNotice> result = noticeMapper.selectPage(page,
+                visibleWrapper(userId).orderByDesc(SysNotice::getId));
+
+        List<SysNotice> records = result.getRecords();
+        Set<Long> readIds = readNoticeIds(userId, records.stream().map(SysNotice::getId).toList());
+        for (SysNotice n : records) {
             n.setReadFlag(readIds.contains(n.getId()));
             n.setLink(parseLink(n.getRemark()));
         }
-        Page<SysNotice> page = new Page<>(query.getPageNum(), query.getPageSize(), total);
-        page.setRecords(slice);
-        return page;
+        return result;
     }
 
     @Override
     public long countUnread() {
-        String username = LoginHelper.getUsername();
         Long userId = LoginHelper.getUserId();
-        List<SysNotice> list = visiblePublished(username, userId);
-        if (list.isEmpty()) {
-            return 0;
-        }
-        Set<Long> readIds = readNoticeIds(userId, list.stream().map(SysNotice::getId).toList());
-        return list.stream().filter(n -> !readIds.contains(n.getId())).count();
+        Long count = noticeMapper.selectCount(visibleWrapper(userId)
+                .notExists("SELECT 1 FROM sys_notice_read rd "
+                        + "WHERE rd.notice_id = sys_notice.id AND rd.user_id = {0}", userId));
+        return count == null ? 0L : count;
     }
 
     @Override
-    @Transaction
     public void markRead(Long noticeId) {
         if (noticeId == null) {
             throw new BizException("消息ID不能为空");
         }
-        SysNotice notice = noticeMapper.selectById(noticeId);
-        if (notice == null || notice.getStatus() == null || notice.getStatus() != 1) {
+        Long userId = LoginHelper.getUserId();
+        // 一次索引查询同时完成「存在 + 已发布 + 对本人可见」，不再加载整条消息到内存判断
+        SysNotice notice = noticeMapper.selectOne(visibleWrapper(userId).eq(SysNotice::getId, noticeId));
+        if (notice == null) {
             throw new BizException("消息不存在或已关闭");
         }
-        if (!visibleTo(notice, LoginHelper.getUsername(), LoginHelper.getUserId())) {
-            throw new BizException("无权查看该消息");
-        }
-        Long userId = LoginHelper.getUserId();
-        Long exists = noticeReadMapper.selectCount(new LambdaQueryWrapper<SysNoticeRead>()
-                .eq(SysNoticeRead::getNoticeId, noticeId)
-                .eq(SysNoticeRead::getUserId, userId));
-        if (exists != null && exists > 0) {
-            return;
-        }
-        SysNoticeRead read = new SysNoticeRead();
-        read.setNoticeId(noticeId);
-        read.setUserId(userId);
-        read.setReadTime(LocalDateTime.now());
-        noticeReadMapper.insert(read);
+        noticeReadMapper.insertIgnore(noticeId, userId, LocalDateTime.now());
     }
 
     @Override
-    @Transaction
     public int markAllRead() {
-        String username = LoginHelper.getUsername();
-        Long userId = LoginHelper.getUserId();
-        List<SysNotice> list = visiblePublished(username, userId);
-        if (list.isEmpty()) {
-            return 0;
-        }
-        Set<Long> readIds = readNoticeIds(userId, list.stream().map(SysNotice::getId).toList());
-        int count = 0;
-        for (SysNotice n : list) {
-            if (readIds.contains(n.getId())) {
-                continue;
-            }
-            SysNoticeRead read = new SysNoticeRead();
-            read.setNoticeId(n.getId());
-            read.setUserId(userId);
-            read.setReadTime(LocalDateTime.now());
-            noticeReadMapper.insert(read);
-            count++;
-        }
-        return count;
+        return noticeReadMapper.insertUnreadForUser(LoginHelper.getUserId(), LocalDateTime.now());
     }
 
-    private void pushNewNotice(SysNotice notice) {
+    /**
+     * 当前用户可见消息的条件：已发布 + （全体 或 命中接收人表）。
+     *
+     * <p>两处都存在 {@code (user_id, notice_id)} 索引，EXISTS 只做索引探测，不产生临时表。</p>
+     */
+    private LambdaQueryWrapper<SysNotice> visibleWrapper(Long userId) {
+        return new LambdaQueryWrapper<SysNotice>()
+                .eq(SysNotice::getStatus, SystemConsts.STATUS_ENABLE)
+                .and(w -> w.eq(SysNotice::getReceiverAll, 1)
+                        .or()
+                        .exists("SELECT 1 FROM sys_notice_receiver r "
+                                + "WHERE r.notice_id = sys_notice.id AND r.user_id = {0}", userId));
+    }
+
+    private void pushNewNotice(SysNotice notice, boolean all, List<Long> receiverIds) {
         String link = notice.getLink() != null ? notice.getLink() : parseLink(notice.getRemark());
         NoticePushVO payload = NoticePushVO.builder()
                 .id(notice.getId())
@@ -182,33 +183,30 @@ public class SysNoticeServiceImpl implements SysNoticeService, InboxSink {
                 .build();
         String json = JsonUtil.toJson(payload);
 
-        String receivers = notice.getReceivers();
-        if (!notBlank(receivers) || SysNoticeConsts.RECEIVERS_ALL.equals(receivers.trim())) {
+        if (all) {
             noticeSseHub.pushToAllOnline("notice", json);
             return;
         }
-        List<String> tokens = Arrays.stream(receivers.split(","))
+        if (receiverIds.isEmpty()) {
+            return;
+        }
+        noticeSseHub.pushToUsers(receiverIds, "notice", json);
+    }
+
+    private static List<String> splitReceivers(String receivers) {
+        return Arrays.stream(receivers.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .distinct()
                 .toList();
-        if (tokens.isEmpty()) {
-            noticeSseHub.pushToAllOnline("notice", json);
-            return;
-        }
-        List<Long> userIds = resolveReceiverUserIds(tokens);
-        if (userIds.isEmpty()) {
-            return;
-        }
-        noticeSseHub.pushToUsers(userIds, "notice", json);
     }
 
     /**
-     * receivers 支持用户 ID 或登录账号（逗号分隔）；审批模块传 ID，消息通道可能传账号。
+     * receivers 支持用户 ID 或登录账号；审批模块传 ID，消息通道可能传账号。
      */
     private List<Long> resolveReceiverUserIds(List<String> tokens) {
-        Set<Long> ids = new java.util.LinkedHashSet<>();
-        List<String> names = new java.util.ArrayList<>();
+        Set<Long> ids = new LinkedHashSet<>();
+        List<String> names = new ArrayList<>();
         for (String token : tokens) {
             try {
                 ids.add(Long.valueOf(token));
@@ -253,31 +251,6 @@ public class SysNoticeServiceImpl implements SysNoticeService, InboxSink {
         return text.length() > max ? text.substring(0, max) : text;
     }
 
-    private List<SysNotice> visiblePublished(String username, Long userId) {
-        return noticeMapper.selectList(new LambdaQueryWrapper<SysNotice>()
-                        .eq(SysNotice::getStatus, 1)
-                        .orderByDesc(SysNotice::getId))
-                .stream()
-                .filter(n -> visibleTo(n, username, userId))
-                .toList();
-    }
-
-    private boolean visibleTo(SysNotice notice, String username, Long userId) {
-        if (notice == null) {
-            return false;
-        }
-        String receivers = notice.getReceivers();
-        if (!notBlank(receivers) || SysNoticeConsts.RECEIVERS_ALL.equals(receivers.trim())) {
-            return true;
-        }
-        String uid = userId == null ? null : String.valueOf(userId);
-        return Arrays.stream(receivers.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .anyMatch(token -> (username != null && username.equals(token))
-                        || (uid != null && uid.equals(token)));
-    }
-
     private Set<Long> readNoticeIds(Long userId, List<Long> noticeIds) {
         if (noticeIds == null || noticeIds.isEmpty()) {
             return Set.of();
@@ -288,9 +261,5 @@ public class SysNoticeServiceImpl implements SysNoticeService, InboxSink {
                 .stream()
                 .map(SysNoticeRead::getNoticeId)
                 .collect(Collectors.toCollection(HashSet::new));
-    }
-
-    private boolean notBlank(String s) {
-        return s != null && !s.isBlank();
     }
 }

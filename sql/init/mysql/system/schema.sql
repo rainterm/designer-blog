@@ -320,13 +320,15 @@ CREATE TABLE `sys_message_record` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '消息发送记录';
 
 DROP TABLE IF EXISTS `sys_notice_read`;
+DROP TABLE IF EXISTS `sys_notice_receiver`;
 DROP TABLE IF EXISTS `sys_notice`;
 CREATE TABLE `sys_notice` (
     `id`           BIGINT        NOT NULL AUTO_INCREMENT COMMENT '消息ID',
     `title`        VARCHAR(100)  NOT NULL                COMMENT '标题',
     `content`      TEXT          DEFAULT NULL            COMMENT '内容',
     `status`       TINYINT       NOT NULL DEFAULT 1      COMMENT '状态：1正常 0关闭',
-    `receivers`    VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '接收人账号，空=全体；多个逗号分隔',
+    `receiver_all` TINYINT       NOT NULL DEFAULT 0      COMMENT '是否全体用户：1是 0否（可见性以本列 + sys_notice_receiver 为准）',
+    `receivers`    VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '接收人原文（账号或ID，逗号分隔）；仅展示/审计，不参与查询',
     `remark`       VARCHAR(255)  NOT NULL DEFAULT ''     COMMENT '备注',
     `create_by`    VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '创建人',
     `create_time`  DATETIME      DEFAULT NULL            COMMENT '创建时间',
@@ -336,6 +338,15 @@ CREATE TABLE `sys_notice` (
     PRIMARY KEY (`id`),
     KEY `idx_sys_notice_status` (`status`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '站内消息（inbox 通道）';
+
+-- 定向消息的接收人：按 (user_id, notice_id) 索引，收件箱与未读数可在数据库分页/计数。
+-- 全体消息（receiver_all = 1）不落行，避免用户数 × 消息数膨胀。
+CREATE TABLE `sys_notice_receiver` (
+    `notice_id` BIGINT NOT NULL COMMENT '消息ID',
+    `user_id`   BIGINT NOT NULL COMMENT '接收人用户ID',
+    PRIMARY KEY (`notice_id`, `user_id`),
+    KEY `idx_sys_notice_receiver_user` (`user_id`, `notice_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '站内消息接收人（定向消息）';
 
 CREATE TABLE `sys_notice_read` (
     `id`           BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
