@@ -28,12 +28,14 @@ INSERT INTO `sys_user` (`id`, `username`, `password`, `nickname`, `email`, `phon
 -- ------------------------- 参数配置 -------------------------
 INSERT INTO `sys_config` (`id`, `config_name`, `config_key`, `config_value`, `config_type`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
 (1, '账号登录验证码', 'sys.account.captchaEnabled', 'true', 'Y', '是否开启登录验证码（滑块拼图；开启后仍需连续失败达到阈值才显示）', 'system', NOW(), 'system', NOW()),
-(2, '账号登录失败锁定', 'sys.account.lockEnabled', 'true', 'Y', '是否开启登录失败锁定', 'system', NOW(), 'system', NOW()),
-(3, '登录失败最大次数', 'sys.account.lockMaxRetry', '5', 'Y', '连续失败达到次数后锁定', 'system', NOW(), 'system', NOW()),
-(4, '登录锁定时长(分钟)', 'sys.account.lockMinutes', '10', 'Y', '锁定时长，单位分钟', 'system', NOW(), 'system', NOW()),
+(2, '账号登录失败锁定', 'sys.account.lockEnabled', 'true', 'Y', '是否开启登录失败锁定（按账号 + IP 组合锁定，不会影响该账号从其它 IP 登录）', 'system', NOW(), 'system', NOW()),
+(3, '登录失败最大次数', 'sys.account.lockMaxRetry', '5', 'Y', '同一账号在同一 IP 下连续失败达到次数后锁定该组合', 'system', NOW(), 'system', NOW()),
+(4, '登录锁定时长(分钟)', 'sys.account.lockMinutes', '10', 'Y', '账号 + IP 组合的锁定时长，单位分钟', 'system', NOW(), 'system', NOW()),
 (6, 'Token绝对有效期(秒)', 'sys.account.tokenTimeout', '86400', 'Y', 'Token 最长存活时间，到期必须重新登录；默认 86400=1天，最小 60', 'system', NOW(), 'system', NOW()),
 (7, 'Token活跃续期(秒)', 'sys.account.tokenActiveTimeout', '1800', 'Y', '有请求则自动续期；连续闲置超过该秒数踢出；默认 1800=30分钟，-1 关闭', 'system', NOW(), 'system', NOW()),
-(8, '验证码失败阈值', 'sys.account.captchaFailThreshold', '3', 'Y', '同一账号连续登录失败达到该次数后才要求滑块验证，默认 3', 'system', NOW(), 'system', NOW());
+(8, '验证码失败阈值', 'sys.account.captchaFailThreshold', '3', 'Y', '同一账号连续登录失败达到该次数后才要求滑块验证（跨 IP 累计，但只影响是否出验证码、不锁定账号），默认 3', 'system', NOW(), 'system', NOW()),
+(9, 'IP登录失败锁定阈值', 'sys.account.lockIpMaxRetry', '30', 'Y', '同一 IP 在统计窗口内累计失败达到该次数后临时锁定该 IP，用于拦截撞库 / 密码喷洒；默认 30', 'system', NOW(), 'system', NOW()),
+(10, 'IP锁定时长(分钟)', 'sys.account.lockIpMinutes', '10', 'Y', 'IP 维度锁定时长，单位分钟；默认 10', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 系统设置（单行）-------------------------
 -- 系统名称 / 登录页副标题 / Logo / 默认偏好设置；由「系统管理 → 系统设置」菜单维护

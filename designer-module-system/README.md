@@ -42,16 +42,25 @@ com/designer/admin/system/
 
 | 关注点 | 由谁负责 |
 | --- | --- |
-| 该账号这次要不要验（全局开关 + 连续失败 ≥ `sys.account.captchaFailThreshold`） | `LoginAttemptService#isCaptchaRequired` |
-| 连续失败计数、达 `sys.account.lockMaxRetry` 后锁定 | `LoginAttemptService` |
+| 该账号这次要不要验（全局开关 + **账号维度**连续失败 ≥ `sys.account.captchaFailThreshold`；只影响是否出滑块，不锁定账号） | `LoginAttemptService#isCaptchaRequired` |
+| **账号 + 来源 IP** 组合的连续失败计数，达 `sys.account.lockMaxRetry` 后锁定该组合 | `LoginAttemptService` |
+| **IP** 维度累计失败，达 `sys.account.lockIpMaxRetry` 后临时锁定该 IP（拦撞库 / 密码喷洒） | `LoginAttemptService` |
 | 凭据是否有效（解密、核对、一次性消费） | framework 的 `CaptchaVerifier#assertVerified` |
 | 单个 **IP** 的登录尝试频次（10 次/分钟、100 次/24 小时） | `AuthController#login` 上的 `@RateLimit` |
 
-上面三条都按**账号**计数，只能挡住盯着某一个账号试的人；换着用户名扫（撞库 / 爆破）
-时每个账号只错一两次，够不到验证码阈值也触发不了锁定，所以还需要按 **IP** 记一份总额度。
-阈值写在 `AuthController#login` 的 `@RateLimit` 注解上，改这里即可
-（注解本身的能力见 `designer-framework` 的 `@RateLimit`）；IP 维度复用框架的
-`ClientIpUtil`，与落库 IP、评论限流是同一个值。滑块凭据端点（公开 URL 为
+锁定必须带 IP：只按账号锁定等于给了攻击者一个 DoS 开关，随便输几次错密码就能把别人的账号
+锁在门外。现在攻击者只能锁住「自己这个来源 + 目标账号」的组合，账号主人从自己的网络照常登录。
+账号维度跨 IP 累计，但只回答「要不要验」；换着用户名扫（撞库 / 密码喷洒）由 IP 维度兜住，
+两个阈值分别由 `sys.account.lockMaxRetry` / `sys.account.lockIpMaxRetry` 控制。
+
+**账号大小写不敏感**：与唯一性校验（库表 `utf8mb4_general_ci`）保持同一口径。登录入口统一做
+`trim().toLowerCase(Locale.ROOT)` 归一，登录查询、失败计数、锁定键共用这个规范形式，
+因此 `admin` / `Admin` / `ADMIN` 落在同一个 Redis 键上，
+不存在用大小写变体把失败计数拆成多份的绕过。
+
+`AuthController#login` 上的 `@RateLimit` 是更外层的粗粒度闸门（10 次/分钟、100 次/24 小时），
+阈值写在注解上，改这里即可（注解本身的能力见 `designer-framework` 的 `@RateLimit`）；
+IP 维度复用框架的 `ClientIpUtil`，与落库 IP、限流是同一个值。滑块凭据端点（公开 URL 为
 `/app-api/captcha/**`，由 framework 的 `AppCaptchaController` 映射）标注不到
 （注解加不到该 controller 上），
 频控由 AJ-Captcha 内置 `req-*` 与 nginx 的 `admin_captcha` 桶承担。

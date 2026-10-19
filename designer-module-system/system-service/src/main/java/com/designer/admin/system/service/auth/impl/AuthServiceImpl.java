@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.designer.admin.common.constant.SystemConsts;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.captcha.CaptchaVerifier;
+import com.designer.admin.framework.client.ClientIpUtil;
 import com.designer.admin.framework.crypto.PasswordUtil;
 import com.designer.admin.framework.satoken.LoginHelper;
 import com.designer.admin.framework.satoken.LoginUser;
@@ -33,6 +34,7 @@ import org.noear.solon.core.handle.Context;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 认证服务：登录 / 登出 / 当前用户信息 / 动态路由
@@ -61,24 +63,33 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginVO login(LoginDTO dto, Context ctx) {
-        String ip = ctx == null ? "" : ctx.realIp();
+        String ip = ClientIpUtil.normalize(ctx);
         String userAgent = ctx == null ? null : ctx.userAgent();
-        String username = dto.getUsername();
+        // 账号大小写不敏感，与唯一性校验（库表 ci 排序规则）保持同一口径：
+        // 入口统一归一为「去空白 + 转小写」，登录查询、失败计数、锁定键共用这个规范形式。
+        // 于是 admin / Admin / ADMIN 必然落到同一个 Redis 键上，不存在变体绕过计数的问题。
+        // 用 Locale.ROOT：toLowerCase() 不带参数会跟随默认区域，土耳其语环境下 I 会折成 ı。
+        String username = dto.getUsername() == null
+                ? "" : dto.getUsername().trim().toLowerCase(Locale.ROOT);
 
-        // 先问「要不要验」，再决定是否消费凭据：凭据一次性，
+        // 先判锁定：锁定与验证码都只看「要不要继续」，lock 检查不消费任何凭据。
+        // 放在验证码之前，避免锁定中的账号还要先解一次滑块才知道自己被锁了。
+        loginAttemptService.assertNotLocked(username, ip);
+
+        // 再问「要不要验」，最后才决定是否消费凭据：凭据一次性，
         // 对不需要验证的账号调校验会把它白白用掉（见 LoginAttemptService 的类注释）
         if (loginAttemptService.isCaptchaRequired(username)) {
             captchaVerifier.assertVerified(dto.getCaptchaVerification());
         }
-        loginAttemptService.assertNotLocked(username);
 
+        // 库表排序规则是 utf8mb4_general_ci，大小写变体同样会命中，无需再比原文
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username));
 
         if (user == null || !PasswordUtil.matches(dto.getPassword(), user.getPassword())) {
             recordLoginLog(username, ip, userAgent, 0, "账号或密码错误");
             try {
-                loginAttemptService.saveLoginFail(username);
+                loginAttemptService.saveLoginFail(username, ip);
             } catch (BizException lockEx) {
                 recordLoginLog(username, ip, userAgent, 0, lockEx.getMessage());
                 throw lockEx;
@@ -90,7 +101,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BizException("账号已停用，请联系管理员");
         }
 
-        loginAttemptService.removeLoginFail(username);
+        loginAttemptService.removeLoginFail(username, ip);
         long tokenTimeout = configService.getTokenTimeoutSeconds();
         long activeTimeout = configService.getTokenActiveTimeoutSeconds();
         SaLoginParameter loginParam = new SaLoginParameter().setTimeout(tokenTimeout);
@@ -151,6 +162,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public CaptchaVO getCaptcha(String username) {
         CaptchaVO vo = new CaptchaVO();
+        // 计数键的归一化在 LoginAttemptService 内部完成，这里直接传原始输入
         vo.setEnabled(loginAttemptService.isCaptchaRequired(username));
         return vo;
     }

@@ -11,11 +11,36 @@ package com.designer.admin.system.constant;
  */
 public final class SystemRedisKeyConsts {
 
-    /** 登录失败计数：{@code login:fail:{username}}，值为失败次数 */
-    public static final String LOGIN_FAIL_PREFIX = "login:fail:";
+    /**
+     * 账号 + IP 维度的登录失败计数：{@code login:pair:fail:{ip}:{username}}，值为失败次数。
+     *
+     * <p>IP 放在用户名之前，是为了让「用户名里带冒号」也不会产生键歧义：
+     * IP 本身不含冒号，按第一个冒号切开就能唯一还原出 IP 与用户名。</p>
+     */
+    public static final String LOGIN_PAIR_FAIL_PREFIX = "login:pair:fail:";
 
-    /** 账号锁定标记：{@code login:lock:{username}}，存在即表示锁定中，TTL 为剩余锁定时长 */
-    public static final String LOGIN_LOCK_PREFIX = "login:lock:";
+    /**
+     * 账号 + IP 维度的锁定标记：{@code login:pair:lock:{ip}:{username}}，存在即锁定，TTL 为剩余时长。
+     *
+     * <p><b>锁定必须带 IP</b>：只按用户名锁定等于给攻击者一个 DoS 开关 ——
+     * 随便输几次错密码就能把别人的账号锁在门外。带上 IP 后，攻击者只能锁住
+     * 「自己这个来源 + 目标账号」的组合，受害者换回自己的网络照常登录。</p>
+     */
+    public static final String LOGIN_PAIR_LOCK_PREFIX = "login:pair:lock:";
+
+    /**
+     * 账号维度的失败计数：{@code login:acct:fail:{username}}，不区分来源 IP。
+     *
+     * <p>只用于决定「要不要出人机验证」，<b>绝不据此锁定</b>：
+     * 分布式撞库会让这个计数涨得很快，若它触发锁定，攻击者花少量 IP 就能永久锁死目标账号。</p>
+     */
+    public static final String LOGIN_ACCOUNT_FAIL_PREFIX = "login:acct:fail:";
+
+    /** IP 维度的失败计数：{@code login:ip:fail:{ip}}，不区分账号，用于识别撞库 / 密码喷洒 */
+    public static final String LOGIN_IP_FAIL_PREFIX = "login:ip:fail:";
+
+    /** IP 锁定标记：{@code login:ip:lock:{ip}}，存在即锁定，TTL 为剩余时长 */
+    public static final String LOGIN_IP_LOCK_PREFIX = "login:ip:lock:";
 
     /** SSO 一次性票据：{@code sso:ticket:{ticket}}，值为签发方的 Sa-Token */
     public static final String SSO_TICKET_PREFIX = "sso:ticket:";

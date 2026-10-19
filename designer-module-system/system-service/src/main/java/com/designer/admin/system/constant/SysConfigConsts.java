@@ -29,6 +29,12 @@ public final class SysConfigConsts {
     /** 锁定时长（分钟） */
     public static final String KEY_LOCK_MINUTES = "sys.account.lockMinutes";
 
+    /** 同一 IP 累计失败达到该次数后锁定该 IP（跨账号，用于拦撞库 / 密码喷洒） */
+    public static final String KEY_LOCK_IP_MAX_RETRY = "sys.account.lockIpMaxRetry";
+
+    /** IP 锁定时长（分钟） */
+    public static final String KEY_LOCK_IP_MINUTES = "sys.account.lockIpMinutes";
+
     /** Token 绝对有效期（秒），到期必须重新登录 */
     public static final String KEY_TOKEN_TIMEOUT = "sys.account.tokenTimeout";
 
@@ -52,6 +58,15 @@ public final class SysConfigConsts {
 
     /** 锁定时长默认值（分钟，未配置 {@link #KEY_LOCK_MINUTES} 时） */
     public static final int DEFAULT_LOCK_MINUTES = 10;
+
+    /** 同一 IP 失败次数默认上限（未配置 {@link #KEY_LOCK_IP_MAX_RETRY} 时） */
+    public static final int DEFAULT_LOCK_IP_MAX_RETRY = 30;
+
+    /** IP 锁定时长默认值（分钟，未配置 {@link #KEY_LOCK_IP_MINUTES} 时） */
+    public static final int DEFAULT_LOCK_IP_MINUTES = 10;
+
+    /** 锁定时长上限（分钟）：防止配置成天文数字后把用户长期锁在门外 */
+    public static final int MAX_LOCK_MINUTES = 24 * 60;
 
     /** 配置类型：内置（不允许删除） */
     public static final String TYPE_BUILTIN = "Y";
