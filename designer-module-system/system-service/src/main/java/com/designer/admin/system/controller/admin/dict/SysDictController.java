@@ -8,6 +8,7 @@ import com.designer.admin.common.core.Result;
 import com.designer.admin.common.util.ExcelUtil;
 import com.designer.admin.framework.log.BusinessType;
 import com.designer.admin.framework.log.OperLog;
+import com.designer.admin.system.constant.SystemCacheConsts;
 import com.designer.admin.system.model.dto.dict.DictTypeQueryDTO;
 import com.designer.admin.system.model.dto.dict.DictTypeSaveDTO;
 import com.designer.admin.system.model.entity.dict.SysDictData;
@@ -26,6 +27,7 @@ import org.noear.solon.annotation.Post;
 import org.noear.solon.annotation.Put;
 import org.noear.solon.core.handle.Context;
 import org.noear.solon.core.handle.UploadedFile;
+import org.noear.solon.data.annotation.Cache;
 import org.noear.solon.validation.annotation.Valid;
 import org.noear.solon.validation.annotation.Validated;
 
@@ -57,6 +59,9 @@ public class SysDictController {
 
     @Get
     @Mapping("/type/options")
+    @Cache(key = SystemCacheConsts.DICT_TYPE_OPTIONS,
+            tags = SystemCacheConsts.DICT_TYPE_TAG,
+            seconds = SystemCacheConsts.CACHE_SECONDS)
     @ApiOperation(value = "查询字典类型选项")
     public Result<List<SysDictType>> listTypeOptions() {
         return Result.ok(dictService.listTypeOptions());
@@ -165,6 +170,9 @@ public class SysDictController {
 
     @Get
     @Mapping("/data/{dictType}")
+    @Cache(key = SystemCacheConsts.DICT_DATA_KEY_TMPL,
+            tags = SystemCacheConsts.DICT_DATA_TAG,
+            seconds = SystemCacheConsts.CACHE_SECONDS)
     @ApiOperation(value = "根据类型查询字典数据")
     public Result<List<SysDictData>> listDataByType(String dictType) {
         return Result.ok(dictService.listDataByType(dictType));

@@ -4,6 +4,7 @@ import com.designer.admin.common.constant.SystemConsts;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.system.constant.SystemCacheConsts;
 import com.designer.admin.system.mapper.dict.SysDictDataMapper;
 import com.designer.admin.system.mapper.dict.SysDictTypeMapper;
 import com.designer.admin.system.model.dto.dict.DictTypeQueryDTO;
@@ -15,6 +16,7 @@ import com.designer.admin.system.model.vo.dict.DictTypeExcelVO;
 import com.designer.admin.system.service.dict.SysDictService;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.data.annotation.CacheRemove;
 import org.noear.solon.data.annotation.Transaction;
 
 import java.util.ArrayList;
@@ -54,6 +56,7 @@ public class SysDictServiceImpl implements SysDictService {
 
     @Override
     @Transaction
+    @CacheRemove(tags = SystemCacheConsts.DICT_TYPE_TAG)
     public void addType(DictTypeSaveDTO dto) {
         Long dup = dictTypeMapper.countByDictType(dto.getDictType(), null);
         if (dup != null && dup > 0) {
@@ -68,6 +71,7 @@ public class SysDictServiceImpl implements SysDictService {
 
     @Override
     @Transaction
+    @CacheRemove(tags = SystemCacheConsts.DICT_ALL_TAGS)
     public void updateType(DictTypeSaveDTO dto) {
         if (dto.getId() == null) {
             throw new BizException("字典类型ID不能为空");
@@ -81,6 +85,7 @@ public class SysDictServiceImpl implements SysDictService {
 
     @Override
     @Transaction
+    @CacheRemove(tags = SystemCacheConsts.DICT_ALL_TAGS)
     public void removeType(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;
@@ -125,6 +130,7 @@ public class SysDictServiceImpl implements SysDictService {
     }
 
     @Override
+    @CacheRemove(tags = SystemCacheConsts.DICT_DATA_TAG)
     public void addData(SysDictData data) {
         if (data.getStatus() == null) {
             data.setStatus(SystemConsts.STATUS_ENABLE);
@@ -133,6 +139,7 @@ public class SysDictServiceImpl implements SysDictService {
     }
 
     @Override
+    @CacheRemove(tags = SystemCacheConsts.DICT_DATA_TAG)
     public void updateData(SysDictData data) {
         if (data.getId() == null) {
             throw new BizException("字典数据ID不能为空");
@@ -142,6 +149,7 @@ public class SysDictServiceImpl implements SysDictService {
 
     @Override
     @Transaction
+    @CacheRemove(tags = SystemCacheConsts.DICT_DATA_TAG)
     public void removeData(List<Long> ids) {
         if (ids != null && !ids.isEmpty()) {
             dictDataMapper.deleteByIds(ids);
@@ -193,6 +201,7 @@ public class SysDictServiceImpl implements SysDictService {
 
     @Override
     @Transaction
+    @CacheRemove(tags = SystemCacheConsts.DICT_TYPE_TAG)
     public int importTypes(List<DictTypeExcelVO> rows) {
         if (rows == null || rows.isEmpty()) {
             throw new BizException("导入数据为空");
@@ -222,6 +231,7 @@ public class SysDictServiceImpl implements SysDictService {
 
     @Override
     @Transaction
+    @CacheRemove(tags = SystemCacheConsts.DICT_DATA_TAG)
     public int importData(List<DictDataExcelVO> rows) {
         if (rows == null || rows.isEmpty()) {
             throw new BizException("导入数据为空");

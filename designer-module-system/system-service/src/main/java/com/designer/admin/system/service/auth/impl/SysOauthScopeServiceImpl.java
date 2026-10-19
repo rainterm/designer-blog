@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.constant.SystemConsts;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.common.constant.HttpConsts;
+import com.designer.admin.system.constant.SystemCacheConsts;
 import com.designer.admin.system.mapper.auth.SysOauthClientScopeMapper;
 import com.designer.admin.system.mapper.auth.SysOauthScopeMapper;
 import com.designer.admin.system.model.dto.auth.OauthScopeQueryDTO;
@@ -14,6 +15,8 @@ import com.designer.admin.system.model.entity.auth.SysOauthScope;
 import com.designer.admin.system.service.auth.SysOauthScopeService;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.data.annotation.Cache;
+import org.noear.solon.data.annotation.CacheRemove;
 import org.noear.solon.data.annotation.Transaction;
 
 import java.util.List;
@@ -42,7 +45,17 @@ public class SysOauthScopeServiceImpl implements SysOauthScopeService {
                 .orderByAsc(SysOauthScope::getId));
     }
 
+    /**
+     * 启用的授权范围列表。
+     *
+     * <p>两个读入口（管理端下拉 {@code /oauth-scope/options} 与开放接口鉴权
+     * {@code OpenApiScopeGuard}）共用同一个缓存键：返回值完全一致，
+     * 没必要各存一份、更没必要各失效一次。</p>
+     */
     @Override
+    @Cache(key = SystemCacheConsts.OAUTH_SCOPE_ENABLED,
+            tags = SystemCacheConsts.OAUTH_SCOPE_TAG,
+            seconds = SystemCacheConsts.CACHE_SECONDS)
     public List<SysOauthScope> listEnabled() {
         return scopeMapper.selectList(new LambdaQueryWrapper<SysOauthScope>()
                 .eq(SysOauthScope::getStatus, SystemConsts.STATUS_ENABLE)
@@ -50,7 +63,17 @@ public class SysOauthScopeServiceImpl implements SysOauthScopeService {
                 .orderByAsc(SysOauthScope::getId));
     }
 
+    /**
+     * 开放接口鉴权用的 scope 列表。
+     *
+     * <p><b>注解必须同时标在这里</b>：{@code this.listEnabled()} 是自调用，不经过 Solon 的
+     * Bean 代理，{@link Cache} 拦截不到 —— 只给 {@code listEnabled} 加注解的话，
+     * 每个开放接口请求仍会打一次数据库。两处共用同一个 key，命中同一份数据。</p>
+     */
     @Override
+    @Cache(key = SystemCacheConsts.OAUTH_SCOPE_ENABLED,
+            tags = SystemCacheConsts.OAUTH_SCOPE_TAG,
+            seconds = SystemCacheConsts.CACHE_SECONDS)
     public List<SysOauthScope> listAllEnabledPatterns() {
         return listEnabled();
     }
@@ -66,6 +89,7 @@ public class SysOauthScopeServiceImpl implements SysOauthScopeService {
 
     @Override
     @Transaction
+    @CacheRemove(tags = SystemCacheConsts.OAUTH_SCOPE_TAG)
     public SysOauthScope add(OauthScopeSaveDTO dto) {
         SysOauthScope entity = toEntity(dto);
         assertCodeUnique(entity.getScopeCode(), null);
@@ -75,6 +99,7 @@ public class SysOauthScopeServiceImpl implements SysOauthScopeService {
 
     @Override
     @Transaction
+    @CacheRemove(tags = SystemCacheConsts.OAUTH_SCOPE_TAG)
     public void update(OauthScopeSaveDTO dto) {
         if (dto.getId() == null) {
             throw new BizException("Scope ID不能为空");
@@ -89,6 +114,7 @@ public class SysOauthScopeServiceImpl implements SysOauthScopeService {
 
     @Override
     @Transaction
+    @CacheRemove(tags = SystemCacheConsts.OAUTH_SCOPE_TAG)
     public void remove(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;

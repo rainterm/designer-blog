@@ -26,9 +26,11 @@ import com.designer.admin.system.model.entity.rbac.SysUserRole;
 import com.designer.admin.system.model.vo.rbac.UserExcelVO;
 import com.designer.admin.system.model.vo.rbac.UserOptionVO;
 import com.designer.admin.system.service.rbac.SysUserService;
+import com.designer.admin.system.spi.PermissionInvalidator;
 import com.designer.admin.system.util.PasswordValidatorUtil;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.annotation.Inject;
 import org.noear.solon.data.annotation.Transaction;
 
 import java.util.ArrayList;
@@ -58,6 +60,8 @@ public class SysUserServiceImpl implements SysUserService {
     private SysPostMapper postMapper;
     @Db
     private SysDeptMapper deptMapper;
+    @Inject
+    private PermissionInvalidator permissionInvalidator;
 
     @Override
     public IPage<SysUser> listPage(UserQueryDTO query) {
@@ -161,6 +165,8 @@ public class SysUserServiceImpl implements SysUserService {
         }
         String username = requireUsername(dto.getUsername());
         assertUsernameUnique(username, dto.getId());
+        // 编辑接口同样能改状态：不在这里拦，停用保护就能被 PUT /user/update 绕过
+        assertNotDisablingSuperUser(dto.getId(), dto.getStatus());
         dto.setUsername(username);
         SysUser user = new SysUser();
         user.setId(dto.getId());
@@ -207,7 +213,8 @@ public class SysUserServiceImpl implements SysUserService {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        if (ids.contains(1L)) {
+        // 超管身份以 sys_role.is_super 为准，不再硬编码 id == 1
+        if (userMapper.existsSuperUser(ids)) {
             throw new BizException("超级管理员不允许删除");
         }
         userMapper.deleteByIds(ids);
@@ -215,6 +222,8 @@ public class SysUserServiceImpl implements SysUserService {
             userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
             userPostMapper.delete(new LambdaQueryWrapper<SysUserPost>().eq(SysUserPost::getUserId, id));
         }
+        // 用户没了，残留的快照没人会再读；删掉是为了避免「删号后重建同 ID」读到旧权限（ID 不复用，属防御性）
+        permissionInvalidator.evictUsers(ids);
     }
 
     @Override
@@ -238,13 +247,29 @@ public class SysUserServiceImpl implements SysUserService {
 
     @Override
     public void updateStatus(Long id, Integer status) {
-        if (id != null && id == 1L && status != null && status == 0) {
-            throw new BizException("超级管理员不允许停用");
-        }
+        assertNotDisablingSuperUser(id, status);
         SysUser user = new SysUser();
         user.setId(id);
         user.setStatus(status);
         userMapper.updateById(user);
+    }
+
+    /**
+     * 停用保护：超管账号不允许被停用。
+     *
+     * <p>按 {@code is_super} 判定而不是主键：换库/导入数据后主键会变，
+     * 硬编码 {@code id == 1} 会让保护在不知不觉中失效。</p>
+     *
+     * @param userId 目标用户 ID
+     * @param status 目标状态，非「停用」时直接放行
+     */
+    private void assertNotDisablingSuperUser(Long userId, Integer status) {
+        if (userId == null || !Integer.valueOf(SystemConsts.STATUS_DISABLE).equals(status)) {
+            return;
+        }
+        if (userMapper.existsSuperUser(List.of(userId))) {
+            throw new BizException("超级管理员不允许停用");
+        }
     }
 
     @Override
@@ -383,6 +408,8 @@ public class SysUserServiceImpl implements SysUserService {
                 userRoleMapper.insert(ur);
             }
         }
+        // 角色集合变了，该用户的权限快照必须作废（事务提交后删，避免回源读到旧数据）
+        permissionInvalidator.evictUser(userId);
     }
 
     private void saveUserPosts(Long userId, List<Long> postIds) {

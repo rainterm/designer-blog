@@ -12,12 +12,14 @@ import com.designer.admin.system.model.entity.rbac.SysRole;
 import com.designer.admin.system.model.entity.rbac.SysUserRole;
 import com.designer.admin.system.service.rbac.SysMenuService;
 import com.designer.admin.system.service.rbac.SysRoleService;
+import com.designer.admin.system.spi.PermissionInvalidator;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 import org.noear.solon.data.annotation.Transaction;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 角色服务
@@ -33,6 +35,8 @@ public class SysRoleServiceImpl implements SysRoleService {
     private SysUserRoleMapper userRoleMapper;
     @Inject
     private SysMenuService menuService;
+    @Inject
+    private PermissionInvalidator permissionInvalidator;
 
     @Override
     public IPage<SysRole> listPage(RoleQueryDTO query) {
@@ -104,6 +108,12 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (dto.getMenuIds() != null) {
             menuService.assignRoleMenus(dto.getId(), dto.getMenuIds());
         }
+        // 角色标识 / 状态变了才需要整体失效；只改组名、备注时无需动缓存
+        boolean identityChanged = !Objects.equals(existing.getRoleKey(), update.getRoleKey())
+                || !Objects.equals(existing.getStatus(), update.getStatus());
+        if (identityChanged || dto.getMenuIds() == null) {
+            permissionInvalidator.evictRole(dto.getId());
+        }
     }
 
     @Override
@@ -127,6 +137,8 @@ public class SysRoleServiceImpl implements SysRoleService {
             }
         }
         roleMapper.deleteByIds(ids);
+        // 正常路径下没有用户绑定（上面已校验），这里仍删一次：防止历史脏数据残留在缓存里
+        permissionInvalidator.evictRoles(ids);
     }
 
     @Override

@@ -10,10 +10,10 @@ import com.designer.admin.framework.client.ClientIpUtil;
 import com.designer.admin.framework.crypto.PasswordUtil;
 import com.designer.admin.framework.satoken.LoginHelper;
 import com.designer.admin.framework.satoken.LoginUser;
+import com.designer.admin.framework.satoken.PermissionLoader;
+import com.designer.admin.framework.satoken.PermissionSnapshot;
 import com.designer.admin.system.constant.OnlineUserConsts;
 import com.designer.admin.system.constant.UserAgentConsts;
-import com.designer.admin.system.mapper.rbac.SysMenuMapper;
-import com.designer.admin.system.mapper.rbac.SysRoleMapper;
 import com.designer.admin.system.mapper.rbac.SysUserMapper;
 import com.designer.admin.system.model.dto.auth.LoginDTO;
 import com.designer.admin.system.model.entity.log.SysLoginLog;
@@ -46,10 +46,6 @@ public class AuthServiceImpl implements AuthService {
 
     @Db
     private SysUserMapper userMapper;
-    @Db
-    private SysRoleMapper roleMapper;
-    @Db
-    private SysMenuMapper menuMapper;
     @Inject
     private SysMenuService menuService;
     @Inject
@@ -60,6 +56,8 @@ public class AuthServiceImpl implements AuthService {
     private LoginAttemptService loginAttemptService;
     @Inject
     private SysConfigService configService;
+    @Inject
+    private PermissionLoader permissionLoader;
 
     @Override
     public LoginVO login(LoginDTO dto, Context ctx) {
@@ -110,16 +108,15 @@ public class AuthServiceImpl implements AuthService {
         }
         StpUtil.login(user.getId(), loginParam);
 
-        List<String> roles = roleMapper.selectRoleKeysByUserId(user.getId());
-        boolean superAdmin = roleMapper.selectIsSuperByUserId(user.getId());
+        PermissionSnapshot snapshot = permissionLoader.load(user.getId());
 
         LoginUser loginUser = new LoginUser();
         loginUser.setUserId(user.getId());
         loginUser.setUsername(user.getUsername());
         loginUser.setNickname(user.getNickname());
         loginUser.setAvatar(user.getAvatar());
-        loginUser.setRoles(roles);
-        loginUser.setSuperAdmin(superAdmin);
+        loginUser.setRoles(snapshot.getRoles());
+        loginUser.setSuperAdmin(Boolean.TRUE.equals(snapshot.getSuperAdmin()));
         StpUtil.getSession().set(LoginHelper.LOGIN_USER_KEY, loginUser);
 
         // 写入 token 会话，供在线用户列表展示
@@ -146,7 +143,7 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new BizException("用户不存在或已被删除");
         }
-        List<String> roles = roleMapper.selectRoleKeysByUserId(user.getId());
+        List<String> roles = permissionLoader.load(user.getId()).getRoles();
         LoginVO vo = new LoginVO();
         vo.setTokenName(StpUtil.getTokenName());
         vo.setToken(token);
@@ -179,8 +176,9 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new BizException("用户不存在或已被删除");
         }
-        List<String> roles = roleMapper.selectRoleKeysByUserId(userId);
-        boolean superAdmin = roleMapper.selectIsSuperByUserId(userId);
+        PermissionSnapshot snapshot = permissionLoader.load(userId);
+        List<String> roles = snapshot.getRoles();
+        boolean superAdmin = Boolean.TRUE.equals(snapshot.getSuperAdmin());
 
         UserInfoVO vo = new UserInfoVO();
         vo.setUserId(user.getId());
@@ -191,14 +189,14 @@ public class AuthServiceImpl implements AuthService {
         vo.setPhone(user.getPhone());
         vo.setRoles(roles);
         vo.setSuperAdmin(superAdmin);
-        vo.setPerms(superAdmin ? List.of("*") : menuMapper.selectPermsByUserId(userId));
+        vo.setPerms(snapshot.getPermissions());
         return vo;
     }
 
     @Override
     public List<RouterVO> listRouters() {
         Long userId = LoginHelper.getUserId();
-        boolean superAdmin = roleMapper.selectIsSuperByUserId(userId);
+        boolean superAdmin = Boolean.TRUE.equals(permissionLoader.load(userId).getSuperAdmin());
         return menuService.listRouters(userId, superAdmin);
     }
 

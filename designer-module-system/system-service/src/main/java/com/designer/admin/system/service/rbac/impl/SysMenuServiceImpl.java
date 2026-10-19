@@ -13,8 +13,11 @@ import com.designer.admin.system.model.entity.rbac.SysMenu;
 import com.designer.admin.system.model.entity.rbac.SysRoleMenu;
 import com.designer.admin.system.model.vo.rbac.RouterVO;
 import com.designer.admin.system.service.rbac.SysMenuService;
+import com.designer.admin.system.spi.PermissionInvalidator;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.annotation.Inject;
+import org.noear.solon.data.annotation.Transaction;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -39,6 +42,8 @@ public class SysMenuServiceImpl implements SysMenuService {
     private SysMenuMapper menuMapper;
     @Db
     private SysRoleMenuMapper roleMenuMapper;
+    @Inject
+    private PermissionInvalidator permissionInvalidator;
 
     @Override
     public List<RouterVO> listRouters(Long userId, boolean superAdmin) {
@@ -178,12 +183,15 @@ public class SysMenuServiceImpl implements SysMenuService {
     }
 
     @Override
+    @Transaction
     public void update(MenuSaveDTO dto) {
         if (dto.getId() == null) {
             throw new BizException("菜单ID不能为空");
         }
         menuMapper.updateById(toEntity(dto));
         adjustParentType(toEntity(dto));
+        // perms / status 都可能变，受该菜单影响的用户权限快照全部作废
+        permissionInvalidator.evictMenu(dto.getId());
     }
 
     private SysMenu toEntity(MenuSaveDTO dto) {
@@ -216,9 +224,12 @@ public class SysMenuServiceImpl implements SysMenuService {
     }
 
     @Override
+    @Transaction
     public void remove(Long id) {
         List<Long> ids = collectDescendantIds(id);
         ids.add(id);
+        // 必须在删除 sys_role_menu 之前解析受影响用户，否则关系行没了就找不到人
+        permissionInvalidator.evictMenus(ids);
         menuMapper.deleteByIds(ids);
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getMenuId, ids));
     }
@@ -263,6 +274,8 @@ public class SysMenuServiceImpl implements SysMenuService {
             rm.setMenuId(menuId);
             roleMenuMapper.insert(rm);
         }
+        // 角色菜单变了，该角色下所有用户的权限快照作废
+        permissionInvalidator.evictRole(roleId);
     }
 
     /**
