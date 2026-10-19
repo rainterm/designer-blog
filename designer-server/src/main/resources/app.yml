@@ -36,17 +36,20 @@ knife4j:
     swaggerModelName: "数据模型"
 
 # ============================ 日志 ============================
-# 使用 Solon 内置的 Logback 集成（solon-logging-logback）：
-# 项目未提供 logback.xml / logback-solon.xml，因此由下列配置自动生成 appender。
-# 同时输出到控制台与文件；文件按「天 + 单文件 10MB」滚动，最多保留 7 天，总量上限 1GB。
+# 使用 Solon 内置的 Logback 集成（solon-logging-logback）。
+# appender 定义在 designer-server 的 logback-solon.xml（存在该文件时 Solon 不再生成默认 appender）：
+#   CONSOLE     控制台
+#   FILE        全量文件（INFO 及以上，包含 ERROR）
+#   ERROR_FILE  error 独立文件（仅 ERROR，默认与主日志同目录，文件名加 -error 后缀）
+#   SOLON       Solon 自定义 appender 桥接（与内置默认配置保持一致）
+# XML 通过 <solonProperty> 读取下面的值，因此路径 / 级别 / 滚动策略仍在这里配置。
+# 三路输出固定启用；如需关闭某一路，把对应 level 设为 OFF。
 solon.logging.appender:
   console:
-    enable: true
     level: INFO
     pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
   file:
-    enable: true
-    # 当前日志文件为 "${LOG_PATH}.log"；滚动文件沿用 Solon 默认规则：
+    # 当前日志文件为 "${LOG_PATH}.log"；滚动文件为：
     #   ${name}_yyyy-MM-dd_序号.log
     name: "${LOG_PATH:logs/designer-server}"
     level: INFO
@@ -58,6 +61,16 @@ solon.logging.appender:
     maxHistory: 7
     # 历史日志总量上限，0 表示不限制
     totalSizeCap: "1 GB"
+  error:
+    # 仅 ERROR 级别写入独立文件；默认为 "${LOG_PATH}-error.log"
+    name: "${LOG_PATH:logs/designer-server}-error"
+    level: ERROR
+    # 未显式配置时沿用 file.* 的 extension / pattern / 滚动参数，可按需单独覆盖：
+    # extension: ".log"
+    # pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+    # maxFileSize: "10 MB"
+    # maxHistory: 7
+    # totalSizeCap: "1 GB"
 
 solon.logging.logger:
   root:

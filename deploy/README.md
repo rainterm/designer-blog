@@ -149,9 +149,10 @@ rainterm.cn         A   <服务器IP>     # → 301 跳到 www
 
 ## 日志
 
-- **文件日志**：容器内 `/app/logs/designer-server.log`，挂载在 `server_logs` 卷（`docker volume inspect` 查看位置）。按「天 + 单文件 10MB」滚动，默认保留 `maxHistory=7` 天 / 总量上限 `totalSizeCap=1GB`。
+- **文件日志**：容器内 `/app/logs/designer-server.log`（全量，含 ERROR）与 `/app/logs/designer-server-error.log`（仅 ERROR），均挂载在 `server_logs` 卷（`docker volume inspect` 查看位置）。按「天 + 单文件 10MB」滚动，默认保留 `maxHistory=7` 天 / 总量上限 `totalSizeCap=1GB`。
 - **容器 stdout**：`./logs.sh server` 看到的是 Docker 收集的标准输出（应用控制台日志 + 启动报错），由 `docker-compose.app.yml` 的 `logging.options.max-size=50m` / `max-file=5` 上限约束，最多约 250MB。
-- **调整保留策略**：改后端配置 `solon.logging.appender.file.maxFileSize` / `maxHistory` / `totalSizeCap`，或用环境变量 `LOG_PATH` 覆盖文件路径（默认 `logs/designer-server`）。
+- **error 日志**：ERROR 单独落 `/app/logs/designer-server-error.log`；默认沿用 file 的格式与滚动策略，可用 `solon.logging.appender.error.*`（`name` / `level` / `maxFileSize` 等）单独覆盖。
+- **调整保留策略**：改后端配置 `solon.logging.appender.file.maxFileSize` / `maxHistory` / `totalSizeCap`，或用环境变量 `LOG_PATH` 覆盖文件路径（默认 `logs/designer-server`，error 文件随之为 `${LOG_PATH}-error.log`）。
 
 ## 架构
 
