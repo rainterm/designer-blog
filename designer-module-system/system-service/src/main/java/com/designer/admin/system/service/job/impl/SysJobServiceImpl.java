@@ -45,14 +45,19 @@ public class SysJobServiceImpl implements SysJobService {
     @Init(index = 20)
     public void loadJobs() {
         List<SysJob> jobs = jobMapper.selectList(new LambdaQueryWrapper<SysJob>().orderByAsc(SysJob::getId));
+        int failed = 0;
         for (SysJob job : jobs) {
             try {
-                scheduleManager.createJob(toJobModel(job));
+                // 用 sync 而不是 create：QRTZ_* 里的触发器是持久化的，启动时只需补齐差异。
+                // 若这里 delete + create，每次重启都会重置下次触发时间，多节点滚动重启时
+                // 还会互相删掉对方正在使用的触发器。
+                scheduleManager.syncJob(toJobModel(job));
             } catch (Exception e) {
+                failed++;
                 log.error("加载定时任务失败 id={} name={}", job.getId(), job.getJobName(), e);
             }
         }
-        log.info("已加载定时任务 {} 条", jobs.size());
+        log.info("已同步定时任务 {} 条（失败 {} 条）", jobs.size(), failed);
     }
 
     @Override

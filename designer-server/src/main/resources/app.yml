@@ -116,6 +116,75 @@ mybatis.db1:
       logicNotDeleteValue: 0
       whereStrategy: "not_empty"
 
+# ============================ Quartz 定时任务（JDBC JobStore）============================
+# 键名就是 Quartz 的原生属性名（org.quartz.*），可以对照官方文档直接改；
+# 由 ScheduleManager 读取后交给 StdSchedulerFactory，因此**不再需要 quartz.properties**。
+# 修改后需重启应用。
+#
+# 【为什么是数据库而不是内存】
+# RAMJobStore 把任务与触发器存在 JVM 内存里：重启即丢，且每个实例各存一份，
+# 多实例部署时同一任务会在每个节点各跑一遍。JDBC JobStore 把调度状态落到 QRTZ_* 表
+# （DDL 见 sql/init/mysql/system/schema.sql），节点间靠数据库行锁协调。
+#
+# 【sys_job 与 QRTZ_* 的分工】
+# sys_job 是业务定义（任务名、cron、调用目标、启停），管理界面读写它；
+# QRTZ_* 是运行时状态（下次触发时间、认领标记、节点心跳）。
+# 两者由 SysJobServiceImpl 启动时对账，不要只手工改一边。
+org.quartz:
+  scheduler:
+    # 写入 QRTZ_*.SCHED_NAME。多节点必须一致（共用同一套表）；
+    # 改动时必须同步修改 schema.sql 中 QRTZ_LOCKS 的两行 SCHED_NAME，
+    # 否则 SELECT ... FOR UPDATE 拿不到锁行，调度器启动即失败。
+    instanceName: "designerAdminScheduler"
+    # AUTO：由 Quartz 按主机名 + 时间戳生成。多节点必须各不相同，
+    # 否则集群会把两个节点当成同一实例，互相覆盖心跳与任务认领记录。
+    instanceId: "AUTO"
+
+  threadPool:
+    class: "org.quartz.simpl.SimpleThreadPool"
+    # 同时执行的任务上限。任务体若包含耗时 I/O（HTTP、邮件），不要开太小，
+    # 否则会挤占其它任务的触发时机。
+    threadCount: 10
+    threadPriority: 5
+
+  jobStore:
+    class: "org.quartz.impl.jdbcjobstore.JobStoreTX"
+    # MySQL 用标准委托（MySQLDelegate 已废弃）
+    driverDelegateClass: "org.quartz.impl.jdbcjobstore.StdJDBCDelegate"
+    # 与 schema.sql 中的表前缀一致
+    tablePrefix: "QRTZ_"
+    # JobDataMap 里存的是 JobModel 对象（非 String），必须走 Java 序列化写 BLOB。
+    # 改成 true 只支持 String 值，存取任务时会直接报错。
+    useProperties: false
+    # 指向下方 dataSource 下的名字
+    dataSource: "designerDs"
+    # 错过触发的判定阈值（毫秒）：超过该时长未触发才算 misfire，
+    # 避免线程池瞬时繁忙就触发补偿。
+    misfireThreshold: 60000
+    # 集群模式：多个应用实例共用一套 QRTZ_* 表
+    isClustered: true
+    # 节点心跳间隔（毫秒）：某节点超过该间隔未上报，其它节点会接管它未完成的任务
+    clusterCheckinInterval: 15000
+    # 触发认领必须放在数据库行锁内，否则两个节点可能同时读到同一条待触发记录，
+    # 导致同一任务被执行两次（RAMJobStore 切集群模式时最容易踩的坑）
+    acquireTriggersWithinLock: true
+    # 集群互斥锁语句。Quartz 默认用 JVM 内的 SimpleSemaphore，只保证单进程互斥；
+    # 集群模式必须换成数据库行锁，否则节点之间等于没有互斥。
+    selectWithLockSQL: "SELECT * FROM {0}LOCKS WHERE SCHED_NAME = {1} AND LOCK_NAME = ? FOR UPDATE"
+
+  dataSource:
+    designerDs:
+      # 复用 Solon 已装配的连接池，不额外建池（实现见 framework 的 SolonDataSourceConnectionProvider）。
+      # 键名是 connectionProvider.class；写成旧文档里的 .provider 会被忽略，
+      # 转而读取 driver/jdbcUrl 自建池，然后报 "Driver not specified for DataSource"。
+      connectionProvider:
+        class: "com.designer.admin.framework.job.SolonDataSourceConnectionProvider"
+
+# Quartz 复用哪个数据源：取 solon.dataSources 下的条目名（结尾的 ! 只是「默认数据源」标记，不属于名字）。
+# 多数据源时必须显式指定；单数据源时找不到会退化为按类型查找。
+designer.quartz:
+  data-source: "db1"
+
 # ============================ Redis（Sa-Token 会话存储）============================
 sa-token-dao-redis:
   server: "${REDIS_HOST:localhost}:${REDIS_PORT:6379}"
