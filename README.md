@@ -6,146 +6,176 @@
 [![Vue](https://img.shields.io/badge/Vue-3.5-42b883.svg)](https://vuejs.org/)
 [![Nuxt](https://img.shields.io/badge/Nuxt-4-00DC82.svg)](https://nuxt.com/)
 
-一套**前后台分离**的个人博客系统：博客前台（Nuxt 4 SSR）面向读者与搜索引擎，管理后台复用
-**[Designer Admin](https://gitee.com/rainterm/designer-admin)** 脚手架（Solon + MyBatis-Plus + Vue 3 + Naive UI），
-博客业务以独立模块 `designer-module-blog` 接入，**不改动**脚手架既有能力（改动清单见[相对上游的改动](#相对上游的改动)）。
+## 简介
 
-**网站前台**：文章 / 分类 / 标签 / 评论 / 个人链接 / 访问统计；
-**管理后台**：在同一套 RBAC、操作日志、定时任务、文件存储之上管理博客内容。
+一套**前后台分离**的个人博客系统，基于 **[Designer Admin](https://gitee.com/rainterm/designer-admin)** 后台脚手架开发：
 
-## 目录
+- **博客前台**（`designer-ui/blog-web`）：Nuxt 4 SSR，面向读者与搜索引擎，正文随首屏 HTML 返回；
+- **管理后台**（`designer-ui/admin-web/src/modules/blog`）：在脚手架提供的登录、权限、日志、任务与文件存储之上管理博客内容；
+- **后端**：博客业务作为独立模块 `designer-module-blog` 接入，只依赖 `designer-common` / `designer-framework`，由 `designer-server` 装配。
 
-- [界面预览](#界面预览)
-- [功能特性](#功能特性)
-- [技术栈](#技术栈)
-- [目录结构](#目录结构)
-- [快速开始（本地开发）](#快速开始本地开发)
-- [后台能力（脚手架自带）](#后台能力脚手架自带)
-- [生产环境部署（Docker）](#生产环境部署docker)
-- [文档](#文档)
-- [常见问题（FAQ）](#常见问题faq)
-- [Roadmap](#roadmap)
-- [致谢与上游](#致谢与上游)
-- [贡献与反馈](#贡献与反馈)
-- [许可证](#许可证)
+登录、RBAC、文件存储、操作日志、定时任务等基础能力均来自脚手架，本项目**不重复实现**，也不修改脚手架既有能力。
+
+功能范围：文章 / 分类 / 标签 / 评论 / 个人链接 / 站点设置 / 访问统计，外加 SEO 所需的 `sitemap.xml`、`robots.txt` 与真 404。
+
+**为什么前台用 SSR**
+
+1. **搜索引擎收录**：百度等对 JS 渲染的抓取能力弱，纯客户端渲染的文章常常长时间不被收录。
+2. **分享卡片不为空**：微信 / QQ / Twitter / Facebook / Slack 的爬虫**完全不执行 JS**，只能读到首屏 HTML 里的 `og:*`；没有 SSR 就只剩一张没有标题与缩略图的白卡片。
+3. **真正的 404**：slug 不存在时返回 HTTP 404，而不是「200 + 空壳」——后者会被搜索引擎当成正常页收录，浪费抓取配额。
+
+代价是多一个 Node 常驻进程（基线约 100–200MB），因此 SSR 页面在 nginx 层缓存 60 秒，命中时完全不经过 Node。
 
 ## 界面预览
 
-### 前端
+### 博客前台
 
-![image-20261014221328276](docs/images/image-20261014221328276.png)
+![image-20261020164248246](docs/images/image-20261020164248246.png)
 
-![image-20261014221353698](docs/images/image-20261014221353698.png)
+![image-20261020164331375](docs/images/image-20261020164331375.png)
 
-![image-20261014221411191](docs/images/image-20261014221411191.png)
+![image-20261020164352520](docs/images/image-20261020164352520.png)
 
-### 后台管理
+### 管理后台
 
-![image-20261014221518832](docs/images/image-20261014221518832.png)
+![image-20261020164846637](docs/images/image-20261020164846637.png)
 
-![image-20261014221537610](docs/images/image-20261014221537610.png)
+![image-20261020164910344](docs/images/image-20261020164910344.png)
 
-![image-20261014221605411](docs/images/image-20261014221605411.png)
+![image-20261020164936993](docs/images/image-20261020164936993.png)
 
-![image-20261014221629030](docs/images/image-20261014221629030.png)
+![image-20261020164956362](docs/images/image-20261020164956362.png)
 
-![image-20261014221644249](docs/images/image-20261014221644249.png)
-
-![image-20261014221701735](docs/images/image-20261014221701735.png)
-
-![image-20261014221809428](docs/images/image-20261014221809428.png)
-
-![image-20261014221830414](docs/images/image-20261014221830414.png)
+![image-20261020165013478](docs/images/image-20261020165013478.png)
 
 ## 功能特性
 
-### 内容
+| 模块 | 能力 |
+|---|---|
+| 内容管理 | Markdown 文章、草稿 / 发布、置顶、分类与标签、个人链接、站点设置 |
+| 评论 | 匿名评论、两级开关、默认待审、验证码 + 频控防刷、置顶与博主回复 |
+| 访问统计 | 服务端推导的埋点、五类图表、去重与配额、定期清理 |
+| SEO | 页面级 meta / OG / JSON-LD、`sitemap.xml`、`robots.txt`、真 404 |
+| 阅读数 | Redis 累加 + 定时合并回写，读路径不产生数据库写 |
 
-- **文章管理**：Markdown 正文（`md-editor-v3` 编辑器），草稿 / 发布两态，slug 作为前台地址（`/post/{slug}`）
-- **分类与标签**：多对多标签（`blog_post_tag`），分类与标签各有独立前台页（`/category/{slug}`、`/tag/{slug}`）
-- **个人链接**：站长的社交 / 外部链接（如 GitHub、Gitee、邮箱），后台维护名称与图标、可排序与启停；前台页头以一行图标展示，点击新开标签页
-- **站点设置**：站点名 / 副标题 / Logo / 页脚 / 备案号 / SEO 描述 / 关键词，一处配置前台全站生效
+### 内容管理
+
+- **文章**：Markdown 正文（`md-editor-v3`），草稿 / 发布两态，`slug` 即前台地址 `/post/{slug}`；支持置顶，管理端可按标题 / 正文关键字与分类 / 标签 / 状态筛选，前台顶栏另有搜索（`?q=`）。
+- **分类与标签**：一篇文章一个分类、多个标签（`blog_post_tag`），两者都有独立前台页 `/category/{slug}`、`/tag/{slug}`；列表页的标签查询固定 2 条，避免按篇数放大请求。
+- **个人链接**：站长的社交 / 外部链接（GitHub、Gitee、邮箱等），后台维护名称、图标、排序与启停；前台页头以一行图标展示，点击新开标签页。
+- **站点设置**：站点名 / 副标题 / Logo（含圆角）/ 页脚版权 / 备案号 / 站长署名 / 保留昵称 / SEO 描述与关键词 / 主题色，一处配置前台全站生效；页脚版权留空则整块不渲染。
+- **阅读数**：读路径只写 Redis（`HINCRBY`），`BlogViewFlushJob` 每 30 秒合并回写 MySQL，并用 Redis 锁保证多实例只回写一次；展示值 = 库里已落库 + 未回写增量。
 
 ### 评论
 
-- **匿名评论**：读者无需注册；提交默认**待审**，后台审核通过才公开
-- **防刷**：滑块验证码（AJ-Captcha，一次性凭据）+ 分 IP 频率限制（两次最小间隔 30 秒、24 小时最多 20 条），阈值用 `@RateLimit` 注解声明在方法上；验证码的拉取频控由 AJ-Captcha 自带限流 + nginx 承担（注解标不到第三方 controller 上）
-- **两级开关**：站点总开关（后台「站点设置」）与单篇开关（文章「允许评论」）为**与**关系，都开启才可评论；关闭后**已发布评论仍可读**
-- **回复层级压平为 2 层**：存储上 `parent_id` 记录真实回复对象（链可任意深），展示层统一上溯到顶级评论，最多两层，第二层标出「某某 回复 某某」
-- **我的评论**：读者凭浏览器本地密钥（请求头 `X-Commenter-Key`，服务端只存 SHA-256）查看自己的待审评论、并删除自己的评论
-- **IP 归属地**：离线 ip2region 解析到**省级**，前台与后台均展示，不向第三方泄露访客 IP
+- **匿名评论**：读者无需注册；提交默认**待审**，后台审核通过才公开。
+- **防刷三层**：滑块验证码（AJ-Captcha，一次性凭据）+ 分 IP 频控（`@RateLimit`：30 秒 1 条、24 小时 20 条）+ 默认待审。
+- **两级开关**：站点总开关（站点设置）与单篇「允许评论」为**与**关系，都开启才可评论；关闭后已发布评论仍可读。
+- **回复层级压平为 2 层**：存储上 `parent_id` 记录真实回复对象（链可任意深），展示层统一上溯到顶级评论，最多两层，第二层标出「某某 回复 某某」。
+- **我的评论**：读者凭浏览器本地密钥（请求头 `X-Commenter-Key`，服务端只存 SHA-256）查看自己的待审评论、删除自己的评论。
+- **后台运营**：审核（通过 / 拒绝）、批量删除、置顶、博主回复（`author_type=1`，署名固定取站点设置里的站长署名）；待审批数量在侧栏菜单上以红点提示。
+- **防冒充**：保留昵称可配（默认 `博主,站长,管理员,admin`），访客昵称包含其中任一词即拒绝；博主回复不接受昵称入参。
+- **IP 归属地**：离线 ip2region 解析到**省级**，前台与后台均展示，不向第三方泄露访客 IP。
 
 ### 访问统计
 
 前台每次路由切换上报一次埋点，后台「访问统计」页聚合成图表。
 
-- **埋点只接收路径**：IP / UA / 来源 / 设备 / 页面归属分类**全部由服务端从请求推导**，前端无法伪造统计
-- **五类图表**：PV / UV 趋势（按天补齐空缺日期）、分类访问分布、来源 Top、设备占比、访客地域分布（Top 10 省份）
-- **防刷与去重**：同访客同路径 60 秒去重、单 IP 每日 3000 条上限，超限静默丢弃
-- **日志清理**：内置任务 `blogLogTask.cleanVisitLog(90)`（默认暂停），保留 90 天
+- **埋点只接收路径**：IP / UA / 来源 / 设备 / 页面归属分类**全部由服务端从请求推导**，前端无法伪造统计。
+- **五类图表**：PV / UV 趋势（按天补齐空缺日期）、分类访问分布、来源 Top、设备占比、访客地域分布（Top 10 省份）。
+- **防刷与去重**：同访客同路径 60 秒去重、单 IP 每日 3000 条上限，超限静默丢弃。
+- **日志清理**：内置任务 `blogLogTask.cleanVisitLog(90)`（默认暂停），保留 90 天。
 
-### 安全
+### SEO
 
-- **客户端 IP 防伪造**：默认只信任 `127.0.0.1/32, ::1/128, 172.16.0.0/12` 网段传来的 `X-Forwarded-For`，其余一律忽略，沿链**从右往左**取第一个不可信地址；CIDR 匹配只解析字面量、不触发 DNS
-- **部署层配合**：server 端口只绑回环（不绕过 Nginx 直连）、Nginx 用**覆写**而非追加语义写 `X-Forwarded-For`
+- `app/composables/useBlogSeo.js` 是页面级 SEO 的唯一入口：`title` / `description` / `keywords` / `og:*` / `twitter:*` / `canonical` / JSON-LD（文章页为 `BlogPosting`）。
+- `canonical` 保留 `?page=`、剥掉 `?q=`：分页是不同内容必须收录，搜索词组合必须收敛。
+- `server/routes/` 动态生成 `/robots.txt` 与 `/sitemap.xml`（首页 + 分类 + 标签 + 全部已发布文章），绝对地址由请求的 `Host` / `X-Forwarded-Proto` 推导，**改域名不用改代码**。
+- slug / 分类不存在时抛 `BizException(NOT_FOUND)`，前台返回真正的 HTTP 404。
 
-## 技术栈
+## 设计
 
-后端为 **Solon 全家桶**：框架、校验、日志、JSON、鉴权、密码加密全部来自 Solon / Sa-Token 生态。
+### 技术栈
 
-| 层 | 选型 | 版本 |
-|---|---|---|
-| 运行时 | JDK | 25 |
-| 后端框架 | Solon | 4.1.0 |
-| ORM | MyBatis-Plus（Solon 插件） | 3.5.17 |
-| 多表查询 | MyBatis-Plus-Join | 1.5.9 |
-| 鉴权 | Sa-Token（Solon 插件） | 1.46.0 |
-| 密码加密 | Sa-Token 自带 BCrypt | 内置 |
-| JSON | snack4 | Solon 4.x 内置 |
-| 定时任务 | Quartz | 2.5.0 |
-| 导入导出 | EasyExcel | 4.0.3 |
-| IP 归属地 | ip2region（离线 xdb） | 随包 |
-| 数据库 | MySQL | 8.0.13+ |
-| 缓存/会话 | Redis | 7 |
-| 前台 / 后台框架 | Vue 3（前台 Nuxt 4 SSR） | 3.5 |
-| UI 组件库 | Naive UI | 2.45 |
-| 构建 | Vite（前台 Nitro） | 8 |
-| 状态管理 | Pinia | 4 |
-| Markdown 编辑器 | md-editor-v3 | 7 |
-| 图表 | ECharts（管理后台） | 5.6 |
+| 层 | 选型 | 版本 | 说明 |
+|---|---|---|---|
+| 运行时 | JDK | 25 | 脚手架要求 |
+| 后端框架 | Solon | 4.1.0 | 来自脚手架 |
+| ORM | MyBatis-Plus（Solon 插件） | 3.5.17 | 来自脚手架 |
+| 多表查询 | MyBatis-Plus-Join | 1.5.9 | 来自脚手架 |
+| 鉴权 | Sa-Token | 1.46.0 | 来自脚手架，后台登录与接口权限 |
+| 数据库 | MySQL | 8.0.13+ | 表结构依赖 8.0.13 起支持的函数索引 |
+| 缓存 / 会话 | Redis | 7 | 会话、验证码、限流、阅读数、公开接口缓存 |
+| IP 归属地 | ip2region（离线 xdb） | 2.7.0 | 不请求第三方，不泄露访客 IP |
+| 博客前台 | Nuxt | 4.6 | SSR 直出，页面与接口同源 |
+| 管理后台 | Vue + Naive UI | 3.5 / 2.45 | 来自脚手架 |
+| 构建 | Nitro / Vite | 随 Nuxt / 8 | 前台产物是 Node 服务 |
+| Markdown | md-editor-v3 | 7 | 后台编辑、前台渲染共用一套语法与样式 |
+| 图表 | ECharts | 5.6 | 访问统计 |
 
-> `md-editor-v3` 底层依赖 Vditor 的运行时资源（lute 引擎 / 代码高亮 / 图标 / 语言包），
-> 默认从 unpkg 动态拉取，内网或国内网络下易失败。`admin-web` 的 Vite 插件
-> （`plugins/copyVditorAssets.js`）在启动 / 构建时把这些资源复制到 `public/vditor`，
+> `md-editor-v3` 底层依赖 Vditor 的运行时资源（lute 引擎 / 代码高亮 / 图标 / 语言包），默认从 unpkg 动态拉取。
+> 后台的 Vite 插件（`plugins/copyVditorAssets.js`）在启动 / 构建时把这些资源复制到 `public/vditor`，
 > 编辑器因此**不依赖外部 CDN**。
 
-## 目录结构
+### 目录结构
 
 ```
 designer-blog/
-├── pom.xml                         # Maven 父工程
-├── designer-common/                # 通用：R / BaseEntity / 异常 / 工具 / 注解
-├── designer-framework/             # 框架层与扩展接口（鉴权/日志/任务/存储/消息），禁止依赖 system
-├── designer-module-system/         # RBAC 系统模块（system-api / -service）
-├── designer-module-blog/           # 博客业务模块（blog-api / -service）
-│   └── README.md                   #   ★ 评论防刷、访问统计、IP 防伪造等设计说明
-├── designer-module-demo/           # 模块示例（demo-api / -service）
-├── designer-server/                # 启动组装：DesignerApp + app.yml + Solon 胖包
+├── designer-module-blog/           # 博客业务模块
+│   ├── blog-api/                   #   ★ 对外契约（当前按需预留）
+│   └── blog-service/               #   文章 / 分类 / 标签 / 评论 / 链接 / 设置 / 统计
+├── designer-ui/
+│   ├── blog-web/                   # ★ 博客前台（Nuxt 4 SSR）
+│   ├── admin-web/
+│   │   └── src/modules/blog/       # ★ 后台博客页面：文章 / 分类 / 标签 / 评论 / 链接 / 设置 / 统计
+│   └── shared/captcha/             # ★ 前后台共用的滑块验证码源码
+├── designer-server/
 │   └── src/main/resources/
-│       ├── app.yml
+│       ├── app.yml                 #   博客配置（验证码、限流、缓存等）
 │       └── ip2region.xdb           #   IP 归属地离线数据（约 11MB，随包）
-├── designer-ui/                    # 前端工程
-│   ├── admin-web/                  # 管理后台（Vue3 + Naive UI + ECharts）
-│   ├── blog-web/                   # 博客前台（Nuxt 4 SSR + Naive UI）
-│   └── sso-demo/                   # SSO 接入示例（Vue3 + Vite）
 ├── sql/
-│   └── init/mysql/                 # 按模块文件夹分类的初始化 SQL
-│       ├── 00-run-init.sh          # 入口：_base → system / blog / demo
-│       ├── _base/database.sql      # 建库
-│       └── system|blog|demo/       # {schema,data}.sql
-├── docs/                           # 开发规范、SSO 文档
-└── deploy/                         # Docker 部署
+│   ├── init/mysql/
+│   │   ├── 00-run-init.sh          #   入口：_base → system → demo → blog → upgrade
+│   │   └── blog/                   #   ★ 博客表结构与种子数据
+│   └── upgrade/mysql/              #   增量升级脚本（V{版本}__{说明}.sql，幂等）
+├── deploy/                         # 三容器部署（server + 博客 Node + nginx）
+├── docs/                           # 开发规范、SSO
+└── designer-common/ · designer-framework/ · designer-module-system/ · designer-module-demo/
+                                    # 脚手架模块，与上游保持一致
 ```
+
+### 文档说明
+
+| 文档                                 | 说明                                 |
+| ------------------------------------ | ------------------------------------ |
+| [deploy/README.md](deploy/README.md) | 三容器部署、域名分流、SSR 缓存与限流 |
+| [docs/开发规范.md](docs/开发规范.md) | 脚手架的前后端编码约定与模块依赖方向 |
+
+### 博客设计
+
+#### 性能与缓存
+
+- **SSR 页面缓存在 nginx 层**：`proxy_cache` 缓存整段 HTML，TTL 60 秒，命中时完全不走 Node；缓存键含 `$host`，404 也缓存，冷 URL 并发只回源一次。
+- 公开读接口（站点设置 / 分类 / 标签 / 外链）在应用层有 1 小时缓存，写侧主动失效，后台改完立刻生效。
+- 阅读数读路径只碰 Redis，30 秒合并回写，热文章不会产生行锁竞争。
+- `PostCard` 关闭 Nuxt 链接预取（`:prefetch="false"`）：首页 5 张卡片不值得提前发 5 次请求。
+- 读路径限流全部在 nginx（页面 60r/m、`/app-api/` 120r/m、sitemap 6r/m），被拦下的请求不消耗 Node 与数据库连接。
+
+#### 图片压缩
+
+上传图片在服务端落盘前按**存储配置**压缩
+
+开关在**系统管理 → 存储配置 → 编辑 →「图片压缩」**
+
+| 格式 | 行为 |
+|---|---|
+| JPEG | 有损重编码，质量参数生效 |
+| PNG | 无损重编码，质量参数**无效**（固定最高 deflate 级别） |
+| GIF / WebP / AVIF / SVG / ICO | 跳过：动图重编码只剩第一帧，其余 JDK ImageIO 不支持编码 |
+
+#### 主题
+
+主题色由后台「站点设置」下发，前台据此覆盖品牌配色；`scripts/syncThemeTokens.js` 与 `scripts/syncBrandMark.js` 在构建期把主题变量与 favicon 同步到静态资源，换主题 / 换 Logo 不需要改代码。
 
 ## 快速开始（本地开发）
 
@@ -153,51 +183,71 @@ designer-blog/
 
 | 组件 | 版本 | 说明 |
 |---|---|---|
-| JDK | **25+** | 后端编译与运行（`maven.compiler.release=25`） |
+| JDK | 25+ | 后端编译与运行（`maven.compiler.release=25`） |
 | Maven | 3.9+ | 后端构建 |
 | Node.js | 18+（推荐 22） | 前端构建 |
 | pnpm | 10.x | 前端包管理（`packageManager: pnpm@10.33.0`） |
-| MySQL | **8.0.13+** | 数据库（唯一索引用函数索引实现「仅约束未删除行」，8.0.13 起才支持） |
-| Redis | 7 | Sa-Token 会话、验证码与限流计数（**必需**） |
+| MySQL | 8.0.13+ | 数据库（唯一索引用函数索引实现「仅约束未删除行」） |
+| Redis | 7 | 会话、验证码、限流、阅读数（**必需**） |
 
-> 一键检查 / 安装以上环境：`cd deploy && ./install-env.sh --check`（去掉 `--check` 即安装）。
+一键检查 / 安装：
+
+```bash
+cd deploy
+./install-env.sh --check   # 仅检查
+./install-env.sh           # 按需安装（Linux 建议 sudo）
+```
 
 ### 1. 准备 MySQL 与 Redis
 
-连接信息在 `designer-server/src/main/resources/app.yml`，已支持环境变量覆盖
-（`DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME`、`REDIS_HOST/REDIS_PORT/REDIS_PASSWORD/REDIS_DB`）。
+连接信息在 `designer-server/src/main/resources/app.yml`，支持环境变量覆盖：
+
+- MySQL：`DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME`（默认库 `designer_blog`）
+- Redis：`REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_DB`
+
+本地也可以只起数据库：
+
+```bash
+cd deploy
+cp .env.example .env
+./deploy-db.sh        # MySQL + Redis，不自动建表
+```
 
 ### 2. 初始化数据库
 
 > 脚本为**破坏性初始化**（`DROP TABLE` 重建 + 插入种子数据），仅首次或需要重置时执行，勿对有数据的库重复运行。
 
 ```bash
-# 交互式：按提示输入连接信息，回车使用默认值（已用环境变量提供的项会跳过；数据库名默认 designer_blog，可自定义）
+# 交互式：按提示输入连接信息，回车使用默认值
 bash sql/init/mysql/00-run-init.sh
 
-# 免交互（CI / 脚本）：直接通过环境变量传入
-DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=root DB_PASSWORD=root DB_NAME=designer_blog bash sql/init/mysql/00-run-init.sh
+# 免交互（CI / 脚本）
+DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=root DB_PASSWORD=root DB_NAME=designer_blog \
+  bash sql/init/mysql/00-run-init.sh
 ```
+
+导入顺序为 `_base → system → demo → blog → upgrade`；博客表结构与种子数据在 `sql/init/mysql/blog/`，老库增量变更为 `sql/upgrade/mysql/`（幂等，初始化时会再跑一遍兜底）。
 
 ### 3. 启动后端
 
-在 IDE 里运行 `com.designer.admin.DesignerApp`（模块 `designer-server`），或命令行：
+在 IDE 中运行 `com.designer.admin.DesignerApp`（模块 `designer-server`），或命令行：
 
 ```bash
-# 在仓库根目录
+# 仓库根目录
 mvn -pl designer-server -am -DskipTests clean package
 java -jar designer-server/target/designer-server.jar
 ```
 
-默认监听 `http://localhost:8080`，健康检查 `GET /admin-api/system/health`。
+启动后：
 
-接口文档由 `solon-openapi2-knife4j` 提供，启动后访问 `http://localhost:8080/doc.html`：
-左侧按「管理端 / 前台 / 开放接口」分组，Controller 需标注 `@Api`、方法需标注 `@ApiOperation` 才会出现在文档中。
-生产环境可用 `KNIFE4J_ENABLE=false` 关闭文档，或用 `KNIFE4J_PRODUCTION=true` 关闭 UI 静态资源。
+- 管理端 API：`http://localhost:8080/admin-api`
+- 博客公开接口：`/app-api/blog/public/**`
+- 健康检查：`GET http://localhost:8080/admin-api/system/health`
+- 接口文档：`http://localhost:8080/doc.html`
 
 ### 4. 启动前端
 
-> 需要 pnpm：`corepack enable pnpm`（Node 16.13+ 内置）或 `npm i -g pnpm`。
+> 需要 pnpm：`corepack enable pnpm` 或 `npm i -g pnpm`。
 
 ```bash
 # 管理后台 → http://localhost:5173
@@ -209,13 +259,11 @@ pnpm run dev
 cd designer-ui/blog-web
 pnpm install
 pnpm run dev
+pnpm run build     # 产出 .output/（Node 服务，不是静态站点）
 ```
 
-管理后台把 `/admin-api`、`/app-api` 代理到 `http://localhost:8080`，无需额外配置跨域。
-
-博客前台不用代理：浏览器侧与后台一样走同源相对路径 `/app-api`（生产由 nginx 反代），
-而 **SSR 期间由 Node 直连后端**，地址读 `.env` 的 `NUXT_API_INTERNAL_BASE`（默认 `http://localhost:8080`）。
-这也是它必须用 `$fetch` 而不能用 axios 的原因 —— 服务端没有「页面来源」，相对路径无从解析。
+管理后台把 `/admin-api`、`/app-api` 代理到 `http://localhost:8080`。
+博客前台不用代理：浏览器侧走同源相对路径 `/app-api`，**SSR 期间由 Node 直连后端**，地址读 `.env` 的 `NUXT_API_INTERNAL_BASE`（默认 `http://localhost:8080`）。
 
 ### 默认账号
 
@@ -226,144 +274,65 @@ pnpm run dev
 | admin | admin123 | 超级管理员（全部权限） |
 | guest | guest123 | 普通用户（只读示例） |
 
-### 接口前缀约定
+## 生产部署
 
-| 端 | 前缀 | 鉴权 |
-|---|---|---|
-| 管理后台 | `/admin-api/{模块}/...` | 登录态 + 权限标识 |
-| 公开前台 | `/app-api/{模块}/...` | 默认免登录（`@SaIgnore`） |
-| 第三方开放 | `/open-api/...` | OAuth2 + Scope |
-
-博客前台只用到 `/app-api/blog/public/**`，详见 [designer-ui/blog-web/README.md](designer-ui/blog-web/README.md)。
-
-## 后台能力（脚手架自带）
-
-博客功能建立在这些基础能力之上，全部来自 Designer Admin：
-
-- **认证与权限**：Sa-Token 登录鉴权（会话存 Redis，可集群共享）、滑块验证码（失败达阈值才出现，与博客前台评论共用同一套实现）与登录失败锁定，`@RateLimit` 再按 IP 给登录接口兜一层频控（挡换用户名扫的撞库/爆破）；用户 - 角色 - 菜单三级 RBAC，按钮即权限标识（如 `blog:comment:audit`）；动态路由按权限注册
-- **组织与基础数据**：用户、部门树、岗位、角色授权、数据字典、系统参数
-- **文件与消息**：可插拔文件存储（本地 / S3 兼容，上传元数据落库）、站内信 SSE 通知
-- **日志与监控**：操作日志（`@OperLog` 异步落库）、登录日志、服务监控（CPU / 内存 / JVM / 磁盘）、首页仪表盘
-- **定时任务**：Quartz 动态任务 + 执行日志（访问日志清理任务即注册在此）
-- **前端体验**：7 种布局与主题色实时切换、多页签、个人中心、EasyExcel 导入导出、`@Sensitive` 字段脱敏
-- **统一规范**：响应体 `{code,msg,data}`、全局异常、分页封装、字段自动填充、逻辑删除、全表更新/删除防护
-
-## 生产环境部署（Docker）
-
-数据库与应用**分开**部署：本机用 JDK / Maven / Node 打包后，再打成运行镜像。
-应用共三个容器（后端 Server、博客前台 Nuxt SSR 的 Node 服务、入口 Nginx），
+数据库与应用**分开部署**：本机用 JDK / Maven / Node 打包，再构建运行镜像。
+应用共三个容器 —— 后端 Server、博客前台 Node（Nuxt SSR）、入口 Nginx；
 入口 Nginx 按域名分流：博客域名反代到 Node，后台域名发静态文件。
+
+### 部署流程
 
 ```bash
 cd deploy
-./install-env.sh          # 检查并安装 Docker / JDK 25 / Maven / Node
-cp .env.example .env && vim .env
-./deploy-db.sh            # 仅启动 MySQL + Redis（不自动建表）
-cd .. && bash sql/init/mysql/00-run-init.sh && cd deploy   # 手动初始化数据库表（首次/重置）
-./deploy-app.sh           # 父工程 Maven 打包 + 构建镜像 + 启动 Server / 博客前台 / 入口 Nginx
+
+# 1. 检查并按需安装环境（Docker / JDK 25 / Maven / Node）
+./install-env.sh
+
+# 2. 配置环境变量
+cp .env.example .env
+vim .env
+
+# 3. 启动 MySQL + Redis（不自动建表）
+./deploy-db.sh
+
+# 4. 首次 / 重置时初始化数据库
+(cd .. && bash sql/init/mysql/00-run-init.sh)
+
+# 5. 本地打包 + 构建镜像 + 启动 Server / 博客前台 / 入口 Nginx
+./deploy-app.sh
 ```
 
-可选：`./deploy-minio.sh` 一键起本地 MinIO（S3 兼容存储，`9000` / `9001`）。
+可选：`./deploy-minio.sh` 启动本地 MinIO（S3 兼容存储，API `9000` / Console `9001`）。
 
-浏览器访问（均走 80，需先把域名解析到服务器）：
+### 常用命令
 
-- 博客前台 `http://www.rainterm.cn`（Nuxt SSR，正文随首屏 HTML 返回）
-- 管理后台 `http://admin.rainterm.cn`
-- 收录入口 `http://www.rainterm.cn/sitemap.xml`
-
-域名与端口在 `deploy/nginx/default.conf`（`server_name`）与 `.env`（`WEB_PORT`）中配置，
-完整说明见 [deploy/README.md](deploy/README.md)。
-
-## 文档
-
-| 文档 | 说明 |
+| 命令 | 说明 |
 |---|---|
-| [designer-module-blog/README.md](designer-module-blog/README.md) | 博客后端：评论防刷与两级开关、回复压平、访问统计口径、IP 防伪造、已有库升级 SQL |
-| [designer-ui/blog-web/README.md](designer-ui/blog-web/README.md) | 博客前台：SSR 取数约定、SEO/robots/sitemap、评论交互、埋点、正文渲染与大纲 |
-| [deploy/README.md](deploy/README.md) | 生产环境 Docker 部署（三容器架构、域名分流、DNS、升级与 HTTPS 说明） |
-| [docs/开发规范.md](docs/开发规范.md) | 前后端编码约定、模块依赖方向，以及**新增业务模块**的步骤 |
-| [docs/SSO.md](docs/SSO.md) | 单点登录接入流程与三步接入指引 |
-| [designer-module-system/README.md](designer-module-system/README.md) | 系统模块结构说明 |
-| [designer-module-demo/README.md](designer-module-demo/README.md) | 业务模块模板与跨模块调用约定 |
-| [designer-ui/sso-demo/README.md](designer-ui/sso-demo/README.md) | SSO 客户端示例工程 |
+| `./install-env.sh` | 检查并安装环境（`--check` 仅检查） |
+| `./deploy-db.sh` | 启动 MySQL、Redis（不自动建表） |
+| `./deploy-minio.sh` | 启动本地 MinIO（可选） |
+| `./deploy-app.sh` | 本地打包并部署三个容器 |
+| `./deploy-app.sh --skip-build` | 跳过打包，复用 `deploy/build` 已有产物 |
+| `./restart.sh app` / `./stop.sh app` | 重启 / 停止应用（三个容器一起） |
+| `./logs.sh server` / `blog` / `web` | 查看后端 / 前台 Node / Nginx 日志 |
 
-## 常见问题（FAQ）
+### 访问入口
 
-**Q：想加自己的功能，会不会要改脚手架代码？**
-不会。`designer-common` 与 `designer-module-system` 未改动；博客模块 `designer-module-blog`
-只依赖 `designer-common` / `designer-framework`，由 `designer-server` 装配。
-按 [开发规范 · 二次开发](docs/开发规范.md#二次开发新增业务模块) 新增一个 `module-*` 即可。
+| 入口 | 默认端口 | 说明 |
+|---|---|---|
+| 博客前台 | `WEB_PORT=80` | `http://www.rainterm.cn`（Nuxt SSR，正文随首屏 HTML 返回） |
+| 管理后台 | `WEB_PORT=80` | `http://admin.rainterm.cn` |
+| sitemap | `WEB_PORT=80` | `http://www.rainterm.cn/sitemap.xml` |
+| 后端 API | `SERVER_PORT=8080` | 仅绑定 `127.0.0.1`，不直接对外，统一经 Nginx |
 
-另有两处**与博客无关的通用加固**落在 `designer-framework`（客户端 IP 防伪造、异常信息不回传内部细节），
-与上游无冲突、可直接同步回去，完整清单见[相对上游的改动](#相对上游的改动)。
+域名在 `deploy/nginx/default.conf` 的 `server_name` 中定义，端口在 `.env` 的 `WEB_PORT` 中配置；
+未匹配到 `server_name` 的请求（例如直接访问 IP）落到博客站点，而不是暴露管理后台。完整说明见 [deploy/README.md](deploy/README.md)。
 
-**Q：评论被人刷怎么办？**
-见 [designer-module-blog/README.md](designer-module-blog/README.md) 的「公开评论的防刷」：
-验证码 + 频率限制 + 默认待审，三层兜底；IP 只是粗防线，人工审核才是最终手段。
+### 运维要点
 
-**Q：访问统计会泄露访客隐私吗？**
-统计接口只返回聚合结果，不对外输出原始 `ip` / `ua`；归属地离线解析、不请求第三方接口。
-建议按需调小保留期，或只保留 `ip_location` 而把 `ip` / `ua` 置空，见「隐私」一节。
-
-**Q：有人用脚本频繁刷页面怎么办？**
-匿名**写**接口（评论、访问埋点）在应用层用 Redis 计数限流；
-**读**路径（SSR 页面、公开接口、sitemap）在 **nginx 层**按 IP 限流并回 429，
-拦掉的请求不消耗 Node 与数据库连接——见 [deploy/README.md](deploy/README.md) 的「注意事项」第 11 条。
-之所以还要放在 nginx：SSR 每渲染一页仍要查文章、评论、分类、标签、站点设置，
-一次廉价 GET 依然比静态文件贵得多。限流之外还有缓存：SSR 页面在 nginx 层缓存 60 秒，
-**命中时完全不走 Node**（见 [deploy/README.md](deploy/README.md) 的「注意事项」第 9 条）。
-服务端侧另有几处削减：
-站点设置 / 分类 / 标签 / 外链这四个公开读接口有 1 小时缓存（Solon 声明式 `@Cache`）——
-这几张表几乎不变，而改动由 `@CacheRemove` 在后台写入时按 tag 失效、**立刻生效**，
-所以 TTL 只是兜底；
-列表页的标签查询与篇数无关，固定 2 条；阅读数走 Redis 累加 + 30 秒合并回写，
-读路径不产生任何数据库写 —— 细节见 [designer-module-blog/README.md](designer-module-blog/README.md) 的「阅读数」一节。
-⚠ 前面再加 CDN 时需用 `real_ip` 还原真实 IP，否则限流会按 CDN 节点统计并误伤全站。
-
-**Q：部署后限流好像误伤了所有用户？**
-多半是反向代理不在可信网段内。`designer.client-ip.trusted-proxies` 需覆盖你的代理地址，
-否则真实客户端 IP 会退化成代理地址——见「客户端 IP 防伪造」一节的部署注意事项。
-若加了 CDN，还要在 nginx 里配 `real_ip` / `set_real_ip_from`，两处指向同一个真实来源。
-
-## Roadmap
-
-- [ ] 待规划
-
-## 致谢与上游
-
-本项目**基于 [Designer Admin](https://gitee.com/rainterm/designer-admin) 搭建**
-（Solon + Vue3 后台管理脚手架，同为 MIT 协议）：
-
-- 复用其多模块分层（`common` / `framework` / `module-*` / `server`）与全部基础能力；
-- 博客业务作为独立模块 `designer-module-blog` 接入，并按同一套规范新增前台工程 `designer-ui/blog-web`；
-- Java 包名 `com.designer.admin.*` 沿用上游，以便与上游同步更新。
-
-上游仓库：[Gitee](https://gitee.com/rainterm/designer-admin) · [GitHub](https://github.com/rainterm/designer-admin)
-
-### 相对上游的改动
-
-便于与上游对比、也便于把通用改动同步回去：
-
-| 位置 | 改动 |
-|---|---|
-| `designer-module-blog/` | **新增**博客业务模块（`blog-api` / `blog-service`） |
-| `designer-ui/blog-web/` | **新增**博客前台工程 |
-| `sql/init/mysql/blog/` | **新增**博客表结构与种子数据（`00-run-init.sh` 已纳入导入顺序） |
-| `designer-server/` | 依赖 `blog-service`；`app.yml` 补博客与日志配置；随包 `ip2region.xdb` |
-| `designer-ui/admin-web/` | 新增 `modules/blog` 页面，路由与依赖（ECharts、md-editor-v3）相应补充 |
-| `deploy/` | 前端改为单容器按域名分流，同容器托管两个站点 |
-| `designer-framework/` | 通用加固：`client/`（`TrustedProxyHostUtil` / `IpRange` / `IpRegionResolver` / `ClientIpUtil`）防 IP 伪造；`ratelimit/` 注解式限流组件 `@RateLimit`；`redis/RedisCounter` 原子固定窗口计数；`GlobalExceptionFilter` 不再把异常详情回传调用方 |
-| `designer-common/`、`designer-module-system/`、`designer-module-demo/` | **未改动** |
-
-## 贡献与反馈
-
-欢迎提交 Issue 与 PR：
-
-1. Fork 本仓库并从 `main` 切出特性分支
-2. 遵循 [开发规范](docs/开发规范.md) 的编码与提交约定
-3. 提交 PR 前请确保 `mvn -pl designer-server -am -DskipTests package` 与两个前端的 `pnpm run build` 均通过
-4. PR 描述请说明动机、改动范围与验证方式
-
-## 许可证
-
-本项目基于 [MIT License](LICENSE) 开源，可自由用于商业项目。
+- 日常发版只执行 `./deploy-app.sh`，不必动数据库；数据库表需手动初始化，增量升级脚本按版本执行并登记，禁止重跑破坏性脚本。
+- 上传文件在 `server_uploads` 卷，升级 / 迁移时需与数据库一起备份。
+- 修改 `.env` 中的默认密码，并为 MySQL / Redis 配置强密码；本机库时 `DB_PASSWORD` 与 `MYSQL_ROOT_PASSWORD` 保持一致。
+- 多实例部署时：会话、验证码、限流、阅读数与公开接口缓存共用 Redis，博客 Node 可横向扩容（SSR 缓存仍在 nginx）。
+- 博客前台容器**不发布端口**，只能经 nginx 访问；否则可绕过 nginx 直连并伪造 `X-Real-IP`。
+- 前面再加 CDN 时，需在 nginx 用 `real_ip` / `set_real_ip_from` 还原真实 IP，否则限流会按 CDN 节点统计并误伤全站。

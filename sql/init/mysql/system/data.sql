@@ -198,12 +198,13 @@ INSERT INTO `sys_dict_data` (`dict_type`, `dict_label`, `dict_value`, `sort`, `i
 ('sys_normal_disable', '停用', '0', 2, 0, 1, '', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 默认本地存储配置 -------------------------
-INSERT INTO `sys_storage_config` (`id`, `config_name`, `storage_type`, `is_default`, `status`, `is_public`, `url_prefix`, `allowed_extensions`, `max_size`, `config_json`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+INSERT INTO `sys_storage_config` (`id`, `config_name`, `storage_type`, `is_default`, `status`, `is_public`, `url_prefix`, `allowed_extensions`, `max_size`, `compress_enabled`, `compress_quality`, `config_json`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
 (1, '本地默认', 'local', 1, 1, 1, '/app-api/system/file/download/',
  'jpg,jpeg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt',
  5242880,
+ 0, 80,
  '{"localPath":"./data/uploads"}',
- '系统内置本地存储（公开，可匿名访问）', 'system', NOW(), 'system', NOW());
+ '系统内置本地存储（公开，可匿名访问）；压缩默认关闭，可在编辑里开启', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 默认站内通知通道（系统接收）-------------------------
 INSERT INTO `sys_message_config` (`id`, `config_name`, `channel_type`, `is_default`, `status`, `config_json`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES

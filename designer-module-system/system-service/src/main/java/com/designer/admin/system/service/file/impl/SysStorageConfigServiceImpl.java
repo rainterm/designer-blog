@@ -9,6 +9,7 @@ import com.designer.admin.framework.crypto.ConfigSecretUtil;
 import com.designer.admin.framework.spi.ConfigFieldMeta;
 import com.designer.admin.framework.storage.FileStorageProvider;
 import com.designer.admin.framework.storage.FileStorageProviderRegistry;
+import com.designer.admin.framework.storage.ImageCompressor;
 import com.designer.admin.framework.storage.StorageConfigSource;
 import com.designer.admin.framework.storage.StorageProperties;
 import com.designer.admin.framework.storage.StorageRuntimeConfig;
@@ -92,6 +93,8 @@ public class SysStorageConfigServiceImpl implements SysStorageConfigService, Sto
                 .urlPrefix(cfg.getUrlPrefix())
                 .allowedExtensions(cfg.getAllowedExtensions())
                 .maxSize(cfg.getMaxSize())
+                .compressEnabled(cfg.getCompressEnabled())
+                .compressQuality(cfg.getCompressQuality())
                 .remark(cfg.getRemark())
                 // 键集合由存储类型决定，只能是动态 map
                 .config(JsonUtil.toMap(cfg.getConfigJson()))
@@ -155,6 +158,13 @@ public class SysStorageConfigServiceImpl implements SysStorageConfigService, Sto
         // 旧客户端未传访问类型时保持原值，避免默认值把公开配置误改成私有
         if (dto.getIsPublic() == null) {
             dto.setIsPublic(existing.getIsPublic() == null ? 0 : existing.getIsPublic());
+        }
+        // 压缩参数同理：老版本前端不会带这两个字段，不能因此把关掉的开关重新打开或把质量重置
+        if (dto.getCompressEnabled() == null) {
+            dto.setCompressEnabled(existing.getCompressEnabled());
+        }
+        if (dto.getCompressQuality() == null) {
+            dto.setCompressQuality(existing.getCompressQuality());
         }
 
         SysStorageConfig entity = new SysStorageConfig();
@@ -314,6 +324,8 @@ public class SysStorageConfigServiceImpl implements SysStorageConfigService, Sto
                 .publicAccess(publicAccess)
                 .allowedExtensions(cfg.getAllowedExtensions())
                 .maxSize(cfg.getMaxSize() == null ? 5242880L : cfg.getMaxSize())
+                .compressEnabled(cfg.getCompressEnabled() != null && cfg.getCompressEnabled() == 1)
+                .compressQuality(ImageCompressor.normalizeQuality(cfg.getCompressQuality()))
                 .props(props)
                 .build();
     }
@@ -333,6 +345,8 @@ public class SysStorageConfigServiceImpl implements SysStorageConfigService, Sto
         entity.setAllowedExtensions(blankToDefault(dto.getAllowedExtensions(),
                 "jpg,jpeg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt"));
         entity.setMaxSize(dto.getMaxSize() == null || dto.getMaxSize() <= 0 ? 5242880L : dto.getMaxSize());
+        entity.setCompressEnabled(dto.getCompressEnabled() != null && dto.getCompressEnabled() == 1 ? 1 : 0);
+        entity.setCompressQuality(ImageCompressor.normalizeQuality(dto.getCompressQuality()));
         // 密钥字段落库前加密（未配置 solon.vault.password 时为空操作）
         ConfigSecretUtil.encrypt(props, secretFieldNames(entity.getStorageType()));
         entity.setConfigJson(JsonUtil.toJson(props));

@@ -276,6 +276,8 @@ CREATE TABLE `sys_storage_config` (
     `url_prefix`         VARCHAR(255)  NOT NULL DEFAULT '/admin-api/system/file/download/' COMMENT '代理下载前缀（按访问类型自动生成）',
     `allowed_extensions` VARCHAR(500)  NOT NULL DEFAULT ''     COMMENT '允许扩展名，逗号分隔',
     `max_size`           BIGINT        NOT NULL DEFAULT 5242880 COMMENT '单文件大小上限（字节）',
+    `compress_enabled`   TINYINT       NOT NULL DEFAULT 0      COMMENT '上传图片是否压缩：1是 0否',
+    `compress_quality`   TINYINT       NOT NULL DEFAULT 80     COMMENT 'JPEG 压缩质量：10-100，越小体积越小；PNG 为无损压缩、忽略该值',
     `config_json`        TEXT          DEFAULT NULL            COMMENT '类型专属配置JSON',
     `remark`             VARCHAR(255)  NOT NULL DEFAULT ''     COMMENT '备注',
     `create_by`          VARCHAR(50)   NOT NULL DEFAULT ''     COMMENT '创建人',

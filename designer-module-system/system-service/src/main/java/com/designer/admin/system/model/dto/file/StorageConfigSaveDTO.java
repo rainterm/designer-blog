@@ -41,6 +41,12 @@ public class StorageConfigSaveDTO {
     @ApiModelProperty("单文件大小上限（字节）")
     private Long maxSize;
 
+    @ApiModelProperty("上传图片是否压缩：1是 0否；留空时编辑保留原值")
+    private Integer compressEnabled;
+
+    @ApiModelProperty("JPEG 压缩质量 10-100，越小体积越小；PNG 为无损压缩、忽略该值")
+    private Integer compressQuality;
+
     @ApiModelProperty("类型专属配置（含密钥，返回时整段脱敏）")
     @Sensitive
     private Map<String, Object> config;

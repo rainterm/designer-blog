@@ -101,6 +101,31 @@
           />
         </n-form-item>
 
+        <n-divider title-placement="left">图片压缩</n-divider>
+        <n-form-item label="压缩图片">
+          <n-space align="center" :size="10">
+            <n-switch v-model:value="form.compressEnabled" :checked-value="1" :unchecked-value="0" />
+            <span class="form-tip">仅对 jpg / jpeg / png 生效，其余类型按原文件上传</span>
+          </n-space>
+        </n-form-item>
+        <n-form-item v-if="form.compressEnabled === 1" label="压缩质量">
+          <div class="quality-field">
+            <n-slider v-model:value="form.compressQuality" :min="10" :max="100" :step="5" />
+            <n-input-number
+              v-model:value="form.compressQuality"
+              :min="10"
+              :max="100"
+              :step="5"
+              style="width: 110px"
+            >
+              <template #suffix>%</template>
+            </n-input-number>
+          </div>
+          <template #feedback>
+            越低体积越小、画质越差；PNG 为无损压缩，会忽略该值
+          </template>
+        </n-form-item>
+
         <n-divider title-placement="left">类型专属配置</n-divider>
         <TableEmpty
           v-if="!activeFields.length"
@@ -218,6 +243,8 @@ const {
     isPublic: 0,
     allowedExtensions: 'jpg,jpeg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt',
     maxSizeMb: 5,
+    compressEnabled: 0,
+    compressQuality: 80,
     config: {},
     remark: ''
   },
@@ -231,6 +258,8 @@ const {
       isPublic: payload.isPublic,
       allowedExtensions: payload.allowedExtensions,
       maxSize: mbToBytes(payload.maxSizeMb),
+      compressEnabled: payload.compressEnabled,
+      compressQuality: payload.compressQuality,
       remark: payload.remark,
       config: { ...payload.config }
     }
@@ -348,6 +377,17 @@ const columns = computed(() => [
       })
   },
   { title: '单文件上限', key: 'maxSize', width: 120, render: (row) => formatSizeMb(row.maxSize) },
+  {
+    title: '图片压缩',
+    key: 'compressEnabled',
+    width: 110,
+    render: (row) =>
+      row.compressEnabled === 1
+        ? h(NTag, { bordered: false, type: 'success' }, {
+            default: () => `质量 ${row.compressQuality}%`
+          })
+        : '—'
+  },
   { title: '备注', key: 'remark', width: 160, ellipsis: { tooltip: true } },
   { title: '更新时间', key: 'updateTime', width: 190 },
   {
@@ -461,6 +501,8 @@ function openCreate() {
     isPublic: 0,
     allowedExtensions: 'jpg,jpeg,png,gif,webp,bmp,pdf,doc,docx,xls,xlsx,ppt,pptx,zip,txt',
     maxSizeMb: 5,
+    compressEnabled: 0,
+    compressQuality: 80,
     remark: '',
     config: buildConfigDefaults(storageType)
   })
@@ -478,6 +520,8 @@ async function openEdit(row) {
     isPublic: d.isPublic,
     allowedExtensions: d.allowedExtensions,
     maxSizeMb: bytesToMb(d.maxSize),
+    compressEnabled: d.compressEnabled === 1 ? 1 : 0,
+    compressQuality: d.compressQuality == null ? 80 : d.compressQuality,
     remark: d.remark || '',
     config: { ...(d.config || {}) }
   }))
@@ -513,5 +557,18 @@ onMounted(async () => {
   margin-left: 10px;
   color: var(--n-text-color-3);
   font-size: 12px;
+}
+
+/* 质量滑块 + 数字输入：与「Logo 圆角」保持同一套排版 */
+.quality-field {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.quality-field .n-slider {
+  flex: 1;
+  min-width: 0;
 }
 </style>

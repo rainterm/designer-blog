@@ -25,6 +25,11 @@ public class StorageRuntimeConfig {
     private String urlPrefix;
     private String allowedExtensions;
     private long maxSize;
+    /** 是否压缩上传图片（只影响 jpg / png，其余类型直接跳过） */
+    private boolean compressEnabled;
+    /** JPEG 压缩质量百分比（10 ~ 100），越小体积越小；PNG 为无损压缩、忽略该值 */
+    @Builder.Default
+    private int compressQuality = ImageCompressor.DEFAULT_QUALITY;
     /** 是否公开访问：公开配置的 URL 走 /app-api，私有配置走 /admin-api */
     private boolean publicAccess;
     /** 类型专属配置（已解析的 JSON Map） */

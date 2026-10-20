@@ -4,6 +4,7 @@ import lombok.Data;
 import org.noear.snack4.annotation.ONodeAttr;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -58,6 +59,11 @@ public class AdminCommentVO {
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    /** 子回复列表（第 2 层，不再向下嵌套） */
-    private List<AdminCommentVO> children;
+    /**
+     * 子回复列表（第 2 层，不再向下嵌套）。
+     *
+     * <p>默认初始化成空集合而不是 null：没有回复是常态，调用方直接 {@code add} 即可，
+     * 响应里也始终是 {@code []}，前端不用再区分 {@code null} 与空数组。</p>
+     */
+    private List<AdminCommentVO> children = new ArrayList<>();
 }

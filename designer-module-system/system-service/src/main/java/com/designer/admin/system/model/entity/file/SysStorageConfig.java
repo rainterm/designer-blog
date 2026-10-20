@@ -39,6 +39,12 @@ public class SysStorageConfig extends BaseEntity {
     /** 单文件大小上限（字节） */
     private Long maxSize;
 
+    /** 上传图片是否压缩：1是 0否 */
+    private Integer compressEnabled;
+
+    /** JPEG 压缩质量：10-100，越小体积越小；PNG 为无损压缩、忽略该值 */
+    private Integer compressQuality;
+
     /** 类型专属配置 JSON */
     private String configJson;
 

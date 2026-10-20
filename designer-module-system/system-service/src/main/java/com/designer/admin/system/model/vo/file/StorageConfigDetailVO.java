@@ -46,6 +46,12 @@ public class StorageConfigDetailVO {
     /** 单文件大小上限（字节） */
     private Long maxSize;
 
+    /** 上传图片是否压缩：1是 0否 */
+    private Integer compressEnabled;
+
+    /** JPEG 压缩质量：10-100，越小体积越小 */
+    private Integer compressQuality;
+
     /** 备注 */
     private String remark;
 

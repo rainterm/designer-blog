@@ -7,7 +7,6 @@ import com.designer.admin.framework.storage.StorageProperties;
 import com.designer.admin.framework.storage.StorageRuntimeConfig;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
-import org.noear.solon.core.handle.UploadedFile;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -69,13 +68,12 @@ public class LocalFileStorageProvider implements FileStorageProvider {
     }
 
     @Override
-    public void store(UploadedFile file, String filePath, String contentType, StorageRuntimeConfig config) {
+    public void store(InputStream in, long size, String filePath, String contentType, StorageRuntimeConfig config) {
         Path target = resolve(filePath, config);
         try {
             Files.createDirectories(target.getParent());
-            try (InputStream in = file.getContent()) {
-                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-            }
+            // 流由调用方关闭（门面可能传入压缩后的内存流）
+            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             throw new BizException("文件保存失败：" + e.getMessage());
         }

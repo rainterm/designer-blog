@@ -1,7 +1,6 @@
 package com.designer.admin.framework.storage;
 
 import com.designer.admin.framework.spi.ConfigFieldMeta;
-import org.noear.solon.core.handle.UploadedFile;
 
 import java.io.InputStream;
 import java.util.List;
@@ -45,12 +44,16 @@ public interface FileStorageProvider {
     /**
      * 上传文件。
      *
-     * @param file        上传文件
+     * <p>入参是数据流而不是 {@code UploadedFile}：门面可能在落盘前先做图片压缩，
+     * 此时要写的是重编码后的字节，而不是原始上传流。</p>
+     *
+     * @param in          文件内容，<b>由调用方负责关闭</b>
+     * @param size        内容长度（压缩后）
      * @param filePath    目标相对路径
      * @param contentType 内容类型
      * @param config      运行时配置
      */
-    void store(UploadedFile file, String filePath, String contentType, StorageRuntimeConfig config);
+    void store(InputStream in, long size, String filePath, String contentType, StorageRuntimeConfig config);
 
     /**
      * 删除物理文件（忽略不存在）。

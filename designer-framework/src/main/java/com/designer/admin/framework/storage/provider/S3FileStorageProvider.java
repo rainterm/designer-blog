@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Destroy;
 import org.noear.solon.annotation.Inject;
-import org.noear.solon.core.handle.UploadedFile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -95,16 +94,17 @@ public class S3FileStorageProvider implements FileStorageProvider {
     }
 
     @Override
-    public void store(UploadedFile file, String filePath, String contentType, StorageRuntimeConfig config) {
+    public void store(InputStream in, long size, String filePath, String contentType, StorageRuntimeConfig config) {
         S3Client client = clientOf(config);
-        try (InputStream in = file.getContent()) {
+        try {
             PutObjectRequest req = PutObjectRequest.builder()
                     .bucket(config.prop("bucket"))
                     .key(filePath)
                     .contentType(contentType)
-                    .contentLength(file.getContentSize())
+                    .contentLength(size)
                     .build();
-            client.putObject(req, RequestBody.fromInputStream(in, file.getContentSize()));
+            // 流由调用方关闭；body 的长度必须与压缩后的实际字节数一致，SDK 才能定长签名
+            client.putObject(req, RequestBody.fromInputStream(in, size));
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {
