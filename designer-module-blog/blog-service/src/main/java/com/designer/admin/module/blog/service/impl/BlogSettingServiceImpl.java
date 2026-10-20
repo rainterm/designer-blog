@@ -1,7 +1,7 @@
 package com.designer.admin.module.blog.service.impl;
 
 import com.designer.admin.common.exception.BizException;
-import com.designer.admin.framework.constant.HttpConsts;
+import com.designer.admin.common.constant.HttpConsts;
 import com.designer.admin.module.blog.constant.BlogCacheConsts;
 import com.designer.admin.module.blog.constant.BlogSettingConsts;
 import com.designer.admin.module.blog.mapper.BlogSettingMapper;
