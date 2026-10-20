@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.constant.SystemConsts;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.crypto.PasswordUtil;
+import com.designer.admin.framework.mybatis.DataPermissionContext;
+import com.designer.admin.framework.mybatis.DataPermissionGuard;
 import com.designer.admin.system.constant.SysUserConsts;
 import com.designer.admin.system.mapper.rbac.SysDeptMapper;
 import com.designer.admin.system.mapper.rbac.SysPostMapper;
@@ -62,6 +64,8 @@ public class SysUserServiceImpl implements SysUserService {
     private SysDeptMapper deptMapper;
     @Inject
     private PermissionInvalidator permissionInvalidator;
+    @Inject
+    private DataPermissionGuard dataPermissionGuard;
 
     @Override
     public IPage<SysUser> listPage(UserQueryDTO query) {
@@ -75,6 +79,7 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     public IPage<UserOptionVO> listOptionPage(UserOptionQueryDTO query) {
         String keyword = query.getKeyword() != null ? query.getKeyword().trim() : null;
+        // 数据权限由 MyBatis 拦截器按 sys_user.dept_id 自动追加，这里只写业务条件
         IPage<SysUser> page = userMapper.selectPage(query.toPage(), new LambdaQueryWrapper<SysUser>()
                 .select(SysUser::getId, SysUser::getUsername, SysUser::getNickname, SysUser::getDeptId)
                 .eq(SysUser::getStatus, 1)
@@ -104,6 +109,7 @@ public class SysUserServiceImpl implements SysUserService {
                 .eq(query.getStatus() != null, SysUser::getStatus, query.getStatus())
                 .eq(query.getDeptId() != null, SysUser::getDeptId, query.getDeptId())
                 .orderByDesc(SysUser::getId);
+        // 数据权限由拦截器按 sys_user.dept_id 自动追加；这里再手写一遍会变成两套口径
         if (query.getRoleId() != null) {
             List<Long> userIds = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
                             .eq(SysUserRole::getRoleId, query.getRoleId()))
@@ -122,6 +128,8 @@ public class SysUserServiceImpl implements SysUserService {
 
     @Override
     public SysUser getById(Long id) {
+        // 数据权限由拦截器追加 dept_id 条件：越权 ID 会查不到（等价于不存在），
+        // 不再需要业务层手写「这条数据是否可见」
         SysUser user = userMapper.selectById(id);
         if (user == null) {
             throw new BizException("用户不存在");
@@ -139,6 +147,7 @@ public class SysUserServiceImpl implements SysUserService {
             throw new BizException("新增用户时密码不能为空");
         }
         assertPasswordPolicy(dto.getPassword());
+        assertDeptVisible(dto.getDeptId());
         String username = requireUsername(dto.getUsername());
         assertUsernameUnique(username, null);
         dto.setUsername(username);
@@ -163,6 +172,7 @@ public class SysUserServiceImpl implements SysUserService {
         if (exist == null) {
             throw new BizException("用户不存在");
         }
+        assertDeptVisible(dto.getDeptId());
         String username = requireUsername(dto.getUsername());
         assertUsernameUnique(username, dto.getId());
         // 编辑接口同样能改状态：不在这里拦，停用保护就能被 PUT /user/update 绕过
@@ -182,6 +192,11 @@ public class SysUserServiceImpl implements SysUserService {
         if (dto.getPostIds() != null) {
             saveUserPosts(dto.getId(), dto.getPostIds());
         }
+        // 换了部门会改变「本部门 / 本部门及以下」的计算结果，必须让该用户的快照作废。
+        // 角色变更时 saveUserRoles 已经删过，这里只补部门变化的场景。
+        if (!Objects.equals(exist.getDeptId(), dto.getDeptId())) {
+            permissionInvalidator.evictUser(dto.getId());
+        }
     }
 
     @Override
@@ -189,7 +204,8 @@ public class SysUserServiceImpl implements SysUserService {
         if (!notBlank(username)) {
             return false;
         }
-        Long cnt = userMapper.countByUsername(username.trim(), excludeId);
+        // 唯一性校验看全表：数据权限只约束「能看哪些业务数据」，不该让重名账号在别的部门里隐身
+        Long cnt = DataPermissionContext.ignore(() -> userMapper.countByUsername(username.trim(), excludeId));
         return cnt == null || cnt == 0;
     }
 
@@ -201,7 +217,7 @@ public class SysUserServiceImpl implements SysUserService {
     }
 
     private void assertUsernameUnique(String username, Long excludeId) {
-        Long cnt = userMapper.countByUsername(username, excludeId);
+        Long cnt = DataPermissionContext.ignore(() -> userMapper.countByUsername(username, excludeId));
         if (cnt != null && cnt > 0) {
             throw new BizException("登录账号已存在：" + username);
         }
@@ -216,6 +232,13 @@ public class SysUserServiceImpl implements SysUserService {
         // 超管身份以 sys_role.is_super 为准，不再硬编码 id == 1
         if (userMapper.existsSuperUser(ids)) {
             throw new BizException("超级管理员不允许删除");
+        }
+        // 越权校验：数据权限对 DELETE 同样生效（拦截器会追加 dept_id 条件），
+        // 但那样表现成「静默删 0 行」，这里先查一遍可见记录，把越权显式报出来。
+        // selectBatchIds 本身已被数据权限过滤，返回数量少于请求数量就说明有越权目标
+        List<SysUser> visible = userMapper.selectBatchIds(ids);
+        if (visible.size() != new java.util.LinkedHashSet<>(ids).size()) {
+            throw new BizException(403, "包含无权删除的用户");
         }
         userMapper.deleteByIds(ids);
         for (Long id : ids) {
@@ -247,11 +270,32 @@ public class SysUserServiceImpl implements SysUserService {
 
     @Override
     public void updateStatus(Long id, Integer status) {
+        // selectById 已被数据权限过滤：看不见的用户等同于不存在
+        SysUser target = userMapper.selectById(id);
+        if (target == null) {
+            throw new BizException("用户不存在");
+        }
         assertNotDisablingSuperUser(id, status);
         SysUser user = new SysUser();
         user.setId(id);
         user.setStatus(status);
         userMapper.updateById(user);
+    }
+
+    /**
+     * 数据权限：目标部门是否可见。
+     *
+     * <p><b>为什么这条必须显式校验</b>：{@code INSERT} 没有 WHERE，拦截器无法改写；
+     * 把用户新增 / 调岗到自己看不见的部门，等于写出一条自己读不到的数据。
+     * SQL 改写覆盖不到这种「写入新值」的场景，所以这里用 {@link DataPermissionGuard} 点查。</p>
+     */
+    private void assertDeptVisible(Long deptId) {
+        if (deptId == null) {
+            return;
+        }
+        if (!dataPermissionGuard.canSeeDept(deptId)) {
+            throw new BizException(403, "无权将用户分配到该部门");
+        }
     }
 
     /**
@@ -352,13 +396,16 @@ public class SysUserServiceImpl implements SysUserService {
             if (row == null || !notBlank(row.getUsername())) {
                 continue;
             }
-            Long dup = userMapper.countByUsername(row.getUsername().trim(), null);
+            // 账号唯一性必须看全表：被数据权限裁掉的行会让「已存在」判断静默失效，
+            // 于是另一个部门里同名的账号就再也建不出来（或建出重名）
+            Long dup = DataPermissionContext.ignore(() -> userMapper.countByUsername(row.getUsername().trim(), null));
             if (dup != null && dup > 0) {
                 continue;
             }
             if (row.getDeptId() != null && deptMapper.selectById(row.getDeptId()) == null) {
                 throw new BizException("第 " + line + " 行部门ID不存在：" + row.getDeptId());
             }
+            assertDeptVisible(row.getDeptId());
             SysUser user = new SysUser();
             user.setUsername(row.getUsername().trim());
             user.setNickname(notBlank(row.getNickname()) ? row.getNickname().trim() : row.getUsername().trim());

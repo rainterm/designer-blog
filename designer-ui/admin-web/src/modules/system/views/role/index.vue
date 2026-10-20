@@ -58,6 +58,32 @@
             <n-radio :value="0">停用</n-radio>
           </n-radio-group>
         </n-form-item>
+        <n-form-item label="数据权限" path="dataScope">
+          <n-select
+            v-model:value="form.dataScope"
+            :options="dataScopeOptions"
+            @update:value="onDataScopeChange"
+          />
+        </n-form-item>
+        <n-form-item
+          v-if="form.dataScope === 2"
+          label="可见部门"
+          path="deptIds"
+          :show-feedback="true"
+        >
+          <n-tree-select
+            v-model:value="form.deptIds"
+            :options="deptTreeOptions"
+            key-field="id"
+            label-field="deptName"
+            children-field="children"
+            multiple
+            checkable
+            cascade
+            default-expand-all
+            placeholder="请选择可见部门"
+          />
+        </n-form-item>
         <n-form-item label="备注">
           <n-input v-model:value="form.remark" type="textarea" :rows="2" placeholder="选填" />
         </n-form-item>
@@ -114,6 +140,8 @@ import {
   assignRoleMenus,
   createRole,
   deleteRoles,
+  getDeptOptions,
+  getRoleDeptIds,
   getRoleMenuIds,
   getMenuTree,
   pageRoles,
@@ -128,6 +156,32 @@ import { useUserStore } from '@/store/user'
 const message = useMessage()
 const userStore = useUserStore()
 const { locked, busy, run } = useActionLock()
+
+/** 数据权限档位（编码与后端 DataScopeType 一一对应） */
+const dataScopeOptions = [
+  { label: '全部数据', value: 1 },
+  { label: '自定义部门', value: 2 },
+  { label: '本部门', value: 3 },
+  { label: '本部门及以下', value: 4 },
+  { label: '仅本人', value: 5 }
+]
+const dataScopeLabel = (code) =>
+  dataScopeOptions.find((o) => o.value === Number(code))?.label ?? '—'
+
+/** 部门树（数据权限「自定义部门」用）；按当前账号的数据权限过滤，超管看到全量 */
+const deptTreeOptions = ref([])
+async function loadDeptTree() {
+  if (deptTreeOptions.value.length) return
+  const res = await getDeptOptions()
+  deptTreeOptions.value = res.data || []
+}
+
+/** 切到「自定义部门」时才需要部门树，避免每次打开角色弹框都多一次请求 */
+function onDataScopeChange(value) {
+  if (Number(value) === 2) {
+    loadDeptTree()
+  }
+}
 
 /** 是否内置角色（roleType === 1，不可修改/删除） */
 const isBuiltin = (row) => Number(row?.roleType) === 1
@@ -159,7 +213,7 @@ const {
   form,
   isEdit,
   openCreate,
-  openEdit,
+  openEdit: openEditDialog,
   submit: handleSubmit
 } = useFormDialog({
   defaults: {
@@ -168,19 +222,52 @@ const {
     roleKey: '',
     sort: 0,
     status: 1,
+    dataScope: 1,
+    deptIds: [],
     remark: ''
   },
   async onSubmit(payload) {
+    // 只有「自定义部门」才需要带部门；其余档位传空数组，后端会顺带清掉历史关联
+    const body = {
+      ...payload,
+      deptIds: Number(payload.dataScope) === 2 ? payload.deptIds : []
+    }
     if (payload.id) {
-      await updateRole({ ...payload })
+      await updateRole(body)
       message.success('修改成功')
     } else {
-      await createRole({ ...payload })
+      await createRole(body)
       message.success('新增成功')
     }
     loadData()
   }
 })
+
+/**
+ * 打开编辑弹框：数据权限的部门回显要单独拉一次接口，所以先同步开框、再异步填部门。
+ */
+function openEdit(row, mapper) {
+  openEditDialog(row, (r) => ({ ...mapper(r), dataScope: Number(r.dataScope ?? 1), deptIds: [] }))
+  if (Number(row.dataScope) === 2) {
+    fillRoleDepts(row.id)
+  }
+}
+
+async function fillRoleDepts(roleId) {
+  try {
+    await loadDeptTree()
+    const res = await getRoleDeptIds(roleId)
+    // 防串台：异步期间用户可能已经点了另一个角色
+    if (form.id === roleId) {
+      form.deptIds = res.data || []
+    }
+  } catch {
+    // 部门树加载失败不阻塞表单，用户重新选择即可
+    if (form.id === roleId) {
+      form.deptIds = []
+    }
+  }
+}
 
 const statusOptions = [
   { label: '正常', value: 1 },
@@ -223,6 +310,12 @@ const columns = computed(() => [
     }
   },
   { title: '排序', key: 'sort', width: 80 },
+  {
+    title: '数据权限',
+    key: 'dataScope',
+    width: 120,
+    render: (row) => dataScopeLabel(row.dataScope)
+  },
   {
     title: '状态',
     key: 'status',

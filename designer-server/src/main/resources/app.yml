@@ -116,6 +116,46 @@ mybatis.db1:
       logicNotDeleteValue: 0
       whereStrategy: "not_empty"
 
+# ============================ 数据权限（行级）============================
+# 约定：
+#   1) 表里有 dept_id → 「可见部门 IN (...)」OR「本人创建的」（create_by = 当前账号）
+#   2) 表里有 create_by 但没有 dept_id → 部门维度翻译成
+#      create_by IN (SELECT username FROM sys_user WHERE dept_id IN (可见部门))
+#      即「创建人反查部门」，所以业务表**不需要**加 dept_id 字段
+#   3) 两类列都没有的表不参与
+# 新增业务表只要按约定建列，不需要改任何代码 / 配置，所有查询（含连表、子查询、
+# 分页 count、UPDATE、DELETE）自动生效。
+designer.data-permission:
+  enabled: true
+  dept-column: dept_id
+  # 归属列（创建人）。create_by 存的是用户名（VARCHAR），拦截器按列的真实类型决定拼字符串还是数字
+  owner-column: create_by
+  # 「按创建人反查部门」用到的用户表与账号列：业务表没有 dept_id 时，
+  # 部门维度翻译成 create_by IN (SELECT username FROM sys_user WHERE dept_id IN (...))，
+  # 这样业务表**不需要**加 dept_id 字段。
+  user-table: sys_user
+  username-column: username
+  # 单表覆盖：该表的这一列代表「这条数据属于谁」（sys_user 的归属就是主键，比创建人更准确）
+  owner-column-overrides:
+    sys_user: id
+  # 「创建人」维度跳过的表名前缀：框架自带的共享基础数据（字典 / 菜单 / 角色 / 配置 / 存储…）。
+  # 按创建人裁剪会让下拉框、菜单树变空；字典查询还带 @Cache，空结果会按类型缓存给所有人。
+  # 业务表约定不用 sys_ 前缀，所以默认值即可；留空按默认 sys_ 处理。
+  owner-excluded-prefixes:
+    - sys_
+  # 主键即部门 ID 的表（部门树自身）
+  dept-key-tables:
+    - sys_dept
+  # 明确排除的表
+  #   sys_oper_log / sys_login_log：全局审计，不该按人裁剪
+  #   sys_role_dept：角色可授权的部门。这张表也有 dept_id，一旦参与过滤，
+  #     修改角色数据权限时的 DELETE 会被追加 dept_id 条件，范围外的授权行删不掉，
+  #     残留成越权授权（比"看不到"严重得多）
+  ignore-tables:
+    - sys_oper_log
+    - sys_login_log
+    - sys_role_dept
+
 # ============================ Quartz 定时任务（JDBC JobStore）============================
 # 键名就是 Quartz 的原生属性名（org.quartz.*），可以对照官方文档直接改；
 # 由 ScheduleManager 读取后交给 StdSchedulerFactory，因此**不再需要 quartz.properties**。

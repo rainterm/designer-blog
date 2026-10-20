@@ -8,9 +8,9 @@ USE `designer_blog`;
 
 -- ------------------------- 角色 -------------------------
 -- is_super=1 表示超级管理员；role_type=1=系统内置（不可修改/删除） 2=自定义
-INSERT INTO `sys_role` (`id`, `role_name`, `role_key`, `sort`, `status`, `is_super`, `role_type`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
-(1, '超级管理员', 'admin',  1, 1, 1, 1, '拥有系统全部权限（内置超级管理员）', 'system', NOW(), 'system', NOW()),
-(2, '普通用户',   'common', 2, 1, 0, 2, '仅可查看，示例角色',                'system', NOW(), 'system', NOW());
+INSERT INTO `sys_role` (`id`, `role_name`, `role_key`, `sort`, `status`, `is_super`, `role_type`, `data_scope`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+(1, '超级管理员', 'admin',  1, 1, 1, 1, 1, '拥有系统全部权限（内置超级管理员）', 'system', NOW(), 'system', NOW()),
+(2, '普通用户',   'common', 2, 1, 0, 2, 3, '仅可查看本部门数据，示例角色',          'system', NOW(), 'system', NOW());
 
 -- ------------------------- 部门 -------------------------
 INSERT INTO `sys_dept` (`id`, `parent_id`, `ancestors`, `dept_name`, `sort`, `status`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES

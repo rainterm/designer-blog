@@ -10,8 +10,10 @@ import com.designer.admin.system.model.dto.rbac.DeptSaveDTO;
 import com.designer.admin.system.model.entity.rbac.SysDept;
 import com.designer.admin.system.model.entity.rbac.SysUser;
 import com.designer.admin.system.service.rbac.SysDeptService;
+import com.designer.admin.system.spi.PermissionInvalidator;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.annotation.Inject;
 import org.noear.solon.data.annotation.Transaction;
 
 import java.util.List;
@@ -32,8 +34,12 @@ public class SysDeptServiceImpl implements SysDeptService {
     @Db
     private SysUserMapper userMapper;
 
+    @Inject
+    private PermissionInvalidator permissionInvalidator;
+
     @Override
     public List<SysDept> listTree(String deptName, Integer status) {
+        // 数据权限由拦截器按 sys_dept.id 自动追加（sys_dept 在 dept-key-tables 中声明）
         List<SysDept> list = deptMapper.selectList(new LambdaQueryWrapper<SysDept>()
                 .like(notBlank(deptName), SysDept::getDeptName, deptName)
                 .eq(status != null, SysDept::getStatus, status)
@@ -53,6 +59,7 @@ public class SysDeptServiceImpl implements SysDeptService {
 
     @Override
     public SysDept getById(Long id) {
+        // 越权 ID 会被数据权限过滤成 null，等价于不存在
         SysDept dept = deptMapper.selectById(id);
         if (dept == null) {
             throw new BizException("部门不存在");
@@ -74,6 +81,8 @@ public class SysDeptServiceImpl implements SysDeptService {
             dept.setSort(0);
         }
         deptMapper.insert(dept);
+        // 部门树变了：「本部门及以下」的可见集合需要重算
+        permissionInvalidator.evictAllUsers();
     }
 
     @Override
@@ -118,11 +127,15 @@ public class SysDeptServiceImpl implements SysDeptService {
                 }
             }
         }
+        // 子树整体搬家后，所有「本部门及以下」的可见集合都失效；
+        // 改名 / 排序不影响范围，但没必要为此再做一次「是否动了结构」的判定 —— 部门变更是低频操作
+        permissionInvalidator.evictAllUsers();
     }
 
     @Override
     @Transaction
     public void remove(Long id) {
+        getById(id);
         Long childCnt = deptMapper.selectCount(new LambdaQueryWrapper<SysDept>().eq(SysDept::getParentId, id));
         if (childCnt != null && childCnt > 0) {
             throw new BizException("存在下级部门，不允许删除");
@@ -132,6 +145,8 @@ public class SysDeptServiceImpl implements SysDeptService {
             throw new BizException("部门下存在用户，不允许删除");
         }
         deptMapper.deleteById(id);
+        // 删除会让「自定义部门」里的授权悬空、也会改变子树范围，统一失效一次
+        permissionInvalidator.evictAllUsers();
     }
 
     private String buildAncestors(Long parentId) {

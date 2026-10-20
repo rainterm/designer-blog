@@ -1,6 +1,8 @@
 package com.designer.admin.system.mapper.rbac;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.designer.admin.common.constant.SystemConsts;
+import com.designer.admin.framework.mybatis.DataPermissionContext;
 import com.designer.admin.system.model.entity.rbac.SysRole;
 import com.designer.admin.system.model.entity.rbac.SysUser;
 import com.designer.admin.system.model.entity.rbac.SysUserRole;
@@ -36,6 +38,22 @@ public interface SysUserMapper extends MPJBaseMapper<SysUser> {
     }
 
     /**
+     * 查询用户的所属部门 ID（只取一列，供数据权限装载使用）。
+     *
+     * @param userId 用户 ID
+     * @return 部门 ID；用户不存在或未分配部门时返回 {@code null}
+     */
+    default Long selectDeptIdById(Long userId) {
+        // 装载权限快照时不能反过来被数据权限过滤（否则自定义范围里没有本部门时，deptId 会被裁成 null）
+        return DataPermissionContext.ignore(() -> {
+            SysUser user = selectOne(new LambdaQueryWrapper<SysUser>()
+                    .select(SysUser::getDeptId)
+                    .eq(SysUser::getId, userId));
+            return user == null ? null : user.getDeptId();
+        });
+    }
+
+    /**
      * 判断这批用户中是否存在超级管理员（以 {@code sys_role.is_super} 为准）。
      *
      * <p><b>为什么不再判断 {@code id == 1}</b>：超管身份的唯一事实来源是角色的
@@ -53,11 +71,15 @@ public interface SysUserMapper extends MPJBaseMapper<SysUser> {
         if (userIds == null || userIds.isEmpty()) {
             return false;
         }
-        Long cnt = selectJoinCount(JoinWrappers.lambda(SysUser.class)
-                .leftJoin(SysUserRole.class, SysUserRole::getUserId, SysUser::getId)
-                .leftJoin(SysRole.class, SysRole::getId, SysUserRole::getRoleId)
-                .in(SysUser::getId, userIds)
-                .eq(SysRole::getIsSuper, SystemConsts.IS_SUPER_YES));
-        return cnt != null && cnt > 0;
+        // 必须绕开数据权限：这是「保护性」判定，被过滤掉的超管会让删除/停用保护静默失效。
+        // 表里只有 protected 关键字，另外 sys_user 本身有 dept_id，被裁掉就查不到
+        return DataPermissionContext.ignore(() -> {
+            Long cnt = selectJoinCount(JoinWrappers.lambda(SysUser.class)
+                    .leftJoin(SysUserRole.class, SysUserRole::getUserId, SysUser::getId)
+                    .leftJoin(SysRole.class, SysRole::getId, SysUserRole::getRoleId)
+                    .in(SysUser::getId, userIds)
+                    .eq(SysRole::getIsSuper, SystemConsts.IS_SUPER_YES));
+            return cnt != null && cnt > 0;
+        });
     }
 }

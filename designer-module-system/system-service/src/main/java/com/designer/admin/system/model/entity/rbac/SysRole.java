@@ -33,6 +33,14 @@ public class SysRole extends BaseEntity {
     /** 角色类型：1=系统内置（不可修改/删除） 2=自定义 */
     private Integer roleType;
 
+    /**
+     * 数据权限范围：1全部 2自定义部门 3本部门 4本部门及以下 5仅本人。
+     *
+     * <p>取值语义见 {@link com.designer.admin.common.constant.DataScopeType}。
+     * 多个角色取并集，超管不受限制。</p>
+     */
+    private Integer dataScope;
+
     /** 备注 */
     private String remark;
 }

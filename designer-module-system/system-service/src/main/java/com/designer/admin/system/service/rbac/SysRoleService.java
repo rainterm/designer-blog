@@ -67,6 +67,14 @@ public interface SysRoleService {
     List<Long> listMenuIds(Long roleId);
 
     /**
+     * 查询角色自定义数据权限的部门 ID 列表（仅 {@code data_scope=2} 时有意义）。
+     *
+     * @param roleId 角色 ID
+     * @return 部门 ID 列表，按升序
+     */
+    List<Long> listDeptIds(Long roleId);
+
+    /**
      * 重新分配角色菜单（全量覆盖）。
      *
      * @param roleId  角色 ID

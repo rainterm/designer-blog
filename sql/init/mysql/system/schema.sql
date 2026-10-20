@@ -116,6 +116,7 @@ CREATE TABLE `sys_role` (
     `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0停用',
     `is_super`    TINYINT(1)   NOT NULL DEFAULT 0      COMMENT '是否超级管理员：1是 0否（取代 role_key=admin 字符串判断）',
     `role_type`   TINYINT      NOT NULL DEFAULT 2      COMMENT '角色类型：1=系统内置（不可修改/删除） 2=自定义',
+    `data_scope`  TINYINT      NOT NULL DEFAULT 1      COMMENT '数据权限：1全部 2自定义部门 3本部门 4本部门及以下 5仅本人',
     `remark`      VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '备注',
     `create_by`   VARCHAR(50)  NOT NULL DEFAULT ''     COMMENT '创建人',
     `create_time` DATETIME     DEFAULT NULL            COMMENT '创建时间',
@@ -161,6 +162,14 @@ CREATE TABLE `sys_role_menu` (
     `menu_id` BIGINT NOT NULL COMMENT '菜单ID',
     PRIMARY KEY (`role_id`, `menu_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '角色菜单关联';
+
+DROP TABLE IF EXISTS `sys_role_dept`;
+CREATE TABLE `sys_role_dept` (
+    `role_id` BIGINT NOT NULL COMMENT '角色ID',
+    `dept_id` BIGINT NOT NULL COMMENT '部门ID（data_scope=2 自定义部门时有效）',
+    PRIMARY KEY (`role_id`, `dept_id`),
+    KEY `idx_sys_role_dept_dept` (`dept_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '角色数据权限（自定义部门）关联';
 
 DROP TABLE IF EXISTS `sys_dict_type`;
 CREATE TABLE `sys_dict_type` (

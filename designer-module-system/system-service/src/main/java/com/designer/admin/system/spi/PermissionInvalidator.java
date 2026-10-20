@@ -134,6 +134,26 @@ public class PermissionInvalidator {
     }
 
     /**
+     * 失效全部用户的权限快照（部门树结构变化时调用）。
+     *
+     * <p><b>为什么部门变动要清所有人</b>：「本部门及以下」的可见部门集合在装载快照时
+     * 就已展开成 ID 集合。部门新增、移动、删除都会让这个集合失真：
+     * 移动一支子树后，旧快照可能仍然包含「已经不该看到」的部门 —— 那是越权，不是缓存陈旧。
+     * 精确解析「哪些用户受影响」需要把每个角色的数据范围与部门子树做交集，
+     * 复杂度远超收益；部门调整是低频操作，一次全量失效更简单也更安全。</p>
+     *
+     * <p>只清有角色的用户：没有角色的用户本来就没有任何权限与数据范围。</p>
+     */
+    public void evictAllUsers() {
+        List<Long> userIds = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                        .select(SysUserRole::getUserId))
+                .stream()
+                .map(SysUserRole::getUserId)
+                .toList();
+        evictUsers(userIds);
+    }
+
+    /**
      * 事务内挂到提交之后，事务外立即执行。
      *
      * <p>没有事务时立即删是安全的：调用方已经完成写入（本类的调用点都在写完数据之后），

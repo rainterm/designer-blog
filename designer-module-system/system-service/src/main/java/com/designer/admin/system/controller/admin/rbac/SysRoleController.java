@@ -99,6 +99,14 @@ public class SysRoleController {
         return Result.ok(roleService.listMenuIds(id));
     }
 
+    @Get
+    @Mapping("/{id}/depts")
+    @SaCheckPermission("system:role:query")
+    @ApiOperation(value = "查询角色自定义数据权限的部门")
+    public Result<List<Long>> listDeptIds(Long id) {
+        return Result.ok(roleService.listDeptIds(id));
+    }
+
     @Put
     @Mapping("/{id}/menus")
     @OperLog(title = "角色授权", businessType = BusinessType.GRANT)

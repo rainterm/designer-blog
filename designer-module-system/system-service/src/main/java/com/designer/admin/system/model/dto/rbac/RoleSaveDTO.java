@@ -34,6 +34,12 @@ public class RoleSaveDTO {
     @ApiModelProperty("备注")
     private String remark;
 
+    @ApiModelProperty("数据权限：1全部 2自定义部门 3本部门 4本部门及以下 5仅本人；为空表示不修改")
+    private Integer dataScope;
+
+    @ApiModelProperty("自定义数据权限的部门 ID（dataScope=2 时必填，其余档位忽略）")
+    private List<Long> deptIds;
+
     @ApiModelProperty("授权的菜单 ID 列表，为空表示不改动")
     private List<Long> menuIds;
 }

@@ -29,6 +29,7 @@ export const createRole = (data) => request.post('/admin-api/system/role/add', d
 export const updateRole = (data) => request.put('/admin-api/system/role/update', data)
 export const deleteRoles = (ids) => request.delete('/admin-api/system/role/remove', { params: { ids: ids.join(',') } })
 export const getRoleMenuIds = (id) => request.get(`/admin-api/system/role/${id}/menus`)
+export const getRoleDeptIds = (id) => request.get(`/admin-api/system/role/${id}/depts`)
 export const assignRoleMenus = (id, menuIds) => request.put(`/admin-api/system/role/${id}/menus`, menuIds)
 
 // ---------------------- 岗位 ----------------------
