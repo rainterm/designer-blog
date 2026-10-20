@@ -13,7 +13,7 @@
 
     <groupId>com.designer</groupId>
     <artifactId>designer-admin</artifactId>
-    <version>1.0.0</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
     <name>designer-admin</name>
     <description>Designer Admin 多模块脚手架（Solon + Vue3）</description>
@@ -28,6 +28,8 @@
     </modules>
 
     <properties>
+        <!-- 全局版本号：各子模块 parent.version 统一引用 ${revision}，发布时可用 -Drevision=x.y.z 覆盖 -->
+        <revision>2.0.0</revision>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mybatis-plus.version>3.5.17</mybatis-plus.version>
@@ -197,7 +199,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
             </plugin>
-            <!-- 《阿里巴巴 Java 开发手册》静态扫描：mvn pmd:pmd -Pp3c -->
+            <!-- 《阿里巴巴 Java 开发手册》静态扫描：mvn pmd:pmd -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
