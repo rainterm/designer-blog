@@ -22,19 +22,24 @@ public final class VisitPathUtil {
     }
 
     /**
-     * 页面类型：与 blog-web 路由一一对应
+     * 页面类型：与 blog-web 路由一一对应。
+     *
+     * <p>枚举只负责「归类」，码值落库；中文文案放在数据字典 {@code blog_visit_page_type} 里，
+     * 运营调整文案不用改代码，新增类型也只是加一条字典项。</p>
      *
      * @author 雨夜终端
      */
+    @Getter
     public enum PageType {
         /** 首页即文章列表（blog-web 的 `''` 路由） */
         HOME("home"),
         POST("post"),
         TAG("tag"),
         CATEGORY("category"),
+        /** 无法归类（含接口路径、缺 slug 的残缺路径） */
         OTHER("other");
 
-        @Getter
+        /** 落库的码值 */
         private final String code;
 
         PageType(String code) {

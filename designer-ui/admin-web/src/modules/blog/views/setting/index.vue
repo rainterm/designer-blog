@@ -88,18 +88,39 @@
           <n-form-item label="页脚版权" path="copyright">
             <n-input
               v-model:value="form.copyright"
-              placeholder="如 © 2026 Designer. All rights reserved.，留空不显示"
+              placeholder="如 © 2026 Designer 保留所有权利，留空不显示"
             />
           </n-form-item>
 
-          <n-form-item label="备案号">
+          <n-form-item label="ICP 备案号">
             <n-input v-model:value="form.icp" placeholder="如 粤ICP备00000000号-1，留空不显示" />
           </n-form-item>
 
-          <n-form-item label="备案链接">
+          <n-form-item label="ICP 备案链接">
             <n-input
               v-model:value="form.icpUrl"
               placeholder="如 https://beian.miit.gov.cn/，留空则备案号不跳转"
+            />
+          </n-form-item>
+
+          <n-form-item label="公安备案号">
+            <div class="owner-nickname-field">
+              <n-input
+                v-model:value="form.policeIcp"
+                maxlength="100"
+                placeholder="如 粤公网安备 44030502000000号，留空不显示"
+              />
+              <span class="switch-field__hint">
+                公网安备展示在 ICP 备案号下方，并带警徽图标；留空则整行不渲染。
+              </span>
+            </div>
+          </n-form-item>
+
+          <n-form-item label="公安备案链接">
+            <n-input
+              v-model:value="form.policeIcpUrl"
+              maxlength="500"
+              placeholder="如 https://beian.mps.gov.cn/#/query/webSearch?code=44030502000000，留空则备案号不跳转"
             />
           </n-form-item>
 
@@ -207,6 +228,8 @@ const form = reactive({
   copyright: '',
   icp: '',
   icpUrl: '',
+  policeIcp: '',
+  policeIcpUrl: '',
   seoKeywords: '',
   seoDescription: '',
   commentEnabled: 1,
@@ -231,6 +254,8 @@ async function loadSetting() {
     form.copyright = data.copyright || ''
     form.icp = data.icp || ''
     form.icpUrl = data.icpUrl || ''
+    form.policeIcp = data.policeIcp || ''
+    form.policeIcpUrl = data.policeIcpUrl || ''
     form.seoKeywords = data.seoKeywords || ''
     form.seoDescription = data.seoDescription || ''
     // 0 是合法值（关闭），故用 null 判断而非真值

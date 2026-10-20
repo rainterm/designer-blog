@@ -42,6 +42,12 @@ public class PublicSiteVO implements Serializable {
     /** ICP 备案号链接 */
     private String icpUrl;
 
+    /** 公安网安备案号 */
+    private String policeIcp;
+
+    /** 公安网安备案号链接 */
+    private String policeIcpUrl;
+
     /** SEO 默认关键字（逗号分隔） */
     private String seoKeywords;
 

@@ -134,8 +134,9 @@
         </n-form-item>
         <n-form-item label="状态">
           <n-radio-group v-model:value="typeForm.status">
-            <n-radio :value="1">正常</n-radio>
-            <n-radio :value="0">停用</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
         <n-form-item label="备注">
@@ -168,8 +169,9 @@
         </n-form-item>
         <n-form-item label="状态">
           <n-radio-group v-model:value="dataForm.status">
-            <n-radio :value="1">正常</n-radio>
-            <n-radio :value="0">停用</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
         <n-form-item label="备注">
@@ -205,12 +207,19 @@ import {
 import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useFormDialog } from '@/composables/useFormDialog'
+import { useDict } from '@/composables/useDict'
+import { DICT_NORMAL_DISABLE } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 import { fileDownloading } from '@/utils/download'
 
 const message = useMessage()
 const userStore = useUserStore()
 const { locked, busy, run } = useActionLock()
+
+/** 字典类型 / 字典数据的启用状态文案取自字典本身（sys_normal_disable） */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_NORMAL_DISABLE, {
+  numeric: true
+})
 
 const typeImporting = ref(false)
 const dataImporting = ref(false)
@@ -318,7 +327,7 @@ const typeColumns = computed(() => [
       h(
         NTag,
         { type: row.status === 1 ? 'success' : 'error', bordered: false },
-        { default: () => (row.status === 1 ? '正常' : '停用') }
+        { default: () => statusLabel(row.status) }
       )
   },
   {
@@ -372,7 +381,7 @@ const dataColumns = computed(() => [
       h(
         NTag,
         { type: row.status === 1 ? 'success' : 'error', bordered: false },
-        { default: () => (row.status === 1 ? '正常' : '停用') }
+        { default: () => statusLabel(row.status) }
       )
   },
   { title: '备注', key: 'remark', ellipsis: { tooltip: true } },

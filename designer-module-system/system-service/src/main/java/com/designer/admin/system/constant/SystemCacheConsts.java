@@ -43,6 +43,15 @@ public final class SystemCacheConsts {
      */
     public static final String DICT_DATA_KEY_TMPL = "system:dict:data:#{dictType}";
 
+    /**
+     * 字典「键值 → 标签」映射：{@code DictLookup#labelMap}。
+     *
+     * <p>与 {@link #DICT_DATA_KEY_TMPL} 缓存的是同一批行的不同形态（一个是原始行，
+     * 一个是渲染直接可用的映射），故共用 {@link #DICT_DATA_TAG} 失效 —— 字典数据一改，
+     * 管理端下拉与后端文案同时生效。</p>
+     */
+    public static final String DICT_LABEL_MAP_KEY_TMPL = "system:dict:label:#{dictType}";
+
     /** 字典类型缓存 tag：类型增删改时整体失效 */
     public static final String DICT_TYPE_TAG = "system:dict:type";
 

@@ -1,6 +1,9 @@
 package com.designer.admin.module.blog.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.designer.admin.module.blog.model.dto.VisitLogQueryDTO;
 import com.designer.admin.module.blog.model.dto.VisitReportDTO;
+import com.designer.admin.module.blog.model.vo.VisitLogVO;
 import com.designer.admin.module.blog.model.vo.VisitOverviewVO;
 
 /**
@@ -32,6 +35,17 @@ public interface BlogVisitService {
      * @return 概览数据
      */
     VisitOverviewVO getOverview(Integer days);
+
+    /**
+     * 分页查询访问明细。
+     *
+     * <p>与概览页的分工：概览只做聚合，本方法保留每条流水，
+     * 用于排查「某个 IP 为什么访问量异常」「这条来源到底来自哪」这类具体问题。</p>
+     *
+     * @param query 筛选与分页条件
+     * @return 访问明细分页
+     */
+    IPage<VisitLogVO> listLogs(VisitLogQueryDTO query);
 
     /**
      * 清理保留期之外的访问日志。

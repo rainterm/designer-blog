@@ -50,6 +50,8 @@ public class BlogSettingServiceImpl implements BlogSettingService {
         vo.setCopyright(s.getCopyright());
         vo.setIcp(s.getIcp());
         vo.setIcpUrl(normalizeLink(s.getIcpUrl()));
+        vo.setPoliceIcp(s.getPoliceIcp());
+        vo.setPoliceIcpUrl(normalizeLink(s.getPoliceIcpUrl()));
         vo.setSeoKeywords(s.getSeoKeywords());
         vo.setSeoDescription(s.getSeoDescription());
         vo.setCommentEnabled(normalizeEnabled(s.getCommentEnabled()));
@@ -90,6 +92,8 @@ public class BlogSettingServiceImpl implements BlogSettingService {
         entity.setCopyright(trim(dto.getCopyright()));
         entity.setIcp(trim(dto.getIcp()));
         entity.setIcpUrl(normalizeLink(dto.getIcpUrl()));
+        entity.setPoliceIcp(trim(dto.getPoliceIcp()));
+        entity.setPoliceIcpUrl(normalizeLink(dto.getPoliceIcpUrl()));
         entity.setSeoKeywords(trim(dto.getSeoKeywords()));
         entity.setSeoDescription(trim(dto.getSeoDescription()));
         entity.setCommentEnabled(normalizeEnabled(dto.getCommentEnabled()));
@@ -115,6 +119,8 @@ public class BlogSettingServiceImpl implements BlogSettingService {
         s.setCopyright("");
         s.setIcp("");
         s.setIcpUrl("");
+        s.setPoliceIcp("");
+        s.setPoliceIcpUrl("");
         s.setSeoKeywords("");
         s.setSeoDescription("");
         s.setCommentEnabled(BlogSettingConsts.COMMENT_ENABLED);

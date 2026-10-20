@@ -51,8 +51,9 @@
         </n-form-item>
         <n-form-item label="状态" path="status">
           <n-radio-group v-model:value="form.status">
-            <n-radio :value="1">正常</n-radio>
-            <n-radio :value="0">停用</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
         <n-form-item label="备注">
@@ -78,6 +79,8 @@ import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useFormDialog } from '@/composables/useFormDialog'
+import { useDict } from '@/composables/useDict'
+import { DICT_NORMAL_DISABLE } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 
 const message = useMessage()
@@ -127,10 +130,8 @@ const {
   }
 })
 
-const statusOptions = [
-  { label: '正常', value: 1 },
-  { label: '停用', value: 0 }
-]
+/** 状态筛选项取自字典 */
+const { options: statusOptions } = useDict(DICT_NORMAL_DISABLE, { numeric: true })
 
 const formRules = {
   postName: [{ required: true, message: '请输入岗位名称', trigger: ['input', 'blur'] }],

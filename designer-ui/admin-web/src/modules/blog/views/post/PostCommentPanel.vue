@@ -99,7 +99,7 @@
                 {{ item.ipLocation }}
               </span>
               <span class="comment-item__status" :class="`is-status-${item.status}`">
-                {{ statusOf(item.status).label }}
+                {{ statusLabel(item.status) }}
               </span>
 
               <!-- 操作与昵称同行、贴右；只显示图标，悬浮给出文字 -->
@@ -289,6 +289,8 @@ import {
 import { useUserStore } from '@/store/user'
 import { useMenuBadgeStore } from '@/store/menuBadge'
 import { BLOG_MENU_BADGE } from '@/modules/blog/menuBadges'
+import { useDict } from '@/composables/useDict'
+import { DICT_BLOG_COMMENT_STATUS } from '@/constants/dict'
 
 const props = defineProps({
   /** 文章ID。为新文章（未保存）时为 null，此时评论无从挂载 */
@@ -390,12 +392,8 @@ const flat = computed(() => {
   return result
 })
 
-const STATUS_MAP = {
-  0: { label: '待审' },
-  1: { label: '通过' },
-  2: { label: '拒绝' }
-}
-const statusOf = (status) => STATUS_MAP[status] || { label: '-' }
+/** 评论状态文案取自字典（与评论管理页同源），后台改文案不用发版 */
+const { labelOf: statusLabel } = useDict(DICT_BLOG_COMMENT_STATUS, { numeric: true })
 
 /** 置顶标记：库里是 0/1，这里统一收敛成布尔，模板里少写一次比较 */
 const isTop = (item) => item.isTop === 1

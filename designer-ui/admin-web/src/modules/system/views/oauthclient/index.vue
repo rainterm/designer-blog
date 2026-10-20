@@ -69,8 +69,9 @@
         </n-form-item>
         <n-form-item label="状态" path="status">
           <n-radio-group v-model:value="form.status">
-            <n-radio :value="1">正常</n-radio>
-            <n-radio :value="0">停用</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
         <n-form-item label="备注">
@@ -154,8 +155,9 @@
         </n-form-item>
         <n-form-item label="状态" path="status">
           <n-radio-group v-model:value="scopeForm.status">
-            <n-radio :value="1">正常</n-radio>
-            <n-radio :value="0">停用</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
         <n-form-item label="备注">
@@ -262,6 +264,8 @@ import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useFormDialog } from '@/composables/useFormDialog'
+import { useDict } from '@/composables/useDict'
+import { DICT_NORMAL_DISABLE } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 import { apiBase } from '@/settings'
 
@@ -416,10 +420,10 @@ const {
   }
 })
 
-const statusOptions = [
-  { label: '正常', value: 1 },
-  { label: '停用', value: 0 }
-]
+/** 状态文案取自字典：筛选下拉与 Scope 列表标签同源 */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_NORMAL_DISABLE, {
+  numeric: true
+})
 
 const formRules = {
   clientId: [
@@ -511,7 +515,7 @@ const scopeColumns = computed(() => [
       h(
         NTag,
         { type: row.status === 1 ? 'success' : 'default', bordered: false },
-        { default: () => (row.status === 1 ? '正常' : '停用') }
+        { default: () => statusLabel(row.status) }
       )
   }
 ])

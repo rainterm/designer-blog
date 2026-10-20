@@ -47,8 +47,9 @@
         </n-form-item>
         <n-form-item label="状态" path="status">
           <n-radio-group v-model:value="form.status">
-            <n-radio :value="1">启用</n-radio>
-            <n-radio :value="0">停用</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
       </n-form>
@@ -64,6 +65,8 @@ import { hActionBtn, hActionConfirm, hActionGroup } from '@/utils/actionBtn'
 import { createTag, deleteTags, pageTags, updateTag } from '@/modules/blog/api'
 import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
+import { useDict } from '@/composables/useDict'
+import { DICT_ENABLE_DISABLE } from '@/constants/dict'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useFormDialog } from '@/composables/useFormDialog'
 import { useUserStore } from '@/store/user'
@@ -104,10 +107,10 @@ const {
   }
 })
 
-const statusOptions = [
-  { label: '启用', value: 1 },
-  { label: '停用', value: 0 }
-]
+/** 状态文案取自字典：页面不再维护「码 → 中文」 */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_ENABLE_DISABLE, {
+  numeric: true
+})
 
 const formRules = {
   name: { required: true, message: '请输入名称', trigger: 'blur' }
@@ -124,7 +127,7 @@ const columns = computed(() => [
     width: 90,
     render: (row) =>
       h(NTag, { type: row.status === 1 ? 'success' : 'default', bordered: false }, {
-        default: () => (row.status === 1 ? '启用' : '停用')
+        default: () => statusLabel(row.status)
       })
   },
   { title: '创建时间', key: 'createTime', width: 180 },

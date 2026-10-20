@@ -87,7 +87,7 @@ defineExpose({ load })
   padding: 16px 18px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: #fafafa;
+  background: var(--color-surface-alt);
 }
 
 .my-comments__head {
@@ -123,7 +123,7 @@ defineExpose({ load })
 .my-comment__body {
   font-size: 14px;
   line-height: 1.7;
-  color: #444;
+  color: var(--color-text-reading);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -133,7 +133,7 @@ defineExpose({ load })
   margin-right: 6px;
   padding: 0 6px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--color-fill-subtle);
   font-size: 12px;
   color: var(--color-text-secondary);
 }
@@ -155,7 +155,7 @@ defineExpose({ load })
   border: none;
   background: none;
   padding: 0;
-  color: #d03050;
+  color: var(--color-danger);
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;

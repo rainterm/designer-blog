@@ -4,6 +4,7 @@ import com.designer.admin.common.constant.SystemConsts;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
+import com.designer.admin.framework.dict.DictLookup;
 import com.designer.admin.system.constant.SystemCacheConsts;
 import com.designer.admin.system.mapper.dict.SysDictDataMapper;
 import com.designer.admin.system.mapper.dict.SysDictTypeMapper;
@@ -16,11 +17,14 @@ import com.designer.admin.system.model.vo.dict.DictTypeExcelVO;
 import com.designer.admin.system.service.dict.SysDictService;
 import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
+import org.noear.solon.data.annotation.Cache;
 import org.noear.solon.data.annotation.CacheRemove;
 import org.noear.solon.data.annotation.Transaction;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 字典服务（类型 + 数据）
@@ -28,7 +32,7 @@ import java.util.List;
  * @author 雨夜终端
  */
 @Component
-public class SysDictServiceImpl implements SysDictService {
+public class SysDictServiceImpl implements SysDictService, DictLookup {
 
     @Db
     private SysDictTypeMapper dictTypeMapper;
@@ -116,6 +120,25 @@ public class SysDictServiceImpl implements SysDictService {
                 .eq(SysDictData::getDictType, dictType)
                 .eq(SysDictData::getStatus, 1)
                 .orderByAsc(SysDictData::getSort));
+    }
+
+    /**
+     * 按类型取「键值 → 标签」映射，供业务模块把库里的码翻成文案。
+     *
+     * <p>缓存粒度是「一个字典类型一个键」：业务侧一次请求里取几个类型就命中几个键，
+     * 不会因为「组合不同」把缓存打散；失效沿用字典数据的 tag，改完字典立刻生效。</p>
+     */
+    @Override
+    @Cache(key = SystemCacheConsts.DICT_LABEL_MAP_KEY_TMPL,
+            tags = SystemCacheConsts.DICT_DATA_TAG,
+            seconds = SystemCacheConsts.CACHE_SECONDS)
+    public Map<String, String> labelMap(String dictType) {
+        List<SysDictData> rows = listDataByType(dictType);
+        Map<String, String> labels = new LinkedHashMap<>(Math.max(8, rows.size() * 2));
+        for (SysDictData row : rows) {
+            labels.putIfAbsent(row.getDictValue(), row.getDictLabel());
+        }
+        return labels;
     }
 
     @Override

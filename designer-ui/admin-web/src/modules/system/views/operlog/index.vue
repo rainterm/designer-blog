@@ -30,7 +30,7 @@
         <n-descriptions-item label="操作时间">{{ detail.operTime }}</n-descriptions-item>
         <n-descriptions-item label="状态">
           <n-tag :type="detail.status === 1 ? 'success' : 'error'" :bordered="false">
-            {{ detail.status === 1 ? '成功' : '失败' }}
+            {{ statusLabel(detail.status) }}
           </n-tag>
         </n-descriptions-item>
       </n-descriptions>
@@ -50,27 +50,29 @@
 </template>
 
 <script setup>
-import { h, reactive, ref } from 'vue'
+import { h, reactive, ref, computed } from 'vue'
 import { NTag } from 'naive-ui'
 import { EyeOutline } from '@vicons/ionicons5'
 import { hActionBtn } from '@/utils/actionBtn'
 import { pageOperLogs } from '@/modules/system/api/system'
 import { usePagination } from '@/composables/usePagination'
+import { useDict } from '@/composables/useDict'
+import { DICT_OPER_RESULT } from '@/constants/dict'
 
 const pager = usePagination((q) => pageOperLogs(q), {
   defaults: { title: '', operName: '', status: null }
 })
 const { query } = pager
 
-const statusOptions = [
-  { label: '成功', value: 1 },
-  { label: '失败', value: 0 }
-]
+/** 执行结果文案取自字典：详情、列表与筛选项同源 */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_OPER_RESULT, {
+  numeric: true
+})
 
 const detailVisible = ref(false)
 const detail = reactive({})
 
-const columns = [
+const columns = computed(() => [
   { title: 'ID', key: 'id', width: 70 },
   { title: '操作模块', key: 'title', width: 120 },
   {
@@ -91,7 +93,7 @@ const columns = [
       h(
         NTag,
         { type: row.status === 1 ? 'success' : 'error', bordered: false },
-        { default: () => (row.status === 1 ? '成功' : '失败') }
+        { default: () => statusLabel(row.status) }
       )
   },
   { title: '耗时', key: 'costTime', width: 90, render: (row) => `${row.costTime ?? 0} ms` },
@@ -109,7 +111,7 @@ const columns = [
         onClick: () => openDetail(row)
       })
   }
-]
+])
 
 function openDetail(row) {
   Object.assign(detail, row)

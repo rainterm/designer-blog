@@ -35,6 +35,12 @@ public class SettingSaveDTO {
     @ApiModelProperty("ICP 备案查询地址")
     private String icpUrl;
 
+    @ApiModelProperty("公安网安备案号")
+    private String policeIcp;
+
+    @ApiModelProperty("公安网安备案查询地址")
+    private String policeIcpUrl;
+
     @ApiModelProperty("SEO 关键字，逗号分隔")
     private String seoKeywords;
 

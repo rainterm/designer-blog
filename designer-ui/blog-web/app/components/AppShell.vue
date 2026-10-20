@@ -3,6 +3,7 @@
     class="app-shell"
     :locale="zhCN"
     :date-locale="dateZhCN"
+    :theme="isDark ? darkTheme : null"
     :theme-overrides="themeOverrides"
   >
     <n-message-provider>
@@ -16,14 +17,17 @@
 </template>
 
 <script setup>
-import { zhCN, dateZhCN } from 'naive-ui'
+import { darkTheme, zhCN, dateZhCN } from 'naive-ui'
 import {
   colors,
-  themeOverrides as defaultThemeOverrides,
+  darkColors,
+  themeOverrides as lightThemeOverrides,
+  darkThemeOverrides,
   normalizePrimaryColor,
   buildThemeOverrides,
   themeColorVars
 } from '@/config/theme'
+import { useColorMode } from '@/composables/useColorMode'
 import { useSiteSetting } from '@/composables/useSiteSetting'
 
 /**
@@ -36,6 +40,7 @@ import { useSiteSetting } from '@/composables/useSiteSetting'
  * 错误页里的 n-button 就会因为找不到上下文而报错。两边共用同一个外壳即可。</p>
  */
 const site = useSiteSetting()
+const { isDark } = useColorMode()
 
 /**
  * 生效的站点主题色（后台「站点设置 → 站点主题色」下发）。
@@ -52,18 +57,38 @@ const customColor = computed(() => {
   return color === colors.primary ? '' : color
 })
 
-const themeOverrides = computed(() =>
-  customColor.value ? buildThemeOverrides(customColor.value) : defaultThemeOverrides
-)
+const mode = computed(() => (isDark.value ? 'dark' : 'light'))
+
+const themeOverrides = computed(() => {
+  if (customColor.value) return buildThemeOverrides(customColor.value, mode.value)
+  return isDark.value ? darkThemeOverrides : lightThemeOverrides
+})
 
 /**
  * 主题色 CSS 变量写到内容容器上而不是 `:root`：
  * 内联样式随 SSR 首屏 HTML 一起下发（爬虫与访客看到同一份，无水合差异），
  * 又因为是「更近的祖先」，天然胜过 tokens.css 里 `:root` 的定义，不必纠结样式顺序。
+ *
+ * <p>夜间模式下这里只覆盖品牌色；body / surface / text 等仍由
+ * `:root[data-theme='dark']` 提供，否则内联变量会把整套深色底色盖掉。</p>
  */
 const themeCssVars = computed(() =>
-  customColor.value ? themeColorVars(customColor.value) : null
+  customColor.value ? themeColorVars(customColor.value, mode.value) : null
 )
+
+/**
+ * 移动端地址栏 / 状态栏的底色。
+ * 交给 unhead 渲染，SSR 就带着正确的值（按 Cookie 判断），不会先亮后暗。
+ */
+useHead({
+  meta: computed(() => [
+    {
+      name: 'theme-color',
+      content: isDark.value ? darkColors.body : colors.body,
+      key: 'theme-color'
+    }
+  ])
+})
 </script>
 
 <style>

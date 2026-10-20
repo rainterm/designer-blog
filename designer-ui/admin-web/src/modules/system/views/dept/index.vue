@@ -56,8 +56,9 @@
         </n-form-item>
         <n-form-item label="状态">
           <n-radio-group v-model:value="form.status">
-            <n-radio :value="1">正常</n-radio>
-            <n-radio :value="0">停用</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
       </n-form>
@@ -74,6 +75,8 @@ import { createDept, deleteDept, getDeptOptions, getDeptTree, updateDept } from 
 import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useFormDialog } from '@/composables/useFormDialog'
+import { useDict } from '@/composables/useDict'
+import { DICT_NORMAL_DISABLE } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 
 const message = useMessage()
@@ -125,10 +128,10 @@ const {
   }
 })
 
-const statusOptions = [
-  { label: '正常', value: 1 },
-  { label: '停用', value: 0 }
-]
+/** 状态文案取自字典：筛选下拉与列表标签同源 */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_NORMAL_DISABLE, {
+  numeric: true
+})
 
 const columns = computed(() => [
   { title: '部门名称', key: 'deptName', width: 200 },
@@ -139,7 +142,7 @@ const columns = computed(() => [
     width: 90,
     render: (row) =>
       h(NTag, { type: row.status === 1 ? 'success' : 'error', bordered: false }, {
-        default: () => (row.status === 1 ? '正常' : '停用')
+        default: () => statusLabel(row.status)
       })
   },
   { title: '创建时间', key: 'createTime', width: 190 },

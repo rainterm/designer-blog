@@ -21,11 +21,11 @@
  * 这里用同等元素但更高的选择器权重覆盖，保持“结构用主题、配色用站点”的分工。
  */
 .article-body .md-editor .md-editor-preview {
-  --md-theme-color: var(--color-text-secondary);
+  --md-theme-color: var(--color-text-reading);
   --md-theme-link-color: var(--color-primary);
   --md-theme-link-hover-color: var(--color-primary-hover);
   --md-theme-heading-color: var(--color-text);
-  --md-theme-code-inline-color: var(--color-primary-pressed);
+  --md-theme-code-inline-color: var(--color-code-inline);
   --md-theme-code-inline-bg-color: var(--color-primary-soft);
   --md-theme-code-block-bg-color: var(--color-code-bg);
   --md-theme-code-before-bg-color: var(--color-code-bg);
@@ -48,7 +48,7 @@
  * <p>正文里的 `[文字](#锚点)` 由页面接管滚动（原因见 pages/post/[slug].vue 的
  * scrollHeadingIntoView），那里是手动减偏移；这条 scroll-margin-top 是给**原生**锚点定位
  * 兜底的路径 —— 例如中键 / 新标签页直接打开带 `#锚点` 的地址、或浏览器自己处理片段跳转时，
- * 没有它标题会正好被 64px 的吸顶导航盖住。</p>
+ * 没有它标题会正好被吸顶导航盖住。</p>
  */
 .article-body .md-editor-preview :is(h1, h2, h3, h4, h5, h6) {
   scroll-margin-top: calc(var(--layout-nav-height) + 12px);

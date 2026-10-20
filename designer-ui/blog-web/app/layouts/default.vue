@@ -48,7 +48,7 @@ watch(
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
+  scrollbar-color: var(--color-scrollbar) transparent;
   /* 让 footer 在内容不足时也贴底 */
   display: flex;
   flex-direction: column;
@@ -71,14 +71,14 @@ watch(
 }
 
 .blog-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--color-scrollbar);
   border-radius: 999px;
   border: none;
   background-clip: padding-box;
 }
 
 .blog-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--color-scrollbar-hover);
 }
 
 .blog-main {

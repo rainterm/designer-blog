@@ -1,6 +1,9 @@
 /*
  * 由 scripts/syncThemeTokens.js 依据 app/config/theme.js 生成，请勿手改。
  * 改配色请改 theme.js，然后重新执行 dev / build（dev 下保存即自动重建）。
+ *
+ * 夜间模式只覆盖颜色：布局 / 字体 / 圆角在两种模式下相同，
+ * 一起写进 [data-theme=dark] 会压过 index.css 里的移动端媒体查询。
  */
 :root {
   --color-primary: #16A34A;
@@ -12,15 +15,27 @@
   --color-accent: #22C55E;
   --color-body: #F2F5F3;
   --color-surface: #FFFFFF;
+  --color-surface-alt: #F8F8F8;
   --color-border: #E2E8E4;
   --color-border-strong: #D1D9D4;
   --color-text: #161A17;
   --color-text-secondary: #55605A;
   --color-text-muted: #87918B;
+  --color-text-reading: #55605A;
+  --color-search-bg: #F2F5F3;
   --color-success: #16A34A;
   --color-code-bg: #1A2421;
+  --color-code-inline: #15803D;
   --color-quote-bg: rgba(22, 163, 74, 0.08);
   --color-quote-text: #15803D;
+  --color-fill-subtle: rgba(0, 0, 0, 0.06);
+  --color-header-bg: rgba(255, 255, 255, 0.72);
+  --color-header-border: rgba(0, 0, 0, 0.06);
+  --color-scrollbar: rgba(0, 0, 0, 0.22);
+  --color-scrollbar-hover: rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 8px 20px -10px rgba(0, 0, 0, 0.1);
+  --card-hover-lift: -1px;
+  --color-danger: #D03050;
   --gradient-brand: linear-gradient(135deg, #16A34A, #86EFAC);
   --radius: 6px;
   --radius-sm: 6px;
@@ -28,11 +43,45 @@
   --radius-lg: 6px;
   --radius-xl: 6px;
   --radius-full: 999px;
-  --layout-max-width: 920px;
-  --layout-article-max-width: 920px;
-  --layout-nav-height: 64px;
+  --layout-max-width: 820px;
+  --layout-article-max-width: 820px;
+  --layout-nav-height: 60px;
   --layout-page-padding: 24px;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+:root[data-theme="dark"] {
+  --color-primary: #22C55E;
+  --color-primary-hover: #4ADE80;
+  --color-primary-pressed: #16A34A;
+  --color-primary-suppl: #4ADE80;
+  --color-primary-light: #86EFAC;
+  --color-primary-soft: rgba(34, 197, 94, 0.14);
+  --color-accent: #4ADE80;
+  --color-body: #0B0B0B;
+  --color-surface: #161616;
+  --color-surface-alt: #1D1D1D;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-text: #EDEDED;
+  --color-text-secondary: #A3A3A3;
+  --color-text-muted: #7A7A7A;
+  --color-text-reading: #D6D6D6;
+  --color-search-bg: rgba(255, 255, 255, 0.07);
+  --color-success: #22C55E;
+  --color-code-bg: #1A1A1A;
+  --color-code-inline: #86EFAC;
+  --color-quote-bg: rgba(34, 197, 94, 0.1);
+  --color-quote-text: #86EFAC;
+  --color-fill-subtle: rgba(255, 255, 255, 0.07);
+  --color-header-bg: rgba(11, 11, 11, 0.9);
+  --color-header-border: rgba(255, 255, 255, 0.07);
+  --color-scrollbar: rgba(255, 255, 255, 0.16);
+  --color-scrollbar-hover: rgba(255, 255, 255, 0.28);
+  --shadow-card-hover: none;
+  --card-hover-lift: 0;
+  --color-danger: #FA5151;
+  --gradient-brand: linear-gradient(135deg, #22C55E, #86EFAC);
 }

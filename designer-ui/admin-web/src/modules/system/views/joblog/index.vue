@@ -46,7 +46,7 @@
         <n-descriptions-item label="执行时间">{{ detail.createTime }}</n-descriptions-item>
         <n-descriptions-item label="状态">
           <n-tag :type="detail.status === 1 ? 'success' : 'error'" :bordered="false">
-            {{ detail.status === 1 ? '成功' : '失败' }}
+            {{ statusLabel(detail.status) }}
           </n-tag>
         </n-descriptions-item>
       </n-descriptions>
@@ -71,6 +71,8 @@ import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useConfirmAction } from '@/composables/useConfirmAction'
+import { useDict } from '@/composables/useDict'
+import { DICT_OPER_RESULT } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 
 const message = useMessage()
@@ -101,10 +103,10 @@ const { run: handleClear } = useConfirmAction(() => clearJobLogs(), {
 
 applyRouteQuery()
 
-const statusOptions = [
-  { label: '成功', value: 1 },
-  { label: '失败', value: 0 }
-]
+/** 执行结果文案取自字典：详情、列表与筛选项同源 */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_OPER_RESULT, {
+  numeric: true
+})
 
 const detailVisible = ref(false)
 const detail = reactive({})
@@ -123,7 +125,7 @@ const columns = computed(() => [
       h(
         NTag,
         { type: row.status === 1 ? 'success' : 'error', bordered: false },
-        { default: () => (row.status === 1 ? '成功' : '失败') }
+        { default: () => statusLabel(row.status) }
       )
   },
   { title: '耗时', key: 'costTime', width: 90, render: (row) => `${row.costTime ?? 0} ms` },

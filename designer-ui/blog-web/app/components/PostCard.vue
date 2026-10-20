@@ -50,8 +50,8 @@ const coverSrc = computed(() => props.post.coverUrl || '')
 
 .post-card:hover {
   border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
-  box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(var(--card-hover-lift));
 }
 
 .post-card:hover .post-card__title {

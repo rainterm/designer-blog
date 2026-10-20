@@ -49,6 +49,8 @@ import { deletePosts, listCategories, pagePosts, publishPost } from '@/modules/b
 import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
+import { useDict } from '@/composables/useDict'
+import { DICT_BLOG_POST_STATUS } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 
 const router = useRouter()
@@ -71,10 +73,10 @@ const { handleBatchDelete } = useBatchDelete(pager, deletePosts, {
   positiveText: '删除'
 })
 
-const statusOptions = [
-  { label: '草稿', value: 0 },
-  { label: '已发布', value: 1 }
-]
+/** 文章状态文案取自字典：筛选下拉与列表标签同源 */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_BLOG_POST_STATUS, {
+  numeric: true
+})
 
 const columns = computed(() => [
   { type: 'selection', width: 44 },
@@ -100,7 +102,7 @@ const columns = computed(() => [
     width: 90,
     render: (row) =>
       h(NTag, { type: row.status === 1 ? 'success' : 'default', bordered: false }, {
-        default: () => (row.status === 1 ? '已发布' : '草稿')
+        default: () => statusLabel(row.status)
       })
   },
   { title: '浏览', key: 'viewCount', width: 80 },

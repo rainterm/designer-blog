@@ -1,17 +1,24 @@
 package com.designer.admin.module.blog.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.designer.admin.common.core.ResultCode;
+import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.client.ClientIpUtil;
 import com.designer.admin.framework.client.IpRegionResolver;
+import com.designer.admin.framework.dict.DictLookup;
 import com.designer.admin.framework.redis.RedisCounter;
 import com.designer.admin.framework.redis.RedisKeyConsts;
+import com.designer.admin.module.blog.constant.BlogDictConsts;
 import com.designer.admin.module.blog.constant.BlogRedisKeyConsts;
 import com.designer.admin.module.blog.constant.BlogVisitConsts;
 import com.designer.admin.module.blog.mapper.BlogPostMapper;
 import com.designer.admin.module.blog.mapper.BlogVisitMapper;
+import com.designer.admin.module.blog.model.dto.VisitLogQueryDTO;
 import com.designer.admin.module.blog.model.dto.VisitReportDTO;
 import com.designer.admin.module.blog.model.entity.BlogPost;
 import com.designer.admin.module.blog.model.entity.BlogVisitLog;
+import com.designer.admin.module.blog.model.vo.VisitLogVO;
 import com.designer.admin.module.blog.model.vo.VisitNameValueVO;
 import com.designer.admin.module.blog.model.vo.VisitOverviewVO;
 import com.designer.admin.module.blog.model.vo.VisitSummaryVO;
@@ -30,6 +37,8 @@ import org.noear.solon.core.handle.Context;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,6 +57,9 @@ import java.util.Map;
 @Slf4j
 public class BlogVisitServiceImpl implements BlogVisitService {
 
+    /** 访问记录筛选用的日期格式，与前端日期选择器一致 */
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
     @Db
     private BlogVisitMapper visitMapper;
     @Db
@@ -58,6 +70,8 @@ public class BlogVisitServiceImpl implements BlogVisitService {
     private RedisCounter redisCounter;
     @Inject
     private BlogViewCounter viewCounter;
+    @Inject
+    private DictLookup dictLookup;
 
     @Override
     public void addVisit(VisitReportDTO dto) {
@@ -129,7 +143,7 @@ public class BlogVisitServiceImpl implements BlogVisitService {
         entity.setVisitorKey(visitorKey);
         entity.setDevice(device);
         entity.setRefererHost(refererHost);
-        entity.setRefererType(RefererUtil.type(refererHost));
+        entity.setRefererType(RefererUtil.type(refererHost).getCode());
         entity.setUa(ua);
         visitMapper.insert(entity);
     }
@@ -147,9 +161,41 @@ public class BlogVisitServiceImpl implements BlogVisitService {
         vo.setTrend(fillMissingDays(visitMapper.selectTrend(from), from, today));
         vo.setCategories(visitMapper.selectCategoryRank(from, BlogVisitConsts.TOP_SIZE));
         vo.setReferers(visitMapper.selectRefererRank(from, BlogVisitConsts.TOP_SIZE));
-        vo.setDevices(withDeviceLabels(visitMapper.selectDeviceRank(from)));
+        vo.setDevices(withDeviceLabels(visitMapper.selectDeviceRank(from),
+                dictLookup.labelMap(BlogDictConsts.VISIT_DEVICE)));
         vo.setRegions(visitMapper.selectRegionRank(from, BlogVisitConsts.TOP_SIZE));
         return vo;
+    }
+
+    @Override
+    public IPage<VisitLogVO> listLogs(VisitLogQueryDTO query) {
+        LocalDate begin = parseDay(query.getBeginDate(), "开始日期");
+        LocalDate end = parseDay(query.getEndDate(), "结束日期");
+        if (begin != null && end != null && begin.isAfter(end)) {
+            throw new BizException(ResultCode.BAD_REQUEST, "开始日期不能晚于结束日期");
+        }
+        String keyword = blankToNull(query.getKeyword());
+        // 条件为 false 时 MP 仍会先求值参数，日期解析必须放在 wrapper 之外
+        LambdaQueryWrapper<BlogVisitLog> wrapper = new LambdaQueryWrapper<BlogVisitLog>()
+                .ge(begin != null, BlogVisitLog::getVisitDate, begin)
+                .le(end != null, BlogVisitLog::getVisitDate, end)
+                .eq(notBlank(query.getPageType()), BlogVisitLog::getPageType, query.getPageType())
+                .eq(notBlank(query.getDevice()), BlogVisitLog::getDevice, query.getDevice())
+                .eq(notBlank(query.getRefererType()), BlogVisitLog::getRefererType, query.getRefererType())
+                .and(keyword != null, w -> w
+                        .like(BlogVisitLog::getPath, keyword)
+                        .or()
+                        .like(BlogVisitLog::getIp, keyword)
+                        .or()
+                        .like(BlogVisitLog::getIpLocation, keyword))
+                .orderByDesc(BlogVisitLog::getVisitDate)
+                .orderByDesc(BlogVisitLog::getId);
+        // 字典映射在循环外取一次：@Cache 在 labelMap 上，一页数据只读一次缓存
+        Map<String, String> pageTypes = dictLookup.labelMap(BlogDictConsts.VISIT_PAGE_TYPE);
+        Map<String, String> devices = dictLookup.labelMap(BlogDictConsts.VISIT_DEVICE);
+        Map<String, String> refererTypes = dictLookup.labelMap(BlogDictConsts.VISIT_REFERER_TYPE);
+        return visitMapper.selectPage(query.toPage(), wrapper)
+                .convert(e -> toLogVO(e, pageTypes, devices, refererTypes));
     }
 
     @Override
@@ -209,19 +255,72 @@ public class BlogVisitServiceImpl implements BlogVisitService {
      * 设备码转中文标签。
      *
      * <p>库里存的是 {@code PC / MOBILE / TABLET / BOT / OTHER} 这类语言无关的码，
-     * 展示文案在这里定，避免把中文写进数据。</p>
+     * 文案取自数据字典 {@code blog_visit_device}，运营改文案不用发版。</p>
      */
-    private List<VisitNameValueVO> withDeviceLabels(List<VisitNameValueVO> rows) {
+    private List<VisitNameValueVO> withDeviceLabels(List<VisitNameValueVO> rows,
+                                                    Map<String, String> deviceLabels) {
         for (VisitNameValueVO row : rows) {
-            row.setName(switch (row.getName() == null ? "" : row.getName()) {
-                case UserAgentUtil.PC -> "电脑";
-                case UserAgentUtil.MOBILE -> "手机";
-                case UserAgentUtil.TABLET -> "平板";
-                case UserAgentUtil.BOT -> "机器人";
-                default -> "其他";
-            });
+            row.setName(label(deviceLabels, row.getName()));
         }
         return rows;
+    }
+
+    /** 明细分页的实体 → 展示对象：码值在这里统一查字典转中文，前端不再维护映射 */
+    private VisitLogVO toLogVO(BlogVisitLog entity,
+                               Map<String, String> pageTypes,
+                               Map<String, String> deviceLabels,
+                               Map<String, String> refererTypes) {
+        VisitLogVO vo = new VisitLogVO();
+        vo.setId(entity.getId());
+        vo.setVisitDate(entity.getVisitDate());
+        vo.setPageType(entity.getPageType());
+        vo.setPageTypeLabel(label(pageTypes, entity.getPageType()));
+        vo.setPath(entity.getPath());
+        vo.setPostId(entity.getPostId());
+        vo.setIp(entity.getIp());
+        vo.setIpLocation(entity.getIpLocation());
+        vo.setDevice(entity.getDevice());
+        vo.setDeviceLabel(label(deviceLabels, entity.getDevice()));
+        vo.setRefererHost(entity.getRefererHost());
+        vo.setRefererType(entity.getRefererType());
+        vo.setRefererTypeLabel(label(refererTypes, entity.getRefererType()));
+        vo.setUa(entity.getUa());
+        vo.setCreateTime(entity.getCreateTime());
+        return vo;
+    }
+
+    /**
+     * 字典里取文案，缺项时回退成码值本身。
+     *
+     * <p>字典项被停用 / 被误删 / 历史数据里有字典中不存在的码，都不该让列表出现空文案 ——
+     * 显示 {@code external} 也好过显示一个空白单元格，至少能看出是哪一类。</p>
+     */
+    private static String label(Map<String, String> labels, String code) {
+        if (code == null || code.isEmpty()) {
+            return "";
+        }
+        String text = labels.get(code);
+        return text == null || text.isEmpty() ? code : text;
+    }
+
+    /** 解析 yyyy-MM-dd；空值返回 null，格式错误给出可读提示而不是 500 */
+    private LocalDate parseDay(String value, String fieldName) {
+        if (!notBlank(value)) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim(), DAY);
+        } catch (DateTimeParseException e) {
+            throw new BizException(ResultCode.BAD_REQUEST, fieldName + "格式应为 yyyy-MM-dd");
+        }
+    }
+
+    private boolean notBlank(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    private String blankToNull(String s) {
+        return notBlank(s) ? s.trim() : null;
     }
 
     private int normalizeDays(Integer days) {

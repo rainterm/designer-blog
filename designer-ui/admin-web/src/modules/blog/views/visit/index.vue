@@ -83,12 +83,14 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts/core'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { getVisitOverview } from '@/modules/blog/api'
+import { useDict } from '@/composables/useDict'
+import { DICT_BLOG_VISIT_REFERER_TYPE } from '@/constants/dict'
 import { colors } from '@/theme'
 
 echarts.use([LineChart, PieChart, BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer])
@@ -110,6 +112,9 @@ const rangeOptions = [
   { label: '近 30 天', value: 30 },
   { label: '近 90 天', value: 90 }
 ]
+
+/** 来源类型文案取自数据字典：与访问记录页、后端 DictLookup 同源 */
+const { labelMap: refererTypeLabels } = useDict(DICT_BLOG_VISIT_REFERER_TYPE)
 
 const loading = ref(false)
 const days = ref(30)
@@ -240,21 +245,22 @@ function barOption(rows, colorIndex = 0, tooltipFormatter) {
   }
 }
 
-/** 来源域名：空域名代表直接访问，来源类型一并带出便于判断 */
+/** 来源域名：空域名代表直接访问 / 站内跳转，来源类型文案取自数据字典 */
 function refererRows() {
-  const typeLabel = { direct: '直接访问', search: '搜索引擎', external: '外链' }
+  const labels = refererTypeLabels.value
   return referers.value.map((r) => ({
-    name: r.host || '(直接访问)',
+    host: r.host,
+    name: r.host || `(${labels[r.type] || r.type || ''})`,
     value: r.value,
-    type: typeLabel[r.type] || ''
+    type: labels[r.type] || r.type || ''
   }))
 }
 
-/** 来源图的 tooltip：把来源类型补在域名后面 */
+/** 来源图的 tooltip：把来源类型补在域名后面（直接访问那一行名称已是类型文案，不再重复） */
 function refererTooltip(params) {
   const p = Array.isArray(params) ? params[0] : params
   const row = refererRows().find((r) => r.name === p.name)
-  const suffix = row?.type ? `（${row.type}）` : ''
+  const suffix = row?.host && row.type ? `（${row.type}）` : ''
   return `${p.name}${suffix}<br/>${p.value} 次`
 }
 
@@ -299,6 +305,13 @@ function renderCharts() {
 function onResize() {
   Object.values(charts).forEach((c) => c?.resize())
 }
+
+// 字典与概览是两条异步请求：字典后到时，来源图里的「(直接访问)」需要按新文案重画一次
+watch(refererTypeLabels, () => {
+  if (charts.referer && hasReferers.value) {
+    charts.referer.setOption(barOption(refererRows(), 5, refererTooltip), true)
+  }
+})
 
 onMounted(() => {
   loadData()

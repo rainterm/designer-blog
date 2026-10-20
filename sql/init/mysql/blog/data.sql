@@ -8,13 +8,14 @@ USE `designer_blog`;
 -- ------------------------- 菜单 -------------------------
 INSERT INTO `sys_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `path`, `component`, `perms`, `icon`, `sort`, `visible`, `status`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
 (8000, 0,    '博客模块', 'M', '/blog',              '',                    '',                   'book',     80, 1, 1, 'system', NOW(), 'system', NOW()),
-(8008, 8000, '访问统计', 'C', '/blog/visit',        'blog/visit/index',    'blog:visit:list',    'trending',  1, 1, 1, 'system', NOW(), 'system', NOW()),
-(8001, 8000, '文章管理', 'C', '/blog/post',         'blog/post/index',     'blog:post:list',     'document',  2, 1, 1, 'system', NOW(), 'system', NOW()),
-(8002, 8000, '分类管理', 'C', '/blog/category',     'blog/category/index', 'blog:category:list', 'folder',    3, 1, 1, 'system', NOW(), 'system', NOW()),
-(8003, 8000, '标签管理', 'C', '/blog/tag',          'blog/tag/index',      'blog:tag:list',      'pricetag',  4, 1, 1, 'system', NOW(), 'system', NOW()),
-(8004, 8000, '评论管理', 'C', '/blog/comment',      'blog/comment/index',  'blog:comment:list',  'chatbubbles', 5, 1, 1, 'system', NOW(), 'system', NOW()),
-(8006, 8000, '链接管理', 'C', '/blog/link',         'blog/link/index',     'blog:link:list',     'link',      6, 1, 1, 'system', NOW(), 'system', NOW()),
-(8007, 8000, '站点设置', 'C', '/blog/setting',      'blog/setting/index',  'blog:setting:query', 'settings',  7, 1, 1, 'system', NOW(), 'system', NOW()),
+(8008, 8000, '访问统计', 'C', '/blog/visit',        'blog/visit/index',    'blog:visit:list',    'trending-up', 1, 1, 1, 'system', NOW(), 'system', NOW()),
+(8009, 8000, '访问记录', 'C', '/blog/visit/log',    'blog/visit/log',      'blog:visit:list',    'list',      2, 1, 1, 'system', NOW(), 'system', NOW()),
+(8001, 8000, '文章管理', 'C', '/blog/post',         'blog/post/index',     'blog:post:list',     'document',  3, 1, 1, 'system', NOW(), 'system', NOW()),
+(8002, 8000, '分类管理', 'C', '/blog/category',     'blog/category/index', 'blog:category:list', 'folder',    4, 1, 1, 'system', NOW(), 'system', NOW()),
+(8003, 8000, '标签管理', 'C', '/blog/tag',          'blog/tag/index',      'blog:tag:list',      'pricetag',  5, 1, 1, 'system', NOW(), 'system', NOW()),
+(8004, 8000, '评论管理', 'C', '/blog/comment',      'blog/comment/index',  'blog:comment:list',  'chatbubbles', 6, 1, 1, 'system', NOW(), 'system', NOW()),
+(8006, 8000, '链接管理', 'C', '/blog/link',         'blog/link/index',     'blog:link:list',     'link',      7, 1, 1, 'system', NOW(), 'system', NOW()),
+(8007, 8000, '站点设置', 'C', '/blog/setting',      'blog/setting/index',  'blog:setting:query', 'settings',  8, 1, 1, 'system', NOW(), 'system', NOW()),
 -- 文章按钮
 (8010, 8001, '文章查询', 'F', '', '', 'blog:post:query',   '', 1, 1, 1, 'system', NOW(), 'system', NOW()),
 (8011, 8001, '文章新增', 'F', '', '', 'blog:post:add',     '', 2, 1, 1, 'system', NOW(), 'system', NOW()),
@@ -48,7 +49,9 @@ INSERT INTO `sys_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `path`, `co
 (8060, 8007, '站点查询', 'F', '', '', 'blog:setting:query', '', 1, 1, 1, 'system', NOW(), 'system', NOW()),
 (8061, 8007, '站点保存', 'F', '', '', 'blog:setting:edit',  '', 2, 1, 1, 'system', NOW(), 'system', NOW()),
 -- 访问统计按钮
-(8062, 8008, '访问统计查询', 'F', '', '', 'blog:visit:query', '', 1, 1, 1, 'system', NOW(), 'system', NOW());
+(8062, 8008, '访问统计查询', 'F', '', '', 'blog:visit:query', '', 1, 1, 1, 'system', NOW(), 'system', NOW()),
+-- 访问记录按钮（与统计页共用 query 权限：两页读的是同一张明细表）
+(8063, 8009, '访问记录查询', 'F', '', '', 'blog:visit:query', '', 1, 1, 1, 'system', NOW(), 'system', NOW());
 
 -- 文章编辑页已改为独立全屏页（前端常量路由 /blog/post/edit，列表页新标签打开），
 -- 不再经后端菜单注册，故无需隐藏菜单行；权限由前端 meta.authPerm + 后端接口校验。
@@ -126,7 +129,47 @@ INSERT INTO `blog_link` (`id`, `name`, `url`, `icon`, `sort`, `status`, `remark`
 (1, 'GitHub', 'https://github.com/rainterm', 'github', 1, 1, '代码托管', 'system', NOW(), 'system', NOW()),
 (2, 'Gitee',  'https://gitee.com/rainterm',  'gitee',  2, 1, '代码托管', 'system', NOW(), 'system', NOW());
 
+-- ------------------------- 数据字典（访问记录筛选项 / 展示文案）-------------------------
+-- 访问记录只存与语言无关的码（home / PC / direct），中文文案统一走字典：
+-- 后台「系统管理 → 数据字典」改完即时生效，不需要发版。
+-- 码值与后端枚举（VisitPathUtil.PageType / UserAgentUtil / RefererUtil.RefererType）一一对应，
+-- 删除字典项会让对应记录退化成显示码值本身。
+INSERT INTO `sys_dict_type` (`dict_name`, `dict_type`, `status`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+('博客访问页面类型', 'blog_visit_page_type',   1, '博客访问记录「页面类型」与筛选项', 'system', NOW(), 'system', NOW()),
+('博客访问设备类型', 'blog_visit_device',      1, '博客访问记录「设备」与筛选项',     'system', NOW(), 'system', NOW()),
+('博客访问来源类型', 'blog_visit_referer_type', 1, '博客访问记录「来源类型」与筛选项', 'system', NOW(), 'system', NOW());
+
+INSERT INTO `sys_dict_data` (`dict_type`, `dict_label`, `dict_value`, `sort`, `is_default`, `status`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+('blog_visit_page_type', '首页',     'home',     1, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_page_type', '文章详情', 'post',     2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_page_type', '标签页',   'tag',      3, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_page_type', '分类页',   'category', 4, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_page_type', '其他',     'other',    5, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_device',    '电脑',     'PC',       1, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_device',    '手机',     'MOBILE',   2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_device',    '平板',     'TABLET',   3, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_device',    '机器人',   'BOT',      4, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_device',    '其他',     'OTHER',    5, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_referer_type', '直接访问', 'direct',   1, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_referer_type', '搜索引擎', 'search',   2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_visit_referer_type', '外链',     'external', 3, 0, 1, '', 'system', NOW(), 'system', NOW());
+
+-- ------------------------- 数据字典（博客业务状态）-------------------------
+-- 文章 / 评论的状态码落库（0/1/2），文案走字典：后台改文案不发版，也便于以后加状态。
+INSERT INTO `sys_dict_type` (`dict_name`, `dict_type`, `status`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+('博客文章状态', 'blog_post_status',    1, '文章 status：草稿 / 已发布', 'system', NOW(), 'system', NOW()),
+('博客评论状态', 'blog_comment_status', 1, '评论 status：待审 / 通过 / 拒绝', 'system', NOW(), 'system', NOW());
+
+INSERT INTO `sys_dict_data` (`dict_type`, `dict_label`, `dict_value`, `sort`, `is_default`, `status`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+('blog_post_status',    '草稿',   '0', 1, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_post_status',    '已发布', '1', 2, 1, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_comment_status', '待审',   '0', 1, 1, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_comment_status', '通过',   '1', 2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('blog_comment_status', '拒绝',   '2', 3, 0, 1, '', 'system', NOW(), 'system', NOW());
+
 -- ------------------------- 站点设置（单行，id=1）-------------------------
-INSERT INTO `blog_setting` (`id`, `site_name`, `site_subtitle`, `logo_url`, `logo_radius`, `theme_color`, `copyright`, `icp`, `icp_url`, `seo_keywords`, `seo_description`, `comment_enabled`, `owner_nickname`, `reserved_nicknames`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
-(1, 'Designer Blog', '记录技术与生活', '', 6, '#16A34A', '© 2026 Designer. All rights reserved.', '粤ICP备XXXXXX号', 'https://beian.miit.gov.cn/', 'Designer,个人博客,技术与生活', 'Designer 的个人博客，分享技术与生活。', 1, '博主', '博主,站长,管理员,admin', 'system', NOW(), 'system', NOW());
+-- 备案两项给的是占位示例（XXXXXX），上线前务必换成自己备案下来的真实编号，
+-- 没有公安备案就把 police_icp / police_icp_url 留空，页脚那一行会自动不渲染。
+INSERT INTO `blog_setting` (`id`, `site_name`, `site_subtitle`, `logo_url`, `logo_radius`, `theme_color`, `copyright`, `icp`, `icp_url`, `police_icp`, `police_icp_url`, `seo_keywords`, `seo_description`, `comment_enabled`, `owner_nickname`, `reserved_nicknames`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
+(1, 'Designer Blog', '记录技术与生活', '', 6, '#16A34A', '© 2026 Designer 保留所有权利', '粤ICP备XXXXXX号', 'https://beian.miit.gov.cn/', '粤公网安备 44030502XXXXXX号', 'https://beian.mps.gov.cn/#/query/webSearch?code=44030502XXXXXX', 'Designer,个人博客,技术与生活', 'Designer 的个人博客，分享技术与生活。', 1, '博主', '博主,站长,管理员,admin', 'system', NOW(), 'system', NOW());
 

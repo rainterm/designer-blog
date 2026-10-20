@@ -80,6 +80,8 @@ import { useFormDialog } from '@/composables/useFormDialog'
 import { useUserStore } from '@/store/user'
 import { useMenuBadgeStore } from '@/store/menuBadge'
 import { BLOG_MENU_BADGE } from '@/modules/blog/menuBadges'
+import { useDict } from '@/composables/useDict'
+import { DICT_BLOG_COMMENT_STATUS } from '@/constants/dict'
 
 const message = useMessage()
 const userStore = useUserStore()
@@ -141,16 +143,15 @@ function handleReply(row) {
   openReplyDialog({ id: row.id })
 }
 
-const statusOptions = [
-  { label: '待审', value: 0 },
-  { label: '通过', value: 1 },
-  { label: '拒绝', value: 2 }
-]
+/** 评论状态文案取自字典；标签颜色仍按码值（样式不属于字典） */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_BLOG_COMMENT_STATUS, {
+  numeric: true
+})
 
-const statusMap = {
-  0: { label: '待审', type: 'warning' },
-  1: { label: '通过', type: 'success' },
-  2: { label: '拒绝', type: 'error' }
+const statusTagTypes = {
+  0: 'warning',
+  1: 'success',
+  2: 'error'
 }
 
 const columns = computed(() => [
@@ -175,10 +176,12 @@ const columns = computed(() => [
     title: '状态',
     key: 'status',
     width: 90,
-    render: (row) => {
-      const s = statusMap[row.status] || { label: '-', type: 'default' }
-      return h(NTag, { type: s.type, bordered: false }, { default: () => s.label })
-    }
+    render: (row) =>
+      h(
+        NTag,
+        { type: statusTagTypes[row.status] || 'default', bordered: false },
+        { default: () => statusLabel(row.status) }
+      )
   },
   { title: '时间', key: 'createTime', width: 170 },
   {

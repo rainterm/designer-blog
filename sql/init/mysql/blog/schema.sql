@@ -106,6 +106,8 @@ CREATE TABLE `blog_setting` (
     `copyright`       VARCHAR(255) NOT NULL DEFAULT ''     COMMENT '页脚版权',
     `icp`             VARCHAR(100) NOT NULL DEFAULT ''     COMMENT 'ICP 备案号',
     `icp_url`         VARCHAR(500) NOT NULL DEFAULT ''     COMMENT 'ICP 备案号链接，如 https://beian.miit.gov.cn/',
+    `police_icp`      VARCHAR(100) NOT NULL DEFAULT ''     COMMENT '公安网安备案号',
+    `police_icp_url`  VARCHAR(500) NOT NULL DEFAULT ''     COMMENT '公安网安备案号链接，如 https://beian.mps.gov.cn/',
     `seo_keywords`    VARCHAR(255) NOT NULL DEFAULT ''     COMMENT 'SEO 默认关键字（逗号分隔）',
     `seo_description` VARCHAR(500) NOT NULL DEFAULT ''     COMMENT 'SEO 默认描述',
     `comment_enabled` TINYINT      NOT NULL DEFAULT 1      COMMENT '全局评论总开关：1 开启，0 关闭（单篇仍受 blog_post.allow_comment 约束）',

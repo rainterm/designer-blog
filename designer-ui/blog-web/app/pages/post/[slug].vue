@@ -95,6 +95,7 @@
                   :id="catalogEditorId"
                   :model-value="contentMd"
                   language="zh-CN"
+                  :theme="isDark ? 'dark' : 'light'"
                   :md-heading-id="headingId"
                   :on-get-catalog="handleCatalog"
                 />
@@ -172,6 +173,7 @@ import { headingId, resolveHeading } from '@/utils/headingAnchor'
 import { isRepoRelativeLink } from '@/utils/articleLinks'
 import { siteSeoDescription, useSiteSetting } from '@/composables/useSiteSetting'
 import { useBlogSeo } from '@/composables/useBlogSeo'
+import { useColorMode } from '@/composables/useColorMode'
 
 /** 正文预览器与大纲共用的 id（MdPreview 的内层 DOM 会带着它，便于定位预览容器） */
 const catalogEditorId = 'blog-post-preview'
@@ -196,6 +198,7 @@ const TOC_MAX_DEPTH = 3
 
 const route = useRoute()
 const site = useSiteSetting()
+const { isDark } = useColorMode()
 const message = useMessage()
 /**
  * 请求自身的地址（服务端取自请求头，浏览器取自 location）。
@@ -767,7 +770,7 @@ function toIso(value) {
  *
  * <p>现在的划分只按设备：移动端（≤768px，与全站断点一致）收进正文上方的折叠块；
  * 桌面端一律保留左侧大纲。桌面内部再分两档解决「留白不够」：
- * 视口够宽（≥1280px，920 正文两侧各剩 180px 以上）时大纲真的落在留白里；
+ * 视口够宽（≥1160px，820 正文两侧各剩 170px 以上）时大纲真的落在留白里；
  * 再窄一些的桌面就让正文让出 184px 给大纲，保证它不会被裁到屏幕外。</p>
  */
 .post-layout {
@@ -783,14 +786,14 @@ function toIso(value) {
 }
 
 /*
- * 宽屏：正文仍居中 920px，大纲整体落在正文左边缘之外 16px 处，
+ * 宽屏：正文仍居中 820px，大纲整体落在正文左边缘之外 16px 处，
  * 完全位于页面留白中，不参与正文布局。
  *
- * <p>断点 1280 的由来：正文左边缘到视口左侧的距离 = (视口 - 920) / 2 + 24（容器内边距），
- * 要放下 168px 大纲 + 16px 间距共 184px，视口需 ≥ 1252px；再留 28px 余量
- * （抵消滚动条占宽），取整到 1280。</p>
+ * <p>断点 1160 的由来：正文左边缘到视口左侧的距离 = (视口 - 820) / 2 + 24（容器内边距），
+ * 要放下 168px 大纲 + 16px 间距共 184px，视口需 ≥ 1140px；再留 20px 余量
+ * （抵消滚动条占宽），取整到 1160。</p>
  */
-@media (min-width: 1280px) {
+@media (min-width: 1160px) {
   .post-toc {
     position: absolute;
     top: 0;
@@ -800,10 +803,10 @@ function toIso(value) {
 }
 
 /*
- * 中等桌面（769px–1279px）：页面留白不足，正文让出左侧 184px（168 + 16 间距）。
+ * 中等桌面（769px–1159px）：页面留白不足，正文让出左侧 184px（168 + 16 间距）。
  * 这是唯一会压缩正文的情形，且只在桌面窗口确实放不下大纲时发生。
  */
-@media (min-width: 769px) and (max-width: 1279px) {
+@media (min-width: 769px) and (max-width: 1159px) {
   .post-layout {
     padding-left: 184px;
   }
@@ -872,7 +875,7 @@ function toIso(value) {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+  scrollbar-color: var(--color-scrollbar) transparent;
 }
 
 .post-toc__title {

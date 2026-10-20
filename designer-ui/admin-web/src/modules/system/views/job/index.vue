@@ -63,8 +63,9 @@
         </n-form-item>
         <n-form-item label="状态">
           <n-radio-group v-model:value="form.status">
-            <n-radio :value="1">正常</n-radio>
-            <n-radio :value="0">暂停</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
         <n-form-item label="备注">
@@ -97,6 +98,8 @@ import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useFormDialog } from '@/composables/useFormDialog'
+import { useDict } from '@/composables/useDict'
+import { DICT_JOB_MISFIRE_POLICY, DICT_JOB_STATUS } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 
 const message = useMessage()
@@ -148,16 +151,9 @@ const {
   }
 })
 
-const statusOptions = [
-  { label: '正常', value: 1 },
-  { label: '暂停', value: 0 }
-]
-
-const misfireOptions = [
-  { label: '默认策略', value: 1 },
-  { label: '立即执行', value: 2 },
-  { label: '放弃执行', value: 3 }
-]
+/** 状态与失火策略文案取自字典：筛选 / 表单下拉不再硬编码 */
+const { options: statusOptions } = useDict(DICT_JOB_STATUS, { numeric: true })
+const { options: misfireOptions } = useDict(DICT_JOB_MISFIRE_POLICY, { numeric: true })
 
 const formRules = {
   jobName: { required: true, message: '请输入任务名称', trigger: 'blur' },

@@ -26,6 +26,12 @@ body,
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* 让原生控件（滚动条、输入框、日期选择器等）跟随页面模式 */
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 body {
@@ -33,6 +39,15 @@ body {
   color: var(--color-text);
   line-height: 1.6;
   background: var(--color-body);
+  /* 切换主题时颜色平滑过渡；首屏渲染不会触发（没有旧值可比） */
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* 跟随系统的「减少动态效果」设置：切换主题时直接变，不做过渡 */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
 }
 
 a {

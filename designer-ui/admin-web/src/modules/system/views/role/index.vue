@@ -54,8 +54,9 @@
         </n-form-item>
         <n-form-item label="状态" path="status">
           <n-radio-group v-model:value="form.status">
-            <n-radio :value="1">正常</n-radio>
-            <n-radio :value="0">停用</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
         <n-form-item label="数据权限" path="dataScope">
@@ -151,22 +152,18 @@ import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useFormDialog } from '@/composables/useFormDialog'
+import { useDict } from '@/composables/useDict'
+import { DICT_DATA_SCOPE, DICT_NORMAL_DISABLE } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 
 const message = useMessage()
 const userStore = useUserStore()
 const { locked, busy, run } = useActionLock()
 
-/** 数据权限档位（编码与后端 DataScopeType 一一对应） */
-const dataScopeOptions = [
-  { label: '全部数据', value: 1 },
-  { label: '自定义部门', value: 2 },
-  { label: '本部门', value: 3 },
-  { label: '本部门及以下', value: 4 },
-  { label: '仅本人', value: 5 }
-]
-const dataScopeLabel = (code) =>
-  dataScopeOptions.find((o) => o.value === Number(code))?.label ?? '—'
+/** 数据权限档位取自字典（编码与后端 DataScopeType 一一对应） */
+const { options: dataScopeOptions, labelOf: dataScopeLabel } = useDict(DICT_DATA_SCOPE, {
+  numeric: true
+})
 
 /** 部门树（数据权限「自定义部门」用）；按当前账号的数据权限过滤，超管看到全量 */
 const deptTreeOptions = ref([])
@@ -269,10 +266,8 @@ async function fillRoleDepts(roleId) {
   }
 }
 
-const statusOptions = [
-  { label: '正常', value: 1 },
-  { label: '停用', value: 0 }
-]
+/** 状态筛选项取自字典 */
+const { options: statusOptions } = useDict(DICT_NORMAL_DISABLE, { numeric: true })
 
 const formRules = {
   roleName: [{ required: true, message: '请输入角色名称', trigger: ['input', 'blur'] }],

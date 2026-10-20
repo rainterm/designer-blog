@@ -9,6 +9,9 @@ package com.designer.admin.module.blog.util;
  * <p>爬虫单列为 {@code BOT} 而不是并入 {@code OTHER}：个人站点的流量里机器人占比往往不低，
  * 明确标出来才好判断「访问量涨了」到底是真人还是抓取。</p>
  *
+ * <p>这里只负责<b>归类</b>，不负责文案：{@code PC / MOBILE / ...} 这些码的中文名放在
+ * 数据字典 {@code blog_visit_device} 里，运营改名不用发版。</p>
+ *
  * @author 雨夜终端
  */
 public final class UserAgentUtil {

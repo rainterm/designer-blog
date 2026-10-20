@@ -26,6 +26,23 @@ const sharedCaptchaDir = fileURLToPath(new URL('../shared/captcha', import.meta.
  */
 const apiInternalBase = (process.env.NUXT_API_INTERNAL_BASE || 'http://localhost:8080').replace(/\/+$/, '')
 
+/**
+ * 首帧主题脚本。
+ *
+ * <p>系统偏好（`prefers-color-scheme`）在服务端读不到，所以网页的偏好分两个 Cookie：</p>
+ * <ul>
+ *   <li>`blog-theme`：用户偏好，`system` / `light` / `dark`，缺省即 `system`；</li>
+ *   <li>`blog-theme-resolved`：上次算出来的结果，`light` / `dark`，专供服务端渲染首屏。</li>
+ * </ul>
+ *
+ * <p>这个脚本在 `<head>` 里同步执行，赶在第一次绘制之前按「偏好 + 媒体查询」重算一次
+ * 并写好 `<html data-theme>`：结果 Cookie 可能因为系统偏好变化而过期，
+ * 不重算的话深色系统偏好的访客（首次访问，或上次是日间）会先看到一帧白底。</p>
+ *
+ * <p>Cookie 名必须与 `composables/useColorMode.js` 里的常量一致。</p>
+ */
+const colorModeScript = `(function(){try{var k='blog-theme',rk='blog-theme-resolved';function read(n){var p=document.cookie.split(';');for(var i=0;i<p.length;i++){var c=p[i].trim();if(c.indexOf(n+'=')===0)return c.slice(n.length+1)}return null}var pref=read(k),r=null;if(pref==='dark'||pref==='light'){r=pref}else{r=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',r);if(read(rk)!==r){document.cookie=rk+'='+r+'; path=/; max-age=31536000; SameSite=Lax'}}catch(e){}})();`
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-14',
   devtools: { enabled: false },
@@ -121,6 +138,9 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: 'zh-CN' },
       meta: [{ charset: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1.0' }],
+      // 主题偏好必须在绘制前落到 <html> 上，见上方 colorModeScript 的说明。
+      // tagPosition: 'head' 保证它排在样式与正文之前同步执行。
+      script: [{ key: 'blog-color-mode', tagPosition: 'head', innerHTML: colorModeScript }],
       link: [
         // favicon 不写死在这里：它要跟随站点 Logo，由 app.vue / error.vue 的
         // useHead（见 composables/useFavicon.js）统一渲染。两处都写会让 head 里

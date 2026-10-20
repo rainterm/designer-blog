@@ -121,4 +121,7 @@ for module in "${MODULES[@]}"; do
   run_dir_ordered "${ROOT}/${module}"
 done
 
+# 老库增量脚本放最后：全新库上它们应是幂等空转，老库则补齐新增菜单 / 字段
+run_dir_ordered "${ROOT}/../../upgrade/mysql"
+
 echo "[sql-init] done"

@@ -55,19 +55,93 @@
             </svg>
           </button>
         </form>
+
+        <!--
+          主题选择：跟随系统 / 日间 / 夜间。
+
+          三态而不是两态，是因为「跟随系统」本身就是一个要能被选中的状态 ——
+          两态开关只能表达「我选了日间」，用户点过一次之后就再也没法回到
+          「系统变我也变」。这也是 GitHub / Tailwind 文档等站点的通行做法。
+
+          按钮图标显示的是**当前实际生效**的模式（system 且系统为夜间时显示太阳），
+          菜单里的对勾显示的才是**用户选的偏好**，两者刻意分开。
+        -->
+        <n-dropdown
+          trigger="click"
+          placement="bottom-end"
+          :show-arrow="false"
+          :options="themeOptions"
+          @select="setPreference"
+        >
+          <button
+            type="button"
+            class="theme-toggle"
+            :aria-label="themeLabel"
+            :title="themeLabel"
+          >
+            <svg v-if="isDark" class="theme-toggle__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2" />
+              <path
+                d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+            <svg v-else class="theme-toggle__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </n-dropdown>
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
+import { h } from 'vue'
 import BrandLogo from '@/components/BrandLogo.vue'
 import LinkIcon from '@/components/LinkIcon.vue'
 import { useBlogLinks, useSiteSetting } from '@/composables/useSiteSetting'
+import { useColorMode } from '@/composables/useColorMode'
 
 const route = useRoute()
 const router = useRouter()
 const site = useSiteSetting()
+const { preference, isDark, setPreference } = useColorMode()
+
+/** 三个选项；对勾标在**当前偏好**上，而不是标在当前外观上 */
+const THEME_OPTIONS = [
+  { key: 'system', label: '跟随系统' },
+  { key: 'light', label: '日间' },
+  { key: 'dark', label: '夜间' }
+]
+
+const themeOptions = computed(() =>
+  THEME_OPTIONS.map((item) => ({
+    key: item.key,
+    label: item.label,
+    icon: () =>
+      h(
+        'span',
+        { class: 'theme-menu__check' },
+        preference.value === item.key ? '✓' : ''
+      )
+  }))
+)
+
+/** 悬停提示同时说清「当前生效」与「当前偏好」，system 下两者可能不同 */
+const themeLabel = computed(() => {
+  const current = preference.value === 'system' ? '跟随系统' : isDark.value ? '夜间' : '日间'
+  return `主题：${current}`
+})
 // 外链由 app/plugins/blog-config.server.js 在服务端拉好，随 payload 一起下发，
 // 这里只管读 —— 不再需要 onMounted 里的 load()
 const links = useBlogLinks()
@@ -105,12 +179,13 @@ function clearSearch() {
   top: 0;
   z-index: 50;
   height: var(--layout-nav-height);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--color-header-bg);
   backdrop-filter: saturate(180%) blur(12px);
   -webkit-backdrop-filter: saturate(180%) blur(12px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--color-header-border);
   display: flex;
   align-items: center;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .app-header__inner {
@@ -139,8 +214,8 @@ function clearSearch() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-full);
   color: var(--color-text-secondary);
   transition: color 0.15s, background 0.15s;
@@ -149,6 +224,33 @@ function clearSearch() {
 .social__item:hover {
   color: var(--color-primary);
   background: var(--color-primary-soft);
+}
+
+/* 夜间模式开关：与左侧社交图标同尺寸，但永远是单个按钮 */
+.theme-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.theme-toggle:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.theme-toggle__icon {
+  width: 18px;
+  height: 18px;
 }
 
 .brand {
@@ -186,16 +288,19 @@ function clearSearch() {
   align-items: center;
   gap: 6px;
   width: min(260px, 48vw);
-  height: 36px;
+  /* 34px + 顶栏 42px：上下各留 4px，输入框才不会顶到分隔线 */
+  height: 34px;
   padding: 0 5px 0 14px;
   border-radius: var(--radius);
-  background: var(--color-body);
+  /* 用「比画布亮/暗一档」的填充色而不是写死 body 色：
+     亮色下与 body 相同（视觉不变），深色下提亮到 7% 白，顶栏里才看得出是个输入框 */
+  background: var(--color-search-bg);
   border: 1px solid transparent;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
 .search:focus-within {
-  background: #fff;
+  background: var(--color-surface);
   border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
@@ -287,6 +392,11 @@ function clearSearch() {
     height: 30px;
   }
 
+  .theme-toggle {
+    width: 30px;
+    height: 30px;
+  }
+
   /* 窄屏隐藏副标题，优先保证站点名与搜索框 */
   .brand__subtitle {
     display: none;
@@ -302,5 +412,23 @@ function clearSearch() {
     width: 30px;
     height: 30px;
   }
+}
+</style>
+
+<style>
+/*
+ * 主题菜单的对勾。
+ *
+ * <p>菜单由 naive-ui 传送到 body 下，拿不到 scoped 的作用域属性，只能用全局样式。
+ * 类名带 `theme-menu` 前缀，避免与站点其他样式撞车。</p>
+ *
+ * <p>固定宽度 + 居中对齐：未选中的项也占住同样的位置，三个选项的文字才能对齐。</p>
+ */
+.theme-menu__check {
+  display: inline-block;
+  width: 1em;
+  text-align: center;
+  color: var(--color-primary);
+  font-weight: 600;
 }
 </style>

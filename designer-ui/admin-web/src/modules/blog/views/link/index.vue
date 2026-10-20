@@ -58,8 +58,9 @@
         </n-form-item>
         <n-form-item label="状态" path="status">
           <n-radio-group v-model:value="form.status">
-            <n-radio :value="1">启用</n-radio>
-            <n-radio :value="0">停用</n-radio>
+            <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio>
           </n-radio-group>
         </n-form-item>
         <n-form-item label="备注">
@@ -79,6 +80,8 @@ import LinkIcon from '@/components/LinkIcon.vue'
 import { createLink, deleteLinks, pageLinks, updateLink } from '@/modules/blog/api'
 import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
+import { useDict } from '@/composables/useDict'
+import { DICT_ENABLE_DISABLE } from '@/constants/dict'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useFormDialog } from '@/composables/useFormDialog'
 import { useUserStore } from '@/store/user'
@@ -119,10 +122,10 @@ const {
   }
 })
 
-const statusOptions = [
-  { label: '启用', value: 1 },
-  { label: '停用', value: 0 }
-]
+/** 状态文案取自字典：页面不再维护「码 → 中文」 */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_ENABLE_DISABLE, {
+  numeric: true
+})
 
 /** 内置图标标识（前台按标识匹配内置 SVG）；也可输入自定义标识，未知标识回退为通用链接图标 */
 const iconOptions = [
@@ -198,7 +201,7 @@ const columns = computed(() => [
     width: 90,
     render: (row) =>
       h(NTag, { type: row.status === 1 ? 'success' : 'default', bordered: false }, {
-        default: () => (row.status === 1 ? '启用' : '停用')
+        default: () => statusLabel(row.status)
       })
   },
   { title: '备注', key: 'remark', width: 140, ellipsis: { tooltip: true } },

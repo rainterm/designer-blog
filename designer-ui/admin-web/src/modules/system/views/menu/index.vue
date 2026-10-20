@@ -51,9 +51,9 @@
         </n-form-item>
         <n-form-item label="菜单类型" path="menuType">
           <n-radio-group v-model:value="form.menuType" :disabled="!!form.id">
-            <n-radio-button value="M">目录</n-radio-button>
-            <n-radio-button value="C">菜单</n-radio-button>
-            <n-radio-button value="F">按钮</n-radio-button>
+            <n-radio-button v-for="o in menuTypeOptions" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </n-radio-button>
           </n-radio-group>
         </n-form-item>
         <n-form-item label="菜单名称" path="menuName">
@@ -107,10 +107,11 @@
           <n-input-number v-model:value="form.sort" :min="0" :max="9999" style="width: 160px" />
         </n-form-item>
         <n-form-item label="状态">
-          <n-radio-group v-model:value="form.status">
-            <n-radio :value="1">正常</n-radio>
-            <n-radio :value="0">停用</n-radio>
-          </n-radio-group>
+            <n-radio-group v-model:value="form.status">
+              <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+                {{ o.label }}
+              </n-radio>
+            </n-radio-group>
         </n-form-item>
       </n-form>
     </Dialog>
@@ -128,6 +129,8 @@ import { createMenu, deleteMenu, getMenuTree, updateMenu } from '@/modules/syste
 import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useFormDialog } from '@/composables/useFormDialog'
+import { useDict } from '@/composables/useDict'
+import { DICT_MENU_TYPE, DICT_NORMAL_DISABLE } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 
 const message = useMessage()
@@ -222,15 +225,18 @@ const {
   }
 })
 
-const statusOptions = [
-  { label: '正常', value: 1 },
-  { label: '停用', value: 0 }
-]
+/** 状态文案取自字典：筛选下拉与列表标签同源 */
+const { options: statusOptions, labelOf: statusLabel } = useDict(DICT_NORMAL_DISABLE, {
+  numeric: true
+})
 
-const TYPE_MAP = {
-  M: { label: '目录', type: 'default' },
-  C: { label: '菜单', type: 'info' },
-  F: { label: '按钮', type: 'warning' }
+/** 菜单类型文案取自字典；标签颜色仍按码值（样式不属于字典） */
+const { options: menuTypeOptions, labelOf: menuTypeLabel } = useDict(DICT_MENU_TYPE)
+
+const MENU_TYPE_TAG_TYPES = {
+  M: 'default',
+  C: 'info',
+  F: 'warning'
 }
 
 const columns = computed(() => [
@@ -259,10 +265,12 @@ const columns = computed(() => [
     title: '类型',
     key: 'menuType',
     width: 80,
-    render: (row) => {
-      const meta = TYPE_MAP[row.menuType] || { label: row.menuType, type: 'default' }
-      return h(NTag, { type: meta.type, bordered: false }, { default: () => meta.label })
-    }
+    render: (row) =>
+      h(
+        NTag,
+        { type: MENU_TYPE_TAG_TYPES[row.menuType] || 'default', bordered: false },
+        { default: () => menuTypeLabel(row.menuType) }
+      )
   },
   { title: '排序', key: 'sort', width: 70 },
   { title: '路由/外链', key: 'path', width: 180, ellipsis: { tooltip: true } },
@@ -276,7 +284,7 @@ const columns = computed(() => [
       h(
         NTag,
         { type: row.status === 1 ? 'success' : 'error', bordered: false },
-        { default: () => (row.status === 1 ? '正常' : '停用') }
+        { default: () => statusLabel(row.status) }
       )
   },
   {

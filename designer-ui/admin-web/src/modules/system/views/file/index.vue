@@ -45,11 +45,12 @@
 </template>
 
 <script setup>
-import { computed, h, ref } from 'vue'
+import { computed, h, onMounted, ref } from 'vue'
 import { NTag, useMessage } from 'naive-ui'
 import { OpenOutline, TrashOutline } from '@vicons/ionicons5'
 import { hActionBtn, hActionConfirm, hActionGroup } from '@/utils/actionBtn'
 import { deleteFiles, pageFiles, uploadFile } from '@/modules/system/api/file'
+import { listStorageTypes } from '@/modules/system/api/system'
 import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
@@ -74,10 +75,27 @@ const { handleBatchDelete } = useBatchDelete(pager, deleteFiles, {
   confirm: (n) => `确定删除选中的 ${n} 个文件吗？`
 })
 
-const storageOptions = [
-  { label: '本地', value: 'local' },
-  { label: 'S3', value: 's3' }
-]
+/**
+ * 存储类型来自后端 Provider 注册表（新增 S3/OSS 等实现后前端自动出现），
+ * 不在页面里写死「本地 / S3」。
+ */
+const storageTypes = ref([])
+const storageOptions = computed(() =>
+  storageTypes.value.map((t) => ({ label: t.label, value: t.type }))
+)
+const storageLabelMap = computed(() => {
+  const map = {}
+  storageTypes.value.forEach((t) => {
+    map[t.type] = t.label
+  })
+  return map
+})
+const storageTypeLabel = (type) => storageLabelMap.value[type] || type
+
+onMounted(async () => {
+  const res = await listStorageTypes()
+  storageTypes.value = res.data || []
+})
 
 function formatSize(size) {
   const n = Number(size) || 0
@@ -99,7 +117,7 @@ const columns = computed(() => [
       h(
         NTag,
         { bordered: false, type: row.storageType === 's3' ? 'warning' : 'info' },
-        { default: () => (row.storageType === 's3' ? 'S3' : '本地') }
+        { default: () => storageTypeLabel(row.storageType) }
       )
   },
   { title: '大小', key: 'fileSize', width: 100, render: (row) => formatSize(row.fileSize) },

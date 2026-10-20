@@ -34,6 +34,9 @@ export function siteDefaults() {
     copyright: '',
     icp: '',
     icpUrl: '',
+    /** 公安网安备案号（展示时带警徽图标），后台没填就不显示 */
+    policeIcp: '',
+    policeIcpUrl: '',
     seoKeywords: '',
     seoDescription: '',
     /** 全局评论总开关：1 开启，0 关闭（与单篇的 allowComment 是「与」关系） */
@@ -72,7 +75,7 @@ export function siteSeoDescription(siteValue) {
  */
 export function mergeSiteSetting(target, data) {
   if (!target || !data) return target
-  const textKeys = ['siteName', 'siteSubtitle', 'logoUrl', 'themeColor', 'copyright', 'icp', 'icpUrl', 'seoKeywords', 'seoDescription', 'ownerNickname']
+  const textKeys = ['siteName', 'siteSubtitle', 'logoUrl', 'themeColor', 'copyright', 'icp', 'icpUrl', 'policeIcp', 'policeIcpUrl', 'seoKeywords', 'seoDescription', 'ownerNickname']
   textKeys.forEach((key) => {
     if (data[key]) target[key] = data[key]
   })

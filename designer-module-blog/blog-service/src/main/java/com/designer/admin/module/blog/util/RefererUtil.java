@@ -3,6 +3,8 @@ package com.designer.admin.module.blog.util;
 import java.net.URI;
 import java.util.List;
 
+import lombok.Getter;
+
 /**
  * 从 Referer 解析来源域名与来源类型。
  *
@@ -14,10 +16,6 @@ import java.util.List;
  */
 public final class RefererUtil {
 
-    private static final String DIRECT = "direct";
-    private static final String SEARCH = "search";
-    private static final String EXTERNAL = "external";
-
     /** 与 blog_visit_log.referer_host 列宽一致 */
     private static final int HOST_MAX_LENGTH = 128;
 
@@ -28,6 +26,30 @@ public final class RefererUtil {
             "daum.net", "qwant.com", "brave.com", "startpage.com");
 
     private RefererUtil() {
+    }
+
+    /**
+     * 来源类型。
+     *
+     * <p>库里存 {@link #code}（与语言无关的码）；中文文案放在数据字典
+     * {@code blog_visit_referer_type} 里，写入、展示、前端筛选共用同一份配置。
+     * 新增来源类型时这里补一项、字典补一条即可，调用方不用改。</p>
+     *
+     * @author 雨夜终端
+     */
+    @Getter
+    public enum RefererType {
+        /** 直接访问：Referer 缺失，或来自站内跳转 */
+        DIRECT("direct"),
+        SEARCH("search"),
+        EXTERNAL("external");
+
+        /** 落库的码值 */
+        private final String code;
+
+        RefererType(String code) {
+            this.code = code;
+        }
     }
 
     /**
@@ -49,17 +71,17 @@ public final class RefererUtil {
     }
 
     /** 按来源域名判断类型；空域名代表直接访问 */
-    public static String type(String host) {
+    public static RefererType type(String host) {
         if (host == null || host.isEmpty()) {
-            return DIRECT;
+            return RefererType.DIRECT;
         }
         String lower = host.toLowerCase();
         for (String engine : SEARCH_ENGINES) {
             if (lower.contains(engine)) {
-                return SEARCH;
+                return RefererType.SEARCH;
             }
         }
-        return EXTERNAL;
+        return RefererType.EXTERNAL;
     }
 
     /** 提取并归一化域名；无法解析时返回空串（不抛异常，埋点不能因脏 Referer 失败） */

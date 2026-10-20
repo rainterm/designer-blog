@@ -59,16 +59,18 @@
           <n-switch v-model:value="form.isDefault" :checked-value="1" :unchecked-value="0" />
         </n-form-item>
         <n-form-item label="状态">
-          <n-radio-group v-model:value="form.status">
-            <n-radio :value="1">启用</n-radio>
-            <n-radio :value="0">停用</n-radio>
-          </n-radio-group>
-        </n-form-item>
+            <n-radio-group v-model:value="form.status">
+              <n-radio v-for="o in statusOptions" :key="o.value" :value="o.value">
+                {{ o.label }}
+              </n-radio>
+            </n-radio-group>
+          </n-form-item>
         <n-form-item label="访问类型">
           <n-radio-group v-model:value="form.isPublic">
             <n-space>
-              <n-radio :value="1">公开</n-radio>
-              <n-radio :value="0">私有</n-radio>
+              <n-radio v-for="o in accessOptions" :key="o.value" :value="o.value">
+                {{ o.label }}
+              </n-radio>
             </n-space>
           </n-radio-group>
           <span class="form-tip">
@@ -200,6 +202,8 @@ import { useActionLock } from '@/composables/useActionLock'
 import { usePagination } from '@/composables/usePagination'
 import { useBatchDelete } from '@/composables/useBatchDelete'
 import { useFormDialog } from '@/composables/useFormDialog'
+import { useDict } from '@/composables/useDict'
+import { DICT_ENABLE_DISABLE, DICT_STORAGE_ACCESS } from '@/constants/dict'
 import { useUserStore } from '@/store/user'
 
 const message = useMessage()
@@ -273,15 +277,11 @@ const {
   }
 })
 
-const statusOptions = [
-  { label: '启用', value: 1 },
-  { label: '停用', value: 0 }
-]
-
-const accessOptions = [
-  { label: '公开', value: 1 },
-  { label: '私有', value: 0 }
-]
+/** 状态与访问类型文案取自字典：筛选项、列标签、单选按钮同源 */
+const { options: statusOptions } = useDict(DICT_ENABLE_DISABLE, { numeric: true })
+const { options: accessOptions, labelOf: accessLabel } = useDict(DICT_STORAGE_ACCESS, {
+  numeric: true
+})
 
 const typeOptions = computed(() =>
   storageTypes.value.map((t) => ({ label: t.label, value: t.type }))
@@ -340,7 +340,7 @@ const columns = computed(() => [
       h(
         NTag,
         { bordered: false, type: row.isPublic === 1 ? 'success' : 'warning' },
-        { default: () => (row.isPublic === 1 ? '公开' : '私有') }
+        { default: () => accessLabel(row.isPublic) }
       )
   },
   {

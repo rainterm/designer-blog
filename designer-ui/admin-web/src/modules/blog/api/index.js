@@ -56,3 +56,5 @@ export const updateSetting = (data) => request.put('/admin-api/blog/setting', da
 
 // ---------------------- 访问统计 ----------------------
 export const getVisitOverview = (params) => request.get('/admin-api/blog/visit/overview', { params })
+/** 访问记录明细分页：用于排查具体某条来访，与概览的聚合数据互补 */
+export const pageVisitLogs = (params) => request.get('/admin-api/blog/visit/page', { params })

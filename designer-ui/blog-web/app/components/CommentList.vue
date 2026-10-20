@@ -64,7 +64,7 @@ const flat = computed(() => {
 
 <style scoped>
 .comment-empty {
-  background: #f8f8f8;
+  background: var(--color-surface-alt);
   border-radius: var(--radius-lg);
   padding: 40px;
   text-align: center;
@@ -152,7 +152,7 @@ const flat = computed(() => {
 .comment-item__content {
   font-size: 14px;
   line-height: 1.7;
-  color: #444;
+  color: var(--color-text-reading);
   white-space: pre-wrap;
 }
 

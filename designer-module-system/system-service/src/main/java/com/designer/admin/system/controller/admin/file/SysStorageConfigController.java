@@ -3,6 +3,7 @@ package com.designer.admin.system.controller.admin.file;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaMode;
 import com.designer.admin.common.core.PageResult;
 import com.designer.admin.common.core.Result;
 import com.designer.admin.framework.log.BusinessType;
@@ -42,7 +43,9 @@ public class SysStorageConfigController {
 
     @Get
     @Mapping("/types")
-    @SaCheckPermission("system:storage:list")
+    // 文件列表页也要用这份「存储类型」元数据做筛选与标签，不能只对存储配置的可见权限放行，
+    // 否则只有文件权限的角色会 403，只能在前端再抄一份 本地 / S3。
+    @SaCheckPermission(value = {"system:storage:list", "system:file:list"}, mode = SaMode.OR)
     @ApiOperation(value = "查询存储类型")
     public Result<List<StorageTypeVO>> listTypes() {
         return Result.ok(storageConfigService.listTypes());

@@ -190,12 +190,40 @@ INSERT INTO `sys_role_menu` (`role_id`, `menu_id`) VALUES
 (2, 21);
 
 -- ------------------------- 字典 -------------------------
+-- 前端不再硬编码任何「码 → 文案」：下拉项、列表标签统一由 useDict 读取。
+-- 新增一种状态只需插一条 sys_dict_data，页面代码不用改。
 INSERT INTO `sys_dict_type` (`id`, `dict_name`, `dict_type`, `status`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
-(1, '通用状态', 'sys_normal_disable', 1, '通用启用/停用状态', 'system', NOW(), 'system', NOW());
+(1, '通用状态',       'sys_normal_disable',      1, '系统模块 status：正常 / 停用', 'system', NOW(), 'system', NOW()),
+(2, '启用状态',       'sys_enable_disable',      1, '业务配置 status：启用 / 停用', 'system', NOW(), 'system', NOW()),
+(3, '执行结果',       'sys_oper_result',         1, '日志与消息记录的 status：成功 / 失败', 'system', NOW(), 'system', NOW()),
+(4, '任务状态',       'sys_job_status',          1, '定时任务 status：正常 / 暂停', 'system', NOW(), 'system', NOW()),
+(5, '任务失火策略',   'sys_job_misfire_policy',  1, '定时任务 misfire_policy：默认 / 立即 / 放弃', 'system', NOW(), 'system', NOW()),
+(6, '数据权限范围',   'sys_data_scope',          1, '角色 data_scope：1~5', 'system', NOW(), 'system', NOW()),
+(7, '菜单类型',       'sys_menu_type',           1, '菜单 menu_type：目录 / 菜单 / 按钮', 'system', NOW(), 'system', NOW()),
+(8, '存储访问类型',   'sys_storage_access',      1, '存储配置 is_public：公开 / 私有', 'system', NOW(), 'system', NOW());
 
 INSERT INTO `sys_dict_data` (`dict_type`, `dict_label`, `dict_value`, `sort`, `is_default`, `status`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
 ('sys_normal_disable', '正常', '1', 1, 1, 1, '', 'system', NOW(), 'system', NOW()),
-('sys_normal_disable', '停用', '0', 2, 0, 1, '', 'system', NOW(), 'system', NOW());
+('sys_normal_disable', '停用', '0', 2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_enable_disable', '启用', '1', 1, 1, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_enable_disable', '停用', '0', 2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_oper_result',    '成功', '1', 1, 1, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_oper_result',    '失败', '0', 2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_job_status',     '正常', '1', 1, 1, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_job_status',     '暂停', '0', 2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_job_misfire_policy', '默认策略', '1', 1, 1, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_job_misfire_policy', '立即执行', '2', 2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_job_misfire_policy', '放弃执行', '3', 3, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_data_scope',     '全部数据',     '1', 1, 1, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_data_scope',     '自定义部门',   '2', 2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_data_scope',     '本部门',       '3', 3, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_data_scope',     '本部门及以下', '4', 4, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_data_scope',     '仅本人',       '5', 5, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_menu_type',      '目录', 'M', 1, 1, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_menu_type',      '菜单', 'C', 2, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_menu_type',      '按钮', 'F', 3, 0, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_storage_access', '公开', '1', 1, 1, 1, '', 'system', NOW(), 'system', NOW()),
+('sys_storage_access', '私有', '0', 2, 0, 1, '', 'system', NOW(), 'system', NOW());
 
 -- ------------------------- 默认本地存储配置 -------------------------
 INSERT INTO `sys_storage_config` (`id`, `config_name`, `storage_type`, `is_default`, `status`, `is_public`, `url_prefix`, `allowed_extensions`, `max_size`, `compress_enabled`, `compress_quality`, `config_json`, `remark`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES
