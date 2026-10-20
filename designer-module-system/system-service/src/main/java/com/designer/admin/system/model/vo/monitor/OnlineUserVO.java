@@ -1,5 +1,6 @@
 package com.designer.admin.system.model.vo.monitor;
 
+import com.designer.admin.common.core.DateTimePattern;
 import lombok.Data;
 import org.noear.snack4.annotation.ONodeAttr;
 
@@ -35,7 +36,7 @@ public class OnlineUserVO {
     private String os;
 
     /** 登录时间 */
-    @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
+    @ONodeAttr(format = DateTimePattern.DATE_TIME)
     private LocalDateTime loginTime;
 
     /** 剩余有效秒数；-1 永久 */

@@ -110,12 +110,12 @@ const columns = computed(() => {
     })
   }
   cols.push(
-    { title: '账号', key: 'username', minWidth: 120, ellipsis: { tooltip: true } },
-    { title: '昵称', key: 'nickname', minWidth: 120, ellipsis: { tooltip: true } },
+    { title: '账号', key: 'username', width: 120, ellipsis: { tooltip: true } },
+    { title: '昵称', key: 'nickname', width: 120, ellipsis: { tooltip: true } },
     {
       title: '部门',
       key: 'deptName',
-      minWidth: 140,
+      width: 140,
       ellipsis: { tooltip: true },
       render: (row) => row.deptName || '-'
     }

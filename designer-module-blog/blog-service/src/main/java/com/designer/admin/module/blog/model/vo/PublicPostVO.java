@@ -1,5 +1,6 @@
 package com.designer.admin.module.blog.model.vo;
 
+import com.designer.admin.common.core.DateTimePattern;
 import lombok.Data;
 import org.noear.snack4.annotation.ONodeAttr;
 
@@ -69,6 +70,29 @@ public class PublicPostVO {
     private List<String> tagSlugs;
 
     /** 发布时间，未发布为空 */
-    @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
+    @ONodeAttr(format = DateTimePattern.DATE_TIME)
     private LocalDateTime publishedAt;
+
+    /**
+     * 最后更新时间。
+     *
+     * <p>取自 {@code blog_post.update_time}（MyBatis-Plus 自动填充），只在文章真正被修改时变化：
+     * 阅读数回写走的是 {@code update(null, wrapper)}，不会触发自动填充，所以浏览不会让它变。</p>
+     */
+    @ONodeAttr(format = DateTimePattern.DATE_TIME)
+    private LocalDateTime updateTime;
+
+    /**
+     * 是否需要向前台提示「更新于」。
+     *
+     * <p>判定放在服务端而不是前端，是因为它依赖两个时间字段的先后关系，
+     * 前端为了判断得先把「yyyy-MM-dd HH:mm:ss」重新解析成时间对象 —— 那等于把
+     * 「后端负责时间语义、前端只负责展示」这条约定又打破一次。前端直接按这个布尔值决定
+     * 要不要渲染 {@link #updateTime} 即可，不做任何比较。</p>
+     *
+     * <p>刚发布时 {@code update_time} 与 {@code published_at} 是同一秒（见
+     * {@code AutoFillHandler} 与 {@code applyPublishFields}），差值为 0，
+     * 此时展示「更新于」纯属噪音；只有真正编辑过（差值超过阈值）才为 true。</p>
+     */
+    private Boolean updated;
 }

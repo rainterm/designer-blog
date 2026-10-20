@@ -502,7 +502,7 @@ const scopeColumns = computed(() => [
     render: (row) => h(NTag, { type: 'primary', bordered: false }, { default: () => row.scopeCode })
   },
   { title: '名称', key: 'scopeName', width: 140 },
-  { title: '路径模式', key: 'pathPattern', minWidth: 220, ellipsis: { tooltip: true } },
+  { title: '路径模式', key: 'pathPattern', width: 220, ellipsis: { tooltip: true } },
   {
     title: '状态',
     key: 'status',
@@ -529,7 +529,7 @@ const columns = computed(() => [
   {
     title: '授权接口',
     key: 'scopeCodes',
-    minWidth: 200,
+    width: 200,
     render: (row) => (row.scopeCodes || []).join(' ') || '-'
   },
   { title: 'TTL(秒)', key: 'accessTokenTtl', width: 90 },

@@ -139,7 +139,7 @@ const columns = computed(() => [
   { title: 'ID', key: 'id', width: 70 },
   { title: '参数名称', key: 'configName', width: 160, ellipsis: { tooltip: true } },
   { title: '参数键名', key: 'configKey', width: 220, ellipsis: { tooltip: true } },
-  { title: '参数键值', key: 'configValue', minWidth: 160, ellipsis: { tooltip: true } },
+  { title: '参数键值', key: 'configValue', width: 160, ellipsis: { tooltip: true } },
   {
     title: '内置',
     key: 'configType',

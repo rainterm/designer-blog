@@ -3,6 +3,7 @@ package com.designer.admin.module.blog.model.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.designer.admin.common.core.BaseEntity;
+import com.designer.admin.common.core.DateTimePattern;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.noear.snack4.annotation.ONodeAttr;
@@ -66,7 +67,7 @@ public class BlogPost extends BaseEntity {
     private String seoDescription;
 
     /** 发布时间，草稿为空 */
-    @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
+    @ONodeAttr(format = DateTimePattern.DATE_TIME)
     private LocalDateTime publishedAt;
 
     /** 分类名称（非库字段） */

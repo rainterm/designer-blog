@@ -82,7 +82,7 @@ const columns = computed(() => [
   {
     title: '标题',
     key: 'title',
-    minWidth: 200,
+    with: 200,
     ellipsis: { tooltip: true },
     render: (row) =>
       h('div', { style: 'display:flex;align-items:center;gap:6px' }, [
@@ -104,7 +104,14 @@ const columns = computed(() => [
       })
   },
   { title: '浏览', key: 'viewCount', width: 80 },
-  { title: '发布时间', key: 'publishedAt', width: 170 },
+  { title: '发布时间', key: 'publishedAt', width: 180 },
+  {
+    title: '更新时间',
+    key: 'updateTime',
+    width: 180,
+    // 新建后未改过的文章两者一致，直接展示即可；缺值时用占位符避免列塌陷
+    render: (row) => row.updateTime || '-'
+  },
   {
     title: '操作',
     key: 'actions',

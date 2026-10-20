@@ -1,5 +1,6 @@
 package com.designer.admin.module.blog.model.vo;
 
+import com.designer.admin.common.core.DateTimePattern;
 import lombok.Data;
 import org.noear.snack4.annotation.ONodeAttr;
 
@@ -26,6 +27,6 @@ public class MyCommentVO {
     private Integer status;
 
     /** 提交时间 */
-    @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
+    @ONodeAttr(format = DateTimePattern.DATE_TIME)
     private LocalDateTime createTime;
 }

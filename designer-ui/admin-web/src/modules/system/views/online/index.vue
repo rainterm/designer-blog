@@ -73,7 +73,7 @@ const columns = computed(() => [
   {
     title: 'Token',
     key: 'tokenId',
-    minWidth: 180,
+    width: 180,
     ellipsis: { tooltip: true }
   },
   {

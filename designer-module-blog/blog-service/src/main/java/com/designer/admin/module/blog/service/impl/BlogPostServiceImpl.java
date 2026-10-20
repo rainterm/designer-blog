@@ -30,6 +30,7 @@ import org.apache.ibatis.solon.annotation.Db;
 import org.noear.solon.annotation.Component;
 import org.noear.solon.annotation.Inject;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
@@ -45,6 +46,14 @@ import java.util.stream.Collectors;
  */
 @Component
 public class BlogPostServiceImpl implements BlogPostService {
+
+    /**
+     * 「更新于」提示的阈值。
+     *
+     * <p>发布时间与 {@code update_time} 是两次 {@code now()} 调用，落库到秒，
+     * 同一秒落库时差值为 0；留 1 分钟余量，跨秒的那 1 秒不会被当成「编辑过」。</p>
+     */
+    private static final Duration UPDATE_HINT_THRESHOLD = Duration.ofMinutes(1);
 
     @Db
     private BlogPostMapper postMapper;
@@ -378,11 +387,32 @@ public class BlogPostServiceImpl implements BlogPostService {
         vo.setSeoKeywords(post.getSeoKeywords());
         vo.setSeoDescription(post.getSeoDescription());
         vo.setPublishedAt(post.getPublishedAt());
+        // 编辑时间与发布时间分开：前台按 updated 决定要不要提示「更新于」，
+        // 判断逻辑留在服务端，前端不做任何时间比较
+        vo.setUpdateTime(post.getUpdateTime());
+        vo.setUpdated(shouldShowUpdate(post.getPublishedAt(), post.getUpdateTime()));
         // 标签同理：名称与 slug 都在 fillExtras 里一次性填好，这里只做搬运。
         // ⚠ 不要在这里再查 tagMapper.selectByIds，与 fillExtras 完全重复
         vo.setTagNames(post.getTagNames() == null ? Collections.emptyList() : post.getTagNames());
         vo.setTagSlugs(post.getTagSlugs() == null ? Collections.emptyList() : post.getTagSlugs());
         return vo;
+    }
+
+    /**
+     * 是否值得向前台提示「更新于」。
+     *
+     * <p>阈值取 1 分钟而不是「严格大于」：发布与自动填充的 update_time 是两次
+     * {@code now()} 调用，落库精度到秒，跨秒时会出现 1 秒的差值。用严格大于会把这种
+     * 「刚发布就提示已更新」的噪音放到线上。</p>
+     *
+     * <p>未发布（publishedAt 为空）但已有 update_time（草稿被编辑过）时返回 false：
+     * 草稿不在前台展示，这条分支只在未来开放草稿预览时才有意义，先保守处理。</p>
+     */
+    private static boolean shouldShowUpdate(LocalDateTime publishedAt, LocalDateTime updateTime) {
+        if (publishedAt == null || updateTime == null) {
+            return false;
+        }
+        return updateTime.isAfter(publishedAt.plus(UPDATE_HINT_THRESHOLD));
     }
 
     private String ensureUniqueSlug(String base, Long excludeId) {

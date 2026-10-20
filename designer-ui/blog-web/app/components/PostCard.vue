@@ -17,7 +17,9 @@
       <p v-if="post.summary" class="post-card__summary">{{ post.summary }}</p>
       <div class="post-card__meta">
         <span v-if="post.categoryName" class="post-card__cat">{{ post.categoryName }}</span>
-        <span v-if="post.publishedAt">{{ formatDate(post.publishedAt) }}</span>
+        <!-- 时间格式与「是否算更新过」都由后端给出，这里原样展示 -->
+        <span v-if="post.publishedAt">发布于 {{ post.publishedAt }}</span>
+        <span v-if="post.updated">更新于 {{ post.updateTime }}</span>
         <span v-if="post.viewCount != null">{{ formatViews(post.viewCount) }} 阅读</span>
       </div>
     </div>
@@ -25,7 +27,7 @@
 </template>
 
 <script setup>
-import { formatDate, formatViews } from '@/utils/format'
+import { formatViews } from '@/utils/format'
 
 const props = defineProps({
   post: { type: Object, required: true }

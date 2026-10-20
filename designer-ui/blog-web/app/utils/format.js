@@ -1,12 +1,15 @@
 /**
- * 格式化发布时间为 YYYY.MM.DD
- * @param {string|null|undefined} value
+ * 展示层的小工具。
+ *
+ * <p>这里**没有日期格式化**：接口返回的时间已经由后端按
+ * {@code DateTimePattern.DATE_TIME}（yyyy-MM-dd HH:mm:ss）转成字符串，
+ * 前端原样展示即可。在前端再切一刀会带来两个问题：</p>
+ * <ul>
+ *   <li>同一个时间在列表、详情、后台各格式化一次，格式迟早不一致；</li>
+ *   <li>「yyyy-MM-dd HH:mm:ss」是空格分隔的，交给 `new Date()` 在旧版 Safari
+ *       会得到 Invalid Date —— 想格式化就得自己解析，等于把时间语义搬到前端。</li>
+ * </ul>
  */
-export function formatDate(value) {
-  if (!value) return ''
-  const d = String(value).slice(0, 10).replace(/-/g, '.')
-  return d
-}
 
 /**
  * 阅读量展示

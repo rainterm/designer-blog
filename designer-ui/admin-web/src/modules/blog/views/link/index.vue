@@ -165,7 +165,7 @@ const columns = computed(() => [
   {
     title: '地址',
     key: 'url',
-    minWidth: 220,
+    width: 220,
     ellipsis: { tooltip: true },
     render: (row) =>
       h(

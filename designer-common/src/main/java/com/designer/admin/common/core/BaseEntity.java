@@ -39,7 +39,7 @@ public class BaseEntity implements Serializable {
     @TableField(value = "create_by", fill = FieldFill.INSERT)
     private String createBy;
 
-    @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
+    @ONodeAttr(format = DateTimePattern.DATE_TIME)
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
@@ -47,7 +47,7 @@ public class BaseEntity implements Serializable {
     @TableField(value = "update_by", fill = FieldFill.INSERT_UPDATE)
     private String updateBy;
 
-    @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
+    @ONodeAttr(format = DateTimePattern.DATE_TIME)
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 

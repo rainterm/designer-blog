@@ -1,5 +1,6 @@
 package com.designer.admin.module.blog.model.vo;
 
+import com.designer.admin.common.core.DateTimePattern;
 import lombok.Data;
 import org.noear.snack4.annotation.ONodeAttr;
 
@@ -18,7 +19,7 @@ import java.time.LocalDate;
 public class VisitTrendVO implements Serializable {
 
     /** 日期，序列化为 yyyy-MM-dd */
-    @ONodeAttr(format = "yyyy-MM-dd")
+    @ONodeAttr(format = DateTimePattern.DATE)
     private LocalDate date;
 
     /** 当日浏览量 */

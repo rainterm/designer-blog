@@ -131,7 +131,7 @@ const statusOptions = [
 ]
 
 const columns = computed(() => [
-  { title: '部门名称', key: 'deptName', minWidth: 200 },
+  { title: '部门名称', key: 'deptName', width: 200 },
   { title: '排序', key: 'sort', width: 80 },
   {
     title: '状态',

@@ -168,7 +168,7 @@ const columns = computed(() => [
         row.parentId ? h(NTag, { size: 'small', bordered: false, type: 'info' }, { default: () => '回复' }) : null
       ])
   },
-  { title: '内容', key: 'content', minWidth: 200, ellipsis: { tooltip: true } },
+  { title: '内容', key: 'content', width: 200, ellipsis: { tooltip: true } },
   { title: 'IP', key: 'ip', width: 120 },
   { title: '归属地', key: 'ipLocation', width: 90, ellipsis: { tooltip: true } },
   {

@@ -3,6 +3,7 @@ package com.designer.admin.system.model.entity.job;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.designer.admin.common.core.DateTimePattern;
 import lombok.Data;
 import org.noear.snack4.annotation.ONodeAttr;
 
@@ -47,6 +48,6 @@ public class SysJobLog implements Serializable {
     private Long costTime;
 
     /** 执行时间 */
-    @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss")
+    @ONodeAttr(format = DateTimePattern.DATE_TIME)
     private LocalDateTime createTime;
 }

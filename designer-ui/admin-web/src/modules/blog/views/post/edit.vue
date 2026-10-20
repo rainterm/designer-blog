@@ -61,6 +61,11 @@
               :preview="showPreview"
               @onUploadImg="handleEditorUploadImg"
             />
+            <!-- 图片上传进度：粘贴后即时出现，无需等到全部上传完 -->
+            <div v-if="imageUploadingCount > 0" class="md-upload-tip">
+              <n-spin :size="14" />
+              <span>图片上传中{{ imageUploadingCount > 1 ? ` ×${imageUploadingCount}` : '' }}…</span>
+            </div>
           </div>
         </n-form-item>
         <n-form-item label="分类">
@@ -134,7 +139,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { CloseCircleOutline, CloudUploadOutline } from '@vicons/ionicons5'
@@ -158,6 +163,11 @@ const formRef = ref(null)
 const mdEditorRef = ref(null)
 const submitting = ref(false)
 const uploading = ref(false)
+// 正在上传的图片 token 集合：>0 时显示 loading，并拦截保存，避免占位符被存进库
+const pendingImageUploads = ref(new Set())
+const imageUploadingCount = computed(() => pendingImageUploads.value.size)
+// 编辑会话标识：切换文章后旧的上传结果不再写回新正文
+let editorSession = 0
 const loading = ref(false)
 const categoryOptions = ref([])
 const tagOptions = ref([])
@@ -255,6 +265,9 @@ async function loadDetail(id) {
 
 /** keep-alive 按 path 缓存，需按 query.id 主动回填 */
 async function syncFromRoute() {
+  // 切换文章即视为新的编辑会话，旧会话里未完成的上传结果直接丢弃
+  editorSession += 1
+  pendingImageUploads.value.clear()
   const raw = route.query.id
   const id = raw != null && raw !== '' ? Number(raw) : null
   if (id && !Number.isNaN(id)) {
@@ -278,18 +291,165 @@ async function handleCoverUpload({ file, onFinish, onError }) {
   }
 }
 
-/** 编辑器内图片上传 */
-async function handleEditorUploadImg(files, callback) {
-  const urls = []
-  for (const file of files) {
-    const res = await uploadFile(file, 'blog')
-    const url = res.data?.url || ''
-    if (url) urls.push(url)
+/**
+ * 编辑器内图片上传（粘贴 / 拖拽会走同一个 onUploadImg）
+ *
+ * 原生实现只在图片全部传完后才把 Markdown 插到「当前光标」，上传期间没有任何反馈，
+ * 连续粘贴同一张图还会重复上传。这里做了四件事：
+ * 1. 粘贴后立刻在光标处插入占位符，先给出可见的「上传中」反馈；
+ * 2. 按图片内容去重：同一张图并发粘贴只发一次请求，传过的直接复用地址；
+ * 3. 限制同时上传的数量，避免连续粘贴一批图片时瞬时压满上传接口；
+ * 4. 上传结束（成功/失败）后把占位符原位替换成图片或清掉，并保证保存时不被占位符污染。
+ */
+const UPLOAD_PLACEHOLDER_ALT = '图片上传中…'
+const MAX_CONCURRENT_IMAGE_UPLOADS = 2
+
+// 图片内容指纹 → 已上传地址，同一编辑会话内复用
+const uploadedImageCache = new Map()
+// 图片内容指纹 → 上传中的 Promise，避免同一张图被重复上传
+const uploadingImageTasks = new Map()
+
+let runningImageUploads = 0
+const waitingImageUploads = []
+
+function acquireUploadSlot() {
+  if (runningImageUploads < MAX_CONCURRENT_IMAGE_UPLOADS) {
+    runningImageUploads += 1
+    return Promise.resolve()
   }
-  callback(urls)
+  return new Promise((resolve) => waitingImageUploads.push(resolve))
+}
+
+function releaseUploadSlot() {
+  const next = waitingImageUploads.shift()
+  if (next) {
+    // 直接把名额转交给排队者，运行数保持不变
+    next()
+  } else {
+    runningImageUploads = Math.max(0, runningImageUploads - 1)
+  }
+}
+
+/** 生成图片内容指纹；crypto.subtle 不可用（非安全上下文）时降级为采样哈希 */
+async function getImageFingerprint(file) {
+  const buffer = await file.arrayBuffer()
+  if (globalThis.crypto?.subtle) {
+    try {
+      const digest = await crypto.subtle.digest('SHA-256', buffer)
+      return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')
+    } catch (e) {
+      // 继续走下面的降级方案
+    }
+  }
+  const bytes = new Uint8Array(buffer)
+  let hash = 0x811c9dc5
+  const step = Math.max(1, Math.floor(bytes.length / 8192))
+  for (let i = 0; i < bytes.length; i += step) {
+    hash ^= bytes[i]
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return `${file.size}-${file.type}-${hash.toString(16)}`
+}
+
+/** 上传一张图片；相同内容复用缓存或复用正在进行的请求 */
+function uploadEditorImage(file) {
+  return getImageFingerprint(file).then((fingerprint) => {
+    const cached = uploadedImageCache.get(fingerprint)
+    if (cached) return cached
+
+    const pending = uploadingImageTasks.get(fingerprint)
+    if (pending) return pending
+
+    const task = acquireUploadSlot()
+      .then(() => uploadFile(file, 'blog'))
+      .then((res) => {
+        const url = res.data?.url || ''
+        if (!url) throw new Error('上传接口未返回图片地址')
+        uploadedImageCache.set(fingerprint, url)
+        return url
+      })
+      .finally(() => {
+        uploadingImageTasks.delete(fingerprint)
+        releaseUploadSlot()
+      })
+
+    uploadingImageTasks.set(fingerprint, task)
+    return task
+  })
+}
+
+function getEditorView() {
+  return mdEditorRef.value?.getEditorView?.()
+}
+
+/** 在光标处插入文本，返回是否成功 */
+function insertEditorText(text) {
+  const view = getEditorView()
+  if (!view) return false
+  const { from, to } = view.state.selection.main
+  view.dispatch({
+    changes: { from, to, insert: text },
+    selection: { anchor: from + text.length }
+  })
+  return true
+}
+
+/** 把文档中所有目标占位符替换为给定文本，返回是否命中 */
+function replaceEditorText(target, replacement) {
+  const view = getEditorView()
+  if (!view) return false
+  const content = view.state.doc.toString()
+  const changes = []
+  let index = content.indexOf(target)
+  while (index !== -1) {
+    changes.push({ from: index, to: index + target.length, insert: replacement })
+    index = content.indexOf(target, index + target.length)
+  }
+  if (!changes.length) return false
+  view.dispatch({ changes })
+  return true
+}
+
+async function handleEditorUploadImg(files, callback) {
+  const images = (Array.isArray(files) ? files : []).filter(
+    (file) => file && /^image\//.test(file.type || '')
+  )
+  if (!images.length) return
+
+  // 上传是异步的，切换文章后不要再往新正文里写结果
+  const session = editorSession
+  const isCurrentSession = () => session === editorSession
+
+  await Promise.all(
+    images.map(async (file) => {
+      const token = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      const placeholder = `![${UPLOAD_PLACEHOLDER_ALT}](uploading:${token})\n`
+      pendingImageUploads.value.add(token)
+      const inserted = insertEditorText(placeholder)
+
+      try {
+        const url = await uploadEditorImage(file)
+        if (!isCurrentSession()) return
+        const markdown = `![](${url})\n`
+        // 占位符可能被撤销/手动删除，兜底交给编辑器回调按光标插入
+        if (!inserted || !replaceEditorText(placeholder, markdown)) {
+          callback?.([url])
+        }
+      } catch (e) {
+        // 失败提示由 axios 拦截器统一弹出，这里只清理占位符
+        if (isCurrentSession()) replaceEditorText(placeholder, '')
+      } finally {
+        pendingImageUploads.value.delete(token)
+      }
+    })
+  )
 }
 
 async function handleSave(status) {
+  if (imageUploadingCount.value > 0) {
+    message.warning('图片正在上传，请等待上传完成后再保存')
+    return
+  }
   await formRef.value?.validate()
   submitting.value = true
   try {
@@ -348,8 +508,26 @@ watch(
   flex-wrap: wrap;
 }
 .md-wrap {
+  position: relative;
   width: 100%;
   min-height: 420px;
+}
+.md-upload-tip {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  color: var(--n-text-color-2);
+  background: var(--n-color-popover, #fff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  /* 不要挡住编辑与预览的操作 */
+  pointer-events: none;
 }
 .md-wrap :deep(.md-editor) {
   height: 480px;

@@ -56,7 +56,7 @@ const props = defineProps({
     default: false
   },
   /**
-   * 未显式传 scroll-x 时，按 columns 的 width/minWidth 求和自动计算。
+   * 未显式传 scroll-x 时，按 columns 的 width/width 求和自动计算。
    * 传 false 关闭自动计算。
    */
   autoScrollX: {
@@ -110,7 +110,7 @@ const tableSlots = computed(() => {
 function sumColumnWidth(columns) {
   if (!Array.isArray(columns)) return undefined
   const sum = columns.reduce(
-    (acc, col) => acc + (Number(col?.width) || Number(col?.minWidth) || 0),
+    (acc, col) => acc + (Number(col?.width) || Number(col?.width) || 0),
     0
   )
   return sum > 0 ? sum + SCROLL_X_EXTRA : undefined
