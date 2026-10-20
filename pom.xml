@@ -206,7 +206,7 @@
                 <version>3.21.0</version>
                 <configuration>
                     <targetJdk>20</targetJdk>
-                    <sourceEncoding>UTF-8</sourceEncoding>
+                    <inputEncoding>UTF-8</inputEncoding>
                     <linkXRef>false</linkXRef>
                     <printFailingErrors>true</printFailingErrors>
                     <failOnViolation>false</failOnViolation>
