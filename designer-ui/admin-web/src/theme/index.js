@@ -159,7 +159,7 @@ export function buildThemeOverrides(primary = DEFAULT_PRIMARY) {
       borderRadiusLarge: radius,
       borderRadiusHuge: radius,
       fontFamily:
-        "'Manrope', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif",
+        "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
       scrollbarWidth: '12px',
       scrollbarHeight: '12px',
       scrollbarBorderRadius: radius

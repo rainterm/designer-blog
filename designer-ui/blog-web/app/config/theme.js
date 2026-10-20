@@ -35,9 +35,20 @@ export const layout = {
 }
 
 export const fonts = {
-  sans: "'Manrope', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif",
-  display: "'Manrope', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
-  mono: "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace"
+  /**
+   * 一律用系统字体，不引 webfont。
+   *
+   * <p>站点内容是中文，中文在任何方案下都由系统字体渲染（PingFang SC / 微软雅黑），
+   * webfont 只会额外覆盖拉丁字符与数字。为了这一点字形差异多下载字体文件、
+   * 多一条阻塞渲染的链路，不划算。</p>
+   *
+   * <p>用 `-apple-system` 而不是写死 `Helvetica`：macOS 上才会拿到 SF，
+   * Windows 落到 Segoe UI / 微软雅黑，各自都是本平台最自然的观感。</p>
+   */
+  sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
+  display: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
+  /** 等宽同样用系统栈：SF Mono / Menlo / Consolas 都是各自平台的标准等宽字体 */
+  mono: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace"
 }
 
 /**

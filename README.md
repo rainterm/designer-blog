@@ -109,7 +109,7 @@
 | IP 归属地 | ip2region（离线 xdb） | 2.7.0 | 不请求第三方，不泄露访客 IP |
 | 博客前台 | Nuxt | 4.6 | SSR 直出，页面与接口同源 |
 | 管理后台 | Vue + Naive UI | 3.5 / 2.45 | 来自脚手架 |
-| 构建 | Nitro / Vite | 随 Nuxt / 8 | 前台产物是 Node 服务 |
+| 构建 | Nitro / Vite | 随 Nuxt / 8 | 前台产物是 Node 服务；两前端构建期 minify 并预生成 `.gz`（见「前端构建压缩」） |
 | Markdown | md-editor-v3 | 7 | 后台编辑、前台渲染共用一套语法与样式 |
 | 图表 | ECharts | 5.6 | 访问统计 |
 
@@ -160,6 +160,38 @@ designer-blog/
 - 阅读数读路径只碰 Redis，30 秒合并回写，热文章不会产生行锁竞争。
 - `PostCard` 关闭 Nuxt 链接预取（`:prefetch="false"`）：首页 5 张卡片不值得提前发 5 次请求。
 - 读路径限流全部在 nginx（页面 60r/m、`/app-api/` 120r/m、sitemap 6r/m），被拦下的请求不消耗 Node 与数据库连接。
+- 静态资源在构建期压缩并预生成 `.gz`，见下方「前端构建压缩」。
+
+#### 前端构建压缩
+
+两个前端的生产产物都在**构建期**完成压缩，运行时与 nginx 只负责挑合适的文件下发，不在请求路径上现压。
+
+| 项目 | 内容压缩（去换行 / 空格） | gzip 预压缩 | 下发方式 |
+|---|---|---|---|
+| 管理后台（Vite） | `build.minify: 'oxc'` 压 JS、`build.cssMinify: true` 压 CSS；`index.html` 由 `plugins/compressAssets.js` 的 `minifyHtml` 压 | `plugins/compressAssets.js` 的 `compressAssets` 对 `dist/**` 生成同名 `.gz`（`gzip -9`） | nginx `gzip_static on` |
+| 博客前台（Nuxt） | Vite 默认 minify（客户端）、Nitro 压服务端产物 | `nitro.compressPublicAssets` 把 `.output/public/**` 预压成 `.gz` | Nitro 运行时按 `Accept-Encoding` 直出 `.gz` |
+
+**管理后台**（`designer-ui/admin-web`）：
+
+- `build.minify` / `build.cssMinify` 显式写在 `vite.config.js` 里，防止后续被改成 `false` 导致体积翻倍。
+- `index.html` 是 Vite 唯一不压的产物（换行、缩进、注释原样输出，内联 `<script>` 也不处理），由插件补齐：内联脚本交给 Vite 导出的 Oxc minifier，其余部分去注释并折叠空白。`pre` / `textarea` 与内联脚本、内联样式会被先抠出来，避免空白折叠改坏内容。
+- `compressAssets` 在 `closeBundle` 执行，等 `public/`（vditor 资源）也复制进 `dist/` 之后再扫，因此一次构建覆盖全部静态资源。只压文本类扩展名，小于 1KB 或压完反而变大的文件跳过 —— 这些请求由 nginx 的 `gzip on` 兜底，行为不变。
+- 实测：389 个文件 9.25 MB → 2.42 MB；入口 JS 1.26 MB → 333 KB；`index.html` 2.8 KB → 1.1 KB。
+
+**博客前台**（`designer-ui/blog-web`）：
+
+- `nitro.compressPublicAssets: { gzip: true, brotli: false }`。只开 gzip 不开 brotli：压缩口径与 nginx 一致，也避免「客户端声明支持 br、中间缓存却按 gzip 存」的变体问题。
+- 实测：`_nuxt` 入口 JS 1.22 MB → 331 KB，响应带 `Vary: Accept-Encoding` 与长缓存头。
+- **SSR 页面 HTML 无法预压**（每次请求才生成），仍由 nginx 的 `gzip on` 实时压缩。
+
+**nginx 侧**（`deploy/nginx/default.conf`）：
+
+- 后台站点开启 `gzip_static on`：优先下发构建好的 `.gz`，找不到才回落到 `gzip on`。
+- 两个站点都加 `gzip_vary on`：让 CDN / 代理按 `Accept-Encoding` 分开缓存，避免把 gzip 响应发给不支持的客户端。
+- 博客站点看到 Node 已带 `Content-Encoding: gzip` 就不会重复压，`gzip on` 只处理 SSR HTML 等未压响应。
+
+> `.gz` 是构建产物，不要手动创建或提交；`dist/` 与 `.output/` 都已在 `.gitignore` 中。
+> 本地 `vite preview` / `node .output/server/index.mjs` 也会命中预压缩文件，无需额外配置。
 
 #### 图片压缩
 

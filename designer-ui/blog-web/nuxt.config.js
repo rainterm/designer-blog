@@ -125,13 +125,10 @@ export default defineNuxtConfig({
         // favicon 不写死在这里：它要跟随站点 Logo，由 app.vue / error.vue 的
         // useHead（见 composables/useFavicon.js）统一渲染。两处都写会让 head 里
         // 出现两个 rel="icon"，浏览器挑哪个不确定，刷新时图标就会时而对、时而错。
-        // 字体走 Google Fonts：SSR 首屏同样要等它，所以放 head 里预连接
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap'
-        }
+        // 字体一律走系统字体（见 app/config/theme.js 的 fonts），head 里不放任何字体资源。
+        // 刻意不用 fonts.googleapis.com：国内基本加载不出来，而它的 <link rel="stylesheet">
+        // 是渲染阻塞资源 —— 浏览器要等它超时才继续首屏，SSR 再快也会白屏十几秒。
+        // 系统字体零请求、零阻塞，且中文本来就只能由系统字体渲染。
       ]
     }
   },
@@ -149,6 +146,20 @@ export default defineNuxtConfig({
   nitro: {
     // 产出 .output/server/index.mjs，Docker 里由 node 直接拉起
     preset: 'node-server',
+
+    /**
+     * 构建期把 `.output/public` 里的文本资源（`_nuxt/**` 的 JS / CSS、
+     * favicon 等）预压成 `.gz`。
+     *
+     * <p>客户端产物在 Vite 里已经 minify（去掉换行与多余空格），这里解决的是
+     * 传输体积：Nitro 的 node-server 运行时会看 `Accept-Encoding` 直接返回 `.gz`，
+     * 省掉每个请求现压的 CPU。`/` 的 SSR HTML 不在这里（它每次请求才生成），
+     * 由 nginx 的 `gzip on` 兜底。</p>
+     *
+     * <p>只开 gzip 不开 brotli：压缩口径与 nginx 侧一致，且不存在
+     * 「客户端声明支持 br、中间缓存却按 gzip 存」的变体问题。</p>
+     */
+    compressPublicAssets: { gzip: true, brotli: false },
 
     /**
      * dev 下的 `/app-api` 代理。

@@ -4,12 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!--
+      字体一律走系统字体（见 src/styles/index.css），不引任何 webfont。
+      fonts.googleapis.com 在国内基本加载不出来，而 <link rel="stylesheet">
+      是渲染阻塞的，浏览器要等它超时才开始首屏 —— 这是白屏时间最大的单项来源。
+    -->
     <title>%VITE_APP_TITLE%</title>
     <style>
       /* 首屏静态加载动画；颜色 fallback 与 src/theme/index.js 保持一致，挂载后由 CSS 变量接管 */
@@ -37,7 +36,8 @@
         font-size: 13px;
         color: var(--color-text-secondary, #5c6370);
         letter-spacing: 1px;
-        font-family: 'Manrope', 'PingFang SC', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+          'Microsoft YaHei', sans-serif;
       }
       @keyframes boot-spin {
         to {
