@@ -3,6 +3,7 @@ package com.designer.admin.framework.storage.provider;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.framework.spi.ConfigFieldMeta;
 import com.designer.admin.framework.storage.FileStorageProvider;
+import com.designer.admin.framework.storage.StorageCachePolicy;
 import com.designer.admin.framework.storage.StorageProperties;
 import com.designer.admin.framework.storage.StorageRuntimeConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -102,6 +103,11 @@ public class S3FileStorageProvider implements FileStorageProvider {
                     .key(filePath)
                     .contentType(contentType)
                     .contentLength(size)
+                    // 公开配置可能返回 CDN / 公网直链，浏览器与边缘节点根本不经过后端的下载接口，
+                    // 因此缓存策略必须在**上传时**写进对象元数据，由对象存储当响应头返回。
+                    // 私有对象的直链不会下发（buildAccessUrl 只在公开配置上用 publicUrl），
+                    // 但同样写上 no-store：万一以后有人把私有桶接到 CDN 上，也不至于被缓存。
+                    .cacheControl(StorageCachePolicy.of(config.isPublicAccess()))
                     .build();
             // 流由调用方关闭；body 的长度必须与压缩后的实际字节数一致，SDK 才能定长签名
             client.putObject(req, RequestBody.fromInputStream(in, size));

@@ -173,6 +173,28 @@ designer-blog/
 | PNG | 无损重编码，质量参数**无效**（固定最高 deflate 级别） |
 | GIF / WebP / AVIF / SVG / ICO | 跳过：动图重编码只剩第一帧，其余 JDK ImageIO 不支持编码 |
 
+#### 图片缓存
+
+文件名是 UUID、内容不会被原地覆盖，因此「URL 不变 ⇒ 内容不变」，公开图直接给强缓存：
+
+| 访问类型 | `Cache-Control` | 效果 |
+|---|---|---|
+| 公开 | `public, max-age=31536000, immutable` | 浏览器一年内不发请求（刷新也不协商），nginx / CDN 可长期缓存 |
+| 私有 | `private, no-store` | 不落盘：共用电脑换个账号也读不到上一个账号的图 |
+
+**关键点在写入位置**。同一个公开文件有两条到达浏览器的方式，必须都覆盖：
+
+1. 走代理下载接口（`/app-api/system/file/download/**`）—— 我们直接写响应头；
+2. 存储配置填了「公网 / CDN 前缀」时，下发的是**直链**，浏览器与边缘节点根本不经过后端，响应头怎么写都没用 —— 所以在上传时把同样的值写进对象元数据（`PutObject` 的 `Cache-Control`），由对象存储当响应头返回。
+
+两处共用 `StorageCachePolicy` 一个常量，避免「直连 CDN 缓存一年、走代理每次回源」这类分叉。
+
+落地时注意四点：
+
+- **CDN 需开启「遵循源站缓存头」**，否则会按自己的默认 TTL 覆盖；
+- 用 CDN 回源到应用（本地存储）时，响应里的 `SOLONID` Cookie 会让多数 CDN 拒绝缓存，这种组合建议让 CDN 直接指向对象存储；
+- CDN 域名不要与站点主域相同：公开 SVG 走直链时由 CDN 决定 Content-Type，同源下等同于可执行的 XSS；不同域则 `<img>` 天然安全。
+
 #### 主题
 
 主题色由后台「站点设置」下发，前台据此覆盖品牌配色；`scripts/syncThemeTokens.js` 与 `scripts/syncBrandMark.js` 在构建期把主题变量与 favicon 同步到静态资源，换主题 / 换 Logo 不需要改代码。

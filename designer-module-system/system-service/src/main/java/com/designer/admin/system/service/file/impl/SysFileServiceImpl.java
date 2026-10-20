@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.designer.admin.common.exception.BizException;
 import com.designer.admin.common.constant.HttpConsts;
 import com.designer.admin.framework.storage.FileStorageService;
+import com.designer.admin.framework.storage.StorageCachePolicy;
 import com.designer.admin.framework.storage.StorageRuntimeConfig;
 import com.designer.admin.framework.storage.StoredFile;
 import com.designer.admin.system.constant.SysFileConsts;
@@ -196,10 +197,9 @@ public class SysFileServiceImpl implements SysFileService {
             ctx.headerSet("X-Content-Type-Options", "nosniff");
             // 兜底：即便将来有人把危险类型加进 inline 白名单，CSP 也不让脚本执行
             ctx.headerSet("Content-Security-Policy", "default-src 'none'; sandbox");
-            // 文件路径含 UUID 且内容不会被原地覆盖，公开文件可长缓存；私有文件禁止落盘缓存
-            ctx.headerSet("Cache-Control", publicOnly
-                    ? "public, max-age=31536000, immutable"
-                    : "private, no-store");
+            // 文件路径含 UUID 且内容不会被原地覆盖，公开文件可长缓存；私有文件禁止落盘缓存。
+            // 与 S3 Provider 上传时写入的对象元数据共用同一份策略，避免代理链路和 CDN 链路分叉
+            ctx.headerSet("Cache-Control", StorageCachePolicy.of(publicOnly));
             in.transferTo(ctx.outputStream());
         } catch (Exception e) {
             notFound(ctx);
