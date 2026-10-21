@@ -194,13 +194,18 @@ function clearSearch() {
   justify-content: space-between;
   gap: 16px;
   height: 100%;
+  /* 窄屏下允许子项按剩余宽度收缩，避免主题按钮被裁切 */
+  min-width: 0;
 }
 
 .app-header__actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   min-width: 0;
+  /* 占满品牌右侧剩余空间，搜索框才能按可用宽度收缩 */
+  flex: 1 1 auto;
 }
 
 .social {
@@ -257,17 +262,22 @@ function clearSearch() {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
   color: var(--color-text);
   line-height: 1;
 }
 
 .brand__logo {
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
 }
 
 .brand__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -287,7 +297,11 @@ function clearSearch() {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: min(260px, 48vw);
+  /* 用 flex 吃剩余宽度，而不是写死 vw：否则窄屏上社交图标一多就把主题按钮挤出视口 */
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: 260px;
   /* 34px + 顶栏 42px：上下各留 4px，输入框才不会顶到分隔线 */
   height: 34px;
   padding: 0 5px 0 14px;
@@ -377,14 +391,21 @@ function clearSearch() {
   color: var(--color-text);
 }
 
-/* 窄屏：收紧搜索框与图标间距，避免顶栏溢出 */
+/* 窄屏：收紧间距，搜索让位给主题按钮，避免右侧被裁切 */
 @media (max-width: 600px) {
   .app-header__inner {
-    gap: 10px;
+    gap: 8px;
   }
 
   .app-header__actions {
-    gap: 4px;
+    gap: 2px;
+    /* 优先保住右侧操作区，站点名过长时由 brand 侧省略 */
+    flex: 1 1 0;
+  }
+
+  .brand {
+    flex: 0 1 auto;
+    max-width: 46%;
   }
 
   .social__item {
@@ -403,8 +424,9 @@ function clearSearch() {
   }
 
   .search {
-    width: min(150px, 38vw);
-    padding-left: 12px;
+    flex: 1 1 0;
+    max-width: 150px;
+    padding-left: 10px;
   }
 
   /* 触屏上把点击区域放大到 ~30px，避免图标太小点不中 */
