@@ -171,6 +171,7 @@ import { userFacingError } from '@/utils/routeError'
 import { formatViews } from '@/utils/format'
 import { headingId, resolveHeading } from '@/utils/headingAnchor'
 import { isRepoRelativeLink } from '@/utils/articleLinks'
+import { normalizeMarkdownParagraphs } from '@/utils/normalizeMarkdownParagraphs'
 import { siteSeoDescription, useSiteSetting } from '@/composables/useSiteSetting'
 import { useBlogSeo } from '@/composables/useBlogSeo'
 import { useColorMode } from '@/composables/useColorMode'
@@ -305,7 +306,12 @@ const displayTags = computed(() => {
 })
 
 const coverSrc = computed(() => post.value?.coverUrl || '')
-const contentMd = computed(() => post.value?.content || '')
+/**
+ * 正文交给 MdPreview 前先做纯文本换行规范化：
+ * 单回车分段的粘贴稿会变成真正的 {@code <p>}，而不是一堵 {@code <br>} 墙。
+ * 规则见 {@link normalizeMarkdownParagraphs}。
+ */
+const contentMd = computed(() => normalizeMarkdownParagraphs(post.value?.content || ''))
 
 /**
  * 最后更新时间要不要提示，由后端判定（{@link PublicPostVO#getUpdated()}）。

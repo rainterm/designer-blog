@@ -2,9 +2,10 @@
  * 文章正文样式
  *
  * 正文由 md-editor-v3 的 MdPreview 渲染（与后台编辑器预览同一套渲染器 + 预览主题），
- * 所以这里只做两件事：
+ * 这里负责：
  *   1. 覆盖预览主题暴露的设计变量（--md-theme-*），把配色换成站点品牌色；
- *   2. 微调正文容器的字号、行高与少量圆角。
+ *   2. 正文排版：站点字体、段间距、行高、断词（盖过主题偏西文的默认值）；
+ *   3. 微调图片圆角、锚点留白、相对路径链接光标等站点特有细节。
  *
  * 注意：不要直接写 `pre { background: ... !important }` 之类的结构覆盖。
  * 代码块的头部（语言、复制按钮、折叠箭头）、圆角与内边距都由主题的结构规则控制，
@@ -13,7 +14,43 @@
 
 .article-body {
   font-size: 16px;
-  line-height: 1.8;
+  line-height: 1.85;
+  /*
+   * 预览主题自带的字体栈偏西文（Segoe UI Variable 等），中文会落到不理想的回退上，
+   * 个别环境下甚至看起来像斜体。正文统一用站点字体，并显式关掉斜体合成。
+   */
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-synthesis: none;
+}
+
+/*
+ * 预览壳（.md-editor）自带西文字体栈，子元素 inherit 仍会吃到它。
+ * 这里连壳带预览一起换成站点字体；顺带盖掉 word-break: break-all。
+ */
+.article-body .md-editor,
+.article-body .md-editor-preview {
+  font-family: var(--font-sans);
+  font-style: normal;
+}
+
+.article-body .md-editor-preview {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * 段落呼吸感：主题默认 margin 只有 .5rem，纯文本长段读起来仍像一堵墙。
+ * line-height 也盖过主题的 1.6，跟外层 .article-body 对齐。
+ */
+.article-body .md-editor-preview p {
+  margin: 0 0 1.25em;
+  line-height: 1.85;
+  letter-spacing: 0.02em;
+}
+
+.article-body .md-editor-preview p:last-child {
+  margin-bottom: 0;
 }
 
 /*
